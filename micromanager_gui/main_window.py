@@ -360,6 +360,18 @@ class MainWindow(QtW.QWidget, _MainUI):
         """for sample explorer"""
         
         if sequence.extras == 'sample_explorer':
+                
+            #for test 2x2 or 3x3_________________________
+            if self.explorer.scan_size_r == 2 and self.explorer.scan_size_c == 2:
+                sample = tifffile.tifffile.imread('/Users/FG/Desktop/stack2x2.tif')
+                circle = self.viewer.add_image(sample)
+                circle.data = circle.data[:,np.newaxis,...]
+
+            if self.explorer.scan_size_r == 3 and self.explorer.scan_size_c == 3:
+                sample = tifffile.tifffile.imread('/Users/FG/Desktop/stack3x3.tif')
+                circle = self.viewer.add_image(sample)
+                circle.data = circle.data[:,np.newaxis,...]
+            #_____________________________________
 
             try:
                 explorer_layer = next(l for l in self.viewer.layers if l.metadata.get('uid') == sequence.uid)
@@ -374,16 +386,25 @@ class MainWindow(QtW.QWidget, _MainUI):
                 x = sequence.stage_positions[f].x / self._mmc.getPixelSizeUm() 
                 y = sequence.stage_positions[f].y / self._mmc.getPixelSizeUm() * (- 1)
                 z = 0
-                
-                frame = self.viewer.add_image(explorer_layer.data[f], \
-                    name = f"Pos{'{0:03}'.format(int(f))}", \
-                        translate=(z,y,x))
 
-                frame.metadata['frame'] = f"frame_pos{'{0:03}'.format(int(f))}"
-                frame.metadata['stage_position'] = sequence.stage_positions[f]
-                frame.metadata['uid_p'] = str(sequence.uid) + f"_frame_pos{'{0:03}'.format(int(f))}"
+                #for test 2x2 or 3x3___________________________________
+                if self.explorer.scan_size_r == 2 and self.explorer.scan_size_c == 2:
+                    self.viewer.add_image(circle.data[f], \
+                        name = f"Pos{'{0:03}'.format(int(f))}", \
+                            translate=(z,y,x))
+                if self.explorer.scan_size_r == 3 and self.explorer.scan_size_c == 3:
+                    self.viewer.add_image(circle.data[f], \
+                        name = f"Pos{'{0:03}'.format(int(f))}", \
+                            translate=(z,y,x))
+                #_______________________________________________
 
             self.viewer.layers.remove(explorer_layer)
+
+            #for test 2x2 or 3x3___________________________________
+            if (self.explorer.scan_size_r == 2 and self.explorer.scan_size_c == 2) or\
+                  (self.explorer.scan_size_r == 3 and self.explorer.scan_size_c == 3):
+                    self.viewer.layers.remove(circle)
+            #_______________________________________________
 
             self.viewer.reset_view()
 
