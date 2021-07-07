@@ -20,6 +20,8 @@ from ._util import check_filename, extend_array_for_index, get_filename
 from .explore_sample import ExploreSample
 from .multid_widget import MultiDWidget
 
+from prop_browser import PropBrowser
+
 if TYPE_CHECKING:
     import useq
 
@@ -214,11 +216,7 @@ class MainWindow(QtW.QWidget, _MainUI):
             self._mmc.setXYPosition(float(move_to_x), float(move_to_y))
 
     def properties(self):
-        from pymmcore_plus import CMMCorePlus
-        from prop_browser import PropBrowser
-        mmcore = CMMCorePlus()
-        mmcore.loadSystemConfiguration()
-        pb = PropBrowser(mmcore)
+        pb = PropBrowser(self._mmc)
         return pb.show(run=True)
 
     def delete_layer(self, name):
