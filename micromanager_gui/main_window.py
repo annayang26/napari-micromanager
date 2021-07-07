@@ -37,6 +37,7 @@ class _MainUI:
     cfg_LineEdit: QtW.QLineEdit
     browse_cfg_Button: QtW.QPushButton
     load_cfg_Button: QtW.QPushButton
+    props_Button: QtW.QPushButton
     objective_groupBox: QtW.QGroupBox
     objective_comboBox: QtW.QComboBox
     camera_groupBox: QtW.QGroupBox
@@ -155,6 +156,8 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.explorer.x_lineEdit.setText(str(None))
         self.explorer.y_lineEdit.setText(str(None))
 
+        self.props_Button.clicked.connect(self.properties)
+
         # connect comboBox
         self.objective_comboBox.currentIndexChanged.connect(self.change_objective)
         self.bit_comboBox.currentIndexChanged.connect(self.bit_changed)
@@ -209,6 +212,14 @@ class MainWindow(QtW.QWidget, _MainUI):
             move_to_x = float(move_to_x)
             move_to_y = float(move_to_y)
             self._mmc.setXYPosition(float(move_to_x), float(move_to_y))
+
+    def properties(self):
+        from pymmcore_plus import CMMCorePlus
+        from prop_browser import PropBrowser
+        mmcore = CMMCorePlus()
+        mmcore.loadSystemConfiguration()
+        pb = PropBrowser(mmcore)
+        return pb.show(run=True)
 
     def delete_layer(self, name):
         layer_set = {str(layer) for layer in self.viewer.layers}

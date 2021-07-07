@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>519</width>
+    <width>485</width>
     <height>844</height>
    </rect>
   </property>
@@ -1029,6 +1029,13 @@
         </property>
         <property name="text">
          <string>Load</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="3">
+       <widget class="QPushButton" name="props_Button">
+        <property name="text">
+         <string>Properties</string>
         </property>
        </widget>
       </item>
