@@ -123,6 +123,10 @@ class MainWindow(QtW.QWidget, _MainUI):
         sig.channelGroupChanged.connect(self._refresh_channel_list)
         sig.configSet.connect(self._on_config_set)
 
+        ################################################################################
+        sig.action.connect(self._on_action)
+        ################################################################################
+
         # connect buttons
         self.load_cfg_Button.clicked.connect(self.load_cfg)
         self.browse_cfg_Button.clicked.connect(self.browse_cfg)
@@ -164,6 +168,13 @@ class MainWindow(QtW.QWidget, _MainUI):
     def _on_mda_started(self, sequence: useq.MDASequence):
         """ "create temp folder and block gui when mda starts."""
         self._set_enabled(False)
+
+    ################################################################################
+    def _on_action(self, image: np.ndarray, event: useq.MDAEvent):
+        print("______________ACTION______________")
+        print(event)
+
+    ################################################################################
 
     def _on_mda_frame(self, image: np.ndarray, event: useq.MDAEvent):
         meta = self.mda.SEQUENCE_META.get(event.sequence) or SequenceMeta()
