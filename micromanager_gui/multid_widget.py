@@ -237,7 +237,11 @@ class MultiDWidget(QtW.QWidget, _MultiDUI):
             "stage_positions": [],
             "z_plan": None,
             "time_plan": None,
+            ########################################################
+            "action": ["snap", "snap", "snap", "Pulse", "snap", "snap", "Pulse"],
         }
+        #########################################################
+
         state["channels"] = [
             {
                 "config": self.channel_tableWidget.cellWidget(c, 0).currentText(),
