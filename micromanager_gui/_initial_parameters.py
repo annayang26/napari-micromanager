@@ -7,7 +7,7 @@ from qtpy.QtWidgets import QApplication
 group_name_list = ["dia_group_name", "epi_group_name", "objective_device_name"]
 
 
-class InitialParameter(Container):
+class InitialParameters(Container):
     def __init__(self):
         super().__init__()
 
@@ -29,11 +29,20 @@ class InitialParameter(Container):
 
             c.append(ln_wdg)
 
+        @magicgui(
+            layout="horizontal",
+            call_button="ok",
+        )
+        def btn():
+            print("clicked")
+
+        c.append(btn)
+
         c.show()
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    cls = InitialParameter()
+    cls = InitialParameters()
     cls.make_magicgui()
     sys.exit(app.exec_())
