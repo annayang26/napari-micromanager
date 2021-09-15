@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import napari
 import numpy as np
-from pymmcore_plus import CMMCorePlus, RemoteMMCore
+from pymmcore_plus import CMMCorePlus, DeviceType, RemoteMMCore
 from qtpy import QtWidgets as QtW
 from qtpy import uic
 from qtpy.QtCore import QSize, QTimer
@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 ICONS = Path(__file__).parent / "icons"
 CAM_ICON = QIcon(str(ICONS / "vcam.svg"))
 CAM_STOP_ICON = QIcon(str(ICONS / "cam_stop.svg"))
+OBJ_PTRN = re.compile("(Nosepiece|Objective|obj)s?", re.IGNORECASE)
 
 
 class _MainUI:
@@ -106,8 +107,8 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.viewer = viewer
         self.streaming_timer = None
 
-        self.objective_dev_name = "TINosePiece"
-        # self.objective_dev_name = "Objective"
+        self.objectives_device = ""
+        self.px_size_in_cfg = False
 
         # create connection to mmcore server or process-local variant
         self._mmc = RemoteMMCore() if remote else CMMCorePlus()
@@ -294,6 +295,7 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.load_cfg_Button.setEnabled(False)
         print("loading", self.cfg_LineEdit.text())
         self._mmc.loadSystemConfiguration(self.cfg_LineEdit.text())
+        self.px_size_in_cfg = bool(self._mmc.getAvailablePixelSizeConfigs())
 
     def _refresh_camera_options(self):
         cam_device = self._mmc.getCameraDevice()
@@ -319,13 +321,37 @@ class MainWindow(QtW.QWidget, _MainUI):
                 )
 
     def _refresh_objective_options(self):
-        if "Objective" in self._mmc.getLoadedDevices():
-            with blockSignals(self.objective_comboBox):
-                self.objective_comboBox.clear()
-                self.objective_comboBox.addItems(self._mmc.getStateLabels("Objective"))
-                self.objective_comboBox.setCurrentText(
-                    self._mmc.getStateLabel("Objective")
-                )
+        for cfg in self._mmc.getAvailableConfigGroups():
+            if OBJ_PTRN.match(cfg):
+
+                cfg_groups_options = self._mmc.getAvailableConfigs(cfg)
+                cfg_groups_options_keys = (
+                    self._mmc.getConfigData(cfg, cfg_groups_options[0])
+                ).dict()
+
+                dev_name = [
+                    k
+                    for idx, k in enumerate(cfg_groups_options_keys.keys())
+                    if idx == 0
+                ][0]
+
+                self.objectives_device = dev_name
+
+                with blockSignals(self.objective_comboBox):
+                    self.objective_comboBox.clear()
+                    self.objective_comboBox.addItems(
+                        self._mmc.getAvailableConfigs(self.objectives_device)
+                    )
+                    self.set_pixel_size()
+                    return
+
+        for device in self._mmc.getLoadedDevicesOfType(DeviceType.StateDevice):
+            if OBJ_PTRN.match(device):
+                self.objectives_device = device
+                with blockSignals(self.objective_comboBox):
+                    self.objective_comboBox.clear()
+                    self.objective_comboBox.addItems(self._mmc.getStateLabels(device))
+                    self.set_pixel_size()
 
     def _refresh_channel_list(self, channel_group: str = None):
         if channel_group is None:
@@ -414,25 +440,16 @@ class MainWindow(QtW.QWidget, _MainUI):
             0.0, 0.0, -float(self.z_step_size_doubleSpinBox.value())
         )
 
-    def change_objective(self):
-        if self.objective_comboBox.count() <= 0:
+    def set_pixel_size(self):
+        if self.px_size_in_cfg:
             return
 
-        zdev = self._mmc.getFocusDevice()
-
-        currentZ = self._mmc.getZPosition()
-        self._mmc.setPosition(zdev, 0)
-        self._mmc.waitForDevice(zdev)
-        self._mmc.setProperty(
-            self.objective_dev_name, "Label", self.objective_comboBox.currentText()
+        self._mmc.setConfig(
+            self.objectives_device, self.objective_comboBox.currentText()
         )
-        self._mmc.waitForDevice(self.objective_dev_name)
-        self._mmc.setPosition(zdev, currentZ)
-        self._mmc.waitForDevice(zdev)
-
         # define and set pixel size Config
         self._mmc.deletePixelSizeConfig(self._mmc.getCurrentPixelSizeConfig())
-        curr_obj_name = self._mmc.getProperty(self.objective_dev_name, "Label")
+        curr_obj_name = self._mmc.getProperty(self.objectives_device, "Label")
         self._mmc.definePixelSizeConfig(curr_obj_name)
         self._mmc.setPixelSizeConfig(curr_obj_name)
 
@@ -445,6 +462,31 @@ class MainWindow(QtW.QWidget, _MainUI):
             self._mmc.setPixelSizeUm(
                 self._mmc.getCurrentPixelSizeConfig(), self.image_pixel_size
             )
+        else:
+            self._mmc.setPixelSizeUm(self._mmc.getCurrentPixelSizeConfig(), 0.0)
+
+    def change_objective(self):
+        if self.objective_comboBox.count() <= 0:
+            return
+
+        if self.objectives_device == "":
+            return
+
+        zdev = self._mmc.getFocusDevice()
+
+        currentZ = self._mmc.getZPosition()
+        self._mmc.setPosition(zdev, 0)
+        self._mmc.waitForDevice(zdev)
+
+        self._mmc.setConfig(
+            self.objectives_device, self.objective_comboBox.currentText()
+        )
+
+        self._mmc.waitForDevice(self.objectives_device)
+        self._mmc.setPosition(zdev, currentZ)
+        self._mmc.waitForDevice(zdev)
+
+        self.set_pixel_size()
 
     def update_viewer(self, data=None):
         # TODO: - fix the fact that when you change the objective
