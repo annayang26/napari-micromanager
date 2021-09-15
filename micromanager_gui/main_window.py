@@ -11,6 +11,7 @@ from qtpy import uic
 from qtpy.QtCore import QSize, QTimer
 from qtpy.QtGui import QIcon
 
+from ._camera_roi import CameraROI
 from ._illumination import Illumination
 from ._saving import save_sequence
 from ._util import blockSignals, event_indices, extend_array_for_index
@@ -68,6 +69,8 @@ class _MainUI:
     px_size_doubleSpinBox: QtW.QDoubleSpinBox
 
     illumination_Button: QtW.QPushButton
+    cam_roi_comboBox: QtW.QComboBox
+    crop_Button: QtW.QPushButton
 
     def setup_ui(self):
         uic.loadUi(self.UI_FILE, self)  # load QtDesigner .ui file
@@ -148,8 +151,10 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.bin_comboBox.currentIndexChanged.connect(self.bin_changed)
         self.snap_channel_comboBox.currentTextChanged.connect(self._channel_changed)
 
-        # refresh options in case a config is already loaded by another remote
-        self._refresh_options()
+        self.cam_roi = CameraROI(
+            self.viewer, self._mmc, self.cam_roi_comboBox, self.crop_Button
+        )
+        self.cam_roi_comboBox.currentIndexChanged.connect(self.cam_roi.roi_action)
 
     def illumination(self):
         ill = Illumination(self._mmc)
@@ -167,6 +172,8 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.Z_groupBox.setEnabled(enabled)
         self.snap_live_tab.setEnabled(enabled)
         self.snap_live_tab.setEnabled(enabled)
+
+        self.crop_Button.setEnabled(enabled)
 
     def _on_exp_change(self, camera: str, exposure: float):
         self.exp_spinBox.setValue(exposure)
