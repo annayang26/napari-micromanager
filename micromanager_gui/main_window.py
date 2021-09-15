@@ -4,21 +4,22 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import napari
 import numpy as np
 from pymmcore_plus import CMMCorePlus, RemoteMMCore
 from qtpy import QtWidgets as QtW
 from qtpy import uic
 from qtpy.QtCore import QSize, QTimer
-from qtpy.QtGui import QIcon
-
-from prop_browser import PropBrowser
+from qtpy.QtGui import QColor, QIcon
 
 from ._camera_roi import CameraROI
+from ._histogram import Histogram
 from ._illumination import Illumination
 from ._saving import save_sequence
 from ._util import blockSignals, event_indices, extend_array_for_index
 from .explore_sample import ExploreSample
 from .multid_widget import MultiDWidget, SequenceMeta
+from .prop_browser import PropBrowser
 
 if TYPE_CHECKING:
     import napari.layers
@@ -66,13 +67,14 @@ class _MainUI:
     exp_spinBox: QtW.QDoubleSpinBox
     snap_Button: QtW.QPushButton
     live_Button: QtW.QPushButton
-    max_val_lineEdit: QtW.QLineEdit
-    min_val_lineEdit: QtW.QLineEdit
+    max_min_val_label: QtW.QLabel
     px_size_doubleSpinBox: QtW.QDoubleSpinBox
     properties_Button: QtW.QPushButton
     illumination_Button: QtW.QPushButton
     cam_roi_comboBox: QtW.QComboBox
     crop_Button: QtW.QPushButton
+
+    histogram_widget: QtW.QWidget
 
     def setup_ui(self):
         uic.loadUi(self.UI_FILE, self)  # load QtDesigner .ui file
@@ -115,7 +117,6 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.explorer = ExploreSample(self.viewer, self._mmc)
         self.tabWidget.addTab(self.mda, "Multi-D Acquisition")
         self.tabWidget.addTab(self.explorer, "Sample Explorer")
-
         # connect mmcore signals
         sig = self._mmc.events
 
@@ -159,6 +160,20 @@ class MainWindow(QtW.QWidget, _MainUI):
         )
         self.cam_roi_comboBox.currentIndexChanged.connect(self.cam_roi.roi_action)
 
+        # connect spinboxes
+        self.exp_spinBox.valueChanged.connect(self._update_exp)
+        self.exp_spinBox.setKeyboardTracking(False)
+
+        # refresh options in case a config is already loaded by another remote
+        self._refresh_options()
+
+        # histogram widget
+        self.histogram = Histogram(self.viewer, self._mmc, self.histogram_widget)
+
+        self.viewer.layers.selection.events.active.connect(self.histogram_callbacks)
+        self.viewer.dims.events.current_step.connect(self.histogram_callbacks)
+        self.viewer.layers.events.connect(self.histogram_callbacks)
+
     def illumination(self):
         ill = Illumination(self._mmc)
         return ill.make_illumination_magicgui()
@@ -166,6 +181,12 @@ class MainWindow(QtW.QWidget, _MainUI):
     def properties(self):
         pb = PropBrowser(self._mmc)
         pb.show(run=True)
+
+    def histogram_callbacks(self, event):
+        if self.tabWidget.currentIndex() != 0:
+            return
+        self.histogram.histogram()
+        self.update_max_min()
 
     def _on_config_set(self, groupName: str, configName: str):
         if groupName == self._get_channel_group():
@@ -179,11 +200,20 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.Z_groupBox.setEnabled(enabled)
         self.snap_live_tab.setEnabled(enabled)
         self.snap_live_tab.setEnabled(enabled)
-
         self.crop_Button.setEnabled(enabled)
 
+    def _update_exp(self, exposure: float):
+        self._mmc.setExposure(exposure)
+        if self.streaming_timer:
+            self.streaming_timer.setInterval(int(exposure))
+            self._mmc.stopSequenceAcquisition()
+            self._mmc.startContinuousSequenceAcquisition(exposure)
+
     def _on_exp_change(self, camera: str, exposure: float):
-        self.exp_spinBox.setValue(exposure)
+        with blockSignals(self.exp_spinBox):
+            self.exp_spinBox.setValue(exposure)
+        if self.streaming_timer:
+            self.streaming_timer.setInterval(int(exposure))
 
     def _on_mda_started(self, sequence: useq.MDASequence):
         """ "create temp folder and block gui when mda starts."""
@@ -227,7 +257,6 @@ class MainWindow(QtW.QWidget, _MainUI):
             seq = event.sequence
             _image = image[(np.newaxis,) * len(seq.shape)]
             layer = self.viewer.add_image(_image, name=layer_name, blending="additive")
-
             # dimensions labels
             labels = [i for i in seq.axis_order if i in event.index] + ["y", "x"]
             self.viewer.dims.axis_labels = labels
@@ -258,8 +287,7 @@ class MainWindow(QtW.QWidget, _MainUI):
 
         file_dir = QtW.QFileDialog.getOpenFileName(self, "", "⁩", "cfg(*.cfg)")
         self.cfg_LineEdit.setText(str(file_dir[0]))
-        self.max_val_lineEdit.setText("None")
-        self.min_val_lineEdit.setText("None")
+        self.max_min_val_label.setText("None")
         self.load_cfg_Button.setEnabled(True)
 
     def load_cfg(self):
@@ -421,7 +449,6 @@ class MainWindow(QtW.QWidget, _MainUI):
     def update_viewer(self, data=None):
         # TODO: - fix the fact that when you change the objective
         #         the image translation is wrong
-        #       - are max and min_val_lineEdit updating in live mode?
         if data is None:
             try:
                 data = self._mmc.getLastImage()
@@ -434,11 +461,28 @@ class MainWindow(QtW.QWidget, _MainUI):
         except KeyError:
             preview_layer = self.viewer.add_image(data, name="preview")
 
-        self.max_val_lineEdit.setText(str(np.max(preview_layer.data)))
-        self.min_val_lineEdit.setText(str(np.min(preview_layer.data)))
+        self.update_max_min()
 
         if self.streaming_timer is None:
             self.viewer.reset_view()
+
+    def update_max_min(self):
+
+        min_max_txt = ""
+
+        for layer in self.viewer.layers.selection:
+
+            curr_layer = self.viewer.layers[f"{layer}"]
+            col = curr_layer.colormap.name
+
+            if col not in QColor.colorNames():
+                col = "gray"
+
+            min_max_show = (np.min(curr_layer.data), np.max(curr_layer.data))
+            txt = f'<font color="{col}">{min_max_show}</font>'
+            min_max_txt += txt
+
+        self.max_min_val_label.setText(min_max_txt)
 
     def snap(self):
         self.stop_live()
