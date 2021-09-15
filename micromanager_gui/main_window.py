@@ -67,7 +67,7 @@ class _MainUI:
     max_val_lineEdit: QtW.QLineEdit
     min_val_lineEdit: QtW.QLineEdit
     px_size_doubleSpinBox: QtW.QDoubleSpinBox
-
+    properties_Button: QtW.QPushButton
     illumination_Button: QtW.QPushButton
     cam_roi_comboBox: QtW.QComboBox
     crop_Button: QtW.QPushButton
