@@ -11,6 +11,8 @@ from qtpy import uic
 from qtpy.QtCore import QSize, QTimer
 from qtpy.QtGui import QIcon
 
+from prop_browser import PropBrowser
+
 from ._camera_roi import CameraROI
 from ._illumination import Illumination
 from ._saving import save_sequence
@@ -144,9 +146,7 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.live_Button.clicked.connect(self.toggle_live)
 
         self.illumination_Button.clicked.connect(self.illumination)
-
-        cam_roi_comboBox: QtW.QComboBox
-        crop_Button: QtW.QPushButton
+        self.properties_Button.clicked.connect(self.properties)
 
         # connect comboBox
         self.objective_comboBox.currentIndexChanged.connect(self.change_objective)
@@ -162,6 +162,10 @@ class MainWindow(QtW.QWidget, _MainUI):
     def illumination(self):
         ill = Illumination(self._mmc)
         return ill.make_illumination_magicgui()
+
+    def properties(self):
+        pb = PropBrowser(self._mmc)
+        pb.show(run=True)
 
     def _on_config_set(self, groupName: str, configName: str):
         if groupName == self._get_channel_group():

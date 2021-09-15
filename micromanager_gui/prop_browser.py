@@ -225,11 +225,9 @@ class PropBrowser(Container):
         self.pt.filter_string = e.value
 
 
-if __name__ == "__main__":
-    from pymmcore_plus import CMMCorePlus
-
-    mmcore = CMMCorePlus()
-    # mmcore.loadSystemConfiguration("micromanager_gui/s15_Nikon_Ti1.cfg")
-    mmcore.loadSystemConfiguration("micromanager_gui/demo_config.cfg")
-    pb = PropBrowser(mmcore)
-    pb.show(run=True)
+# if __name__ == "__main__":
+#     from pymmcore_plus import CMMCorePlus
+#     mmcore = CMMCorePlus()
+#     mmcore.loadSystemConfiguration('tests/test_config.cfg')
+#     pb = PropBrowser(mmcore)
+#     pb.show(run=True)
