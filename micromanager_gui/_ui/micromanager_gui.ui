@@ -387,6 +387,22 @@
          <property name="topMargin">
           <number>15</number>
          </property>
+         <item row="2" column="0" alignment="Qt::AlignHCenter">
+          <widget class="QPushButton" name="down_Button">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>30</width>
+             <height>20</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
          <item row="0" column="0" alignment="Qt::AlignHCenter">
           <widget class="QPushButton" name="up_Button">
            <property name="enabled">
@@ -452,19 +468,10 @@
            </property>
           </widget>
          </item>
-         <item row="2" column="0" alignment="Qt::AlignHCenter">
-          <widget class="QPushButton" name="down_Button">
-           <property name="enabled">
-            <bool>true</bool>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>30</width>
-             <height>20</height>
-            </size>
-           </property>
+         <item row="3" column="0">
+          <widget class="QCheckBox" name="snap_on_click_z_checkBox">
            <property name="text">
-            <string/>
+            <string>snap on click</string>
            </property>
           </widget>
          </item>
@@ -516,61 +523,8 @@
          <property name="verticalSpacing">
           <number>0</number>
          </property>
-         <item row="0" column="1" alignment="Qt::AlignHCenter">
-          <widget class="QPushButton" name="y_up_Button">
-           <property name="enabled">
-            <bool>true</bool>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>30</width>
-             <height>20</height>
-            </size>
-           </property>
-           <property name="palette">
-            <palette>
-             <active>
-              <colorrole role="Button">
-               <brush brushstyle="SolidPattern">
-                <color alpha="255">
-                 <red>179</red>
-                 <green>179</green>
-                 <blue>179</blue>
-                </color>
-               </brush>
-              </colorrole>
-             </active>
-             <inactive>
-              <colorrole role="Button">
-               <brush brushstyle="SolidPattern">
-                <color alpha="255">
-                 <red>179</red>
-                 <green>179</green>
-                 <blue>179</blue>
-                </color>
-               </brush>
-              </colorrole>
-             </inactive>
-             <disabled>
-              <colorrole role="Button">
-               <brush brushstyle="SolidPattern">
-                <color alpha="255">
-                 <red>179</red>
-                 <green>179</green>
-                 <blue>179</blue>
-                </color>
-               </brush>
-              </colorrole>
-             </disabled>
-            </palette>
-           </property>
-           <property name="text">
-            <string/>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0" alignment="Qt::AlignHCenter">
-          <widget class="QPushButton" name="left_Button">
+         <item row="1" column="2" alignment="Qt::AlignHCenter">
+          <widget class="QPushButton" name="right_Button">
            <property name="enabled">
             <bool>true</bool>
            </property>
@@ -631,8 +585,24 @@
            </property>
           </widget>
          </item>
-         <item row="1" column="2" alignment="Qt::AlignHCenter">
-          <widget class="QPushButton" name="right_Button">
+         <item row="2" column="1" alignment="Qt::AlignHCenter">
+          <widget class="QPushButton" name="y_down_Button">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>30</width>
+             <height>20</height>
+            </size>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" alignment="Qt::AlignHCenter">
+          <widget class="QPushButton" name="left_Button">
            <property name="enabled">
             <bool>true</bool>
            </property>
@@ -647,8 +617,8 @@
            </property>
           </widget>
          </item>
-         <item row="2" column="1" alignment="Qt::AlignHCenter">
-          <widget class="QPushButton" name="y_down_Button">
+         <item row="0" column="1" alignment="Qt::AlignHCenter">
+          <widget class="QPushButton" name="y_up_Button">
            <property name="enabled">
             <bool>true</bool>
            </property>
@@ -658,8 +628,52 @@
              <height>20</height>
             </size>
            </property>
+           <property name="palette">
+            <palette>
+             <active>
+              <colorrole role="Button">
+               <brush brushstyle="SolidPattern">
+                <color alpha="255">
+                 <red>179</red>
+                 <green>179</green>
+                 <blue>179</blue>
+                </color>
+               </brush>
+              </colorrole>
+             </active>
+             <inactive>
+              <colorrole role="Button">
+               <brush brushstyle="SolidPattern">
+                <color alpha="255">
+                 <red>179</red>
+                 <green>179</green>
+                 <blue>179</blue>
+                </color>
+               </brush>
+              </colorrole>
+             </inactive>
+             <disabled>
+              <colorrole role="Button">
+               <brush brushstyle="SolidPattern">
+                <color alpha="255">
+                 <red>179</red>
+                 <green>179</green>
+                 <blue>179</blue>
+                </color>
+               </brush>
+              </colorrole>
+             </disabled>
+            </palette>
+           </property>
            <property name="text">
             <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QCheckBox" name="snap_on_click_xy_checkBox">
+           <property name="text">
+            <string>snap on click</string>
            </property>
           </widget>
          </item>
