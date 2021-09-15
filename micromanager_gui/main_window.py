@@ -145,6 +145,9 @@ class MainWindow(QtW.QWidget, _MainUI):
 
         self.illumination_Button.clicked.connect(self.illumination)
 
+        cam_roi_comboBox: QtW.QComboBox
+        crop_Button: QtW.QPushButton
+
         # connect comboBox
         self.objective_comboBox.currentIndexChanged.connect(self.change_objective)
         self.bit_comboBox.currentIndexChanged.connect(self.bit_changed)
