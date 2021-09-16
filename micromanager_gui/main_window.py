@@ -13,7 +13,6 @@ from qtpy.QtCore import QSize, QTimer
 from qtpy.QtGui import QColor, QIcon
 
 from ._camera_roi import CameraROI
-from ._histogram import Histogram
 from ._illumination import Illumination
 from ._saving import save_sequence
 from ._util import blockSignals, event_indices, extend_array_for_index
@@ -75,7 +74,7 @@ class _MainUI:
     cam_roi_comboBox: QtW.QComboBox
     crop_Button: QtW.QPushButton
 
-    histogram_widget: QtW.QWidget
+    # histogram_widget: QtW.QWidget
 
     snap_on_click_xy_checkBox: QtW.QCheckBox
     snap_on_click_z_checkBox: QtW.QCheckBox
@@ -171,7 +170,7 @@ class MainWindow(QtW.QWidget, _MainUI):
         self._refresh_options()
 
         # histogram widget
-        self.histogram = Histogram(self.viewer, self._mmc, self.histogram_widget)
+        # self.histogram = Histogram(self.viewer, self._mmc, self.histogram_widget)
 
         self.viewer.layers.selection.events.active.connect(self.histogram_callbacks)
         self.viewer.dims.events.current_step.connect(self.histogram_callbacks)
@@ -188,7 +187,7 @@ class MainWindow(QtW.QWidget, _MainUI):
     def histogram_callbacks(self, event):
         if self.tabWidget.currentIndex() != 0:
             return
-        self.histogram.histogram()
+        # self.histogram.histogram()
         self.update_max_min()
 
     def _on_config_set(self, groupName: str, configName: str):
