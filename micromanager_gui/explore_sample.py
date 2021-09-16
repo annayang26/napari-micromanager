@@ -132,9 +132,29 @@ class ExploreSample(QtW.QWidget):
         self.viewer.add_image(
             image, name=layer_name, blending="additive", translate=(y, x), metadata=meta
         )
+
         self.viewer.reset_view()
 
     def _on_mda_finished(self, sequence: useq.MDASequence):
+        from napari.layers.utils._link_layers import link_layers
+
+        # from itertools import groupby
+
+        all_layers = []
+        for layer in self.viewer.layers:
+            ch_name = layer.metadata["ch_name"]
+            cidx = layer.metadata["ch_id"]
+            if (
+                layer.metadata["uid"] == sequence.uid
+                and (f"[{ch_name}_idx{cidx}]") not in all_layers
+            ):
+                all_layers.append(f"[{ch_name}_idx{cidx}]")
+
+        for name in all_layers:
+            layer_list = [layer for layer in self.viewer.layers if name in layer.name]
+            link_layers(layer_list)
+            layer_list.clear()
+
         if (
             self.return_to_position_x is not None
             and self.return_to_position_y is not None
