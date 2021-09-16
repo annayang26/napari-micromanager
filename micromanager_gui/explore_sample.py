@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import useq
+from napari.layers.utils._link_layers import link_layers
 from qtpy import QtWidgets as QtW
 from qtpy import uic
 from useq import MDASequence
@@ -136,9 +137,6 @@ class ExploreSample(QtW.QWidget):
         self.viewer.reset_view()
 
     def _on_mda_finished(self, sequence: useq.MDASequence):
-        from napari.layers.utils._link_layers import link_layers
-
-        # from itertools import groupby
 
         all_layers = []
         for layer in self.viewer.layers:
