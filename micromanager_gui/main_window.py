@@ -33,7 +33,7 @@ OBJ_PTRN = re.compile("(TINosePiece|Nosepiece|Objective|obj)s?", re.IGNORECASE)
 
 
 class _MainUI:
-    UI_FILE = str(Path(__file__).parent / "_ui" / "micromanager_gui.ui")
+    UI_FILE = str(Path(__file__).parent / "_ui" / "micromanager_gui_pfs.ui")
 
     # The UI_FILE above contains these objects:
     cfg_LineEdit: QtW.QLineEdit
@@ -59,6 +59,11 @@ class _MainUI:
     down_Button: QtW.QPushButton
     xy_step_size_SpinBox: QtW.QSpinBox
     z_step_size_doubleSpinBox: QtW.QDoubleSpinBox
+
+    offset_Z_groupBox: QtW.QGroupBox
+    offset_up_Button: QtW.QPushButton
+    offset_down_Button: QtW.QPushButton
+    offset_z_step_size_doubleSpinBox: QtW.QDoubleSpinBox
     tabWidget: QtW.QTabWidget
     snap_live_tab: QtW.QWidget
     multid_tab: QtW.QWidget
@@ -78,6 +83,7 @@ class _MainUI:
 
     snap_on_click_xy_checkBox: QtW.QCheckBox
     snap_on_click_z_checkBox: QtW.QCheckBox
+    offset_snap_on_click_z_checkBox: QtW.QCheckBox
 
     def setup_ui(self):
         uic.loadUi(self.UI_FILE, self)  # load QtDesigner .ui file
