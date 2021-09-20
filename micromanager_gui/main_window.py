@@ -463,7 +463,7 @@ class MainWindow(QtW.QWidget, _MainUI):
             )
         except ValueError:
             self._mmc.setProperty(
-                self.objectives_device, "label", self.objective_comboBox.currentText()
+                self.objectives_device, "Label", self.objective_comboBox.currentText()
             )
 
         # define and set pixel size Config
@@ -503,7 +503,7 @@ class MainWindow(QtW.QWidget, _MainUI):
             )
         except ValueError:
             self._mmc.setProperty(
-                self.objectives_device, "label", self.objective_comboBox.currentText()
+                self.objectives_device, "Label", self.objective_comboBox.currentText()
             )
 
         self._mmc.waitForDevice(self.objectives_device)
