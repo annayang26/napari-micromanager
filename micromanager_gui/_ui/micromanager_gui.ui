@@ -474,6 +474,13 @@
            </property>
           </widget>
          </item>
+         <item row="3" column="1">
+          <widget class="QCheckBox" name="snap_on_click_xy_checkBox">
+           <property name="text">
+            <string>snap on click</string>
+           </property>
+          </widget>
+         </item>
         </layout>
        </widget>
       </item>
@@ -579,6 +586,13 @@
            </property>
            <property name="value">
             <double>1.000000000000000</double>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QCheckBox" name="snap_on_click_z_checkBox">
+           <property name="text">
+            <string>snap on click</string>
            </property>
           </widget>
          </item>
@@ -763,6 +777,13 @@
            </property>
            <property name="text">
             <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QCheckBox" name="offset_snap_on_click_z_checkBox">
+           <property name="text">
+            <string>snap on click</string>
            </property>
           </widget>
          </item>
