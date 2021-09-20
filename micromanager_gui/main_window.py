@@ -254,6 +254,7 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.load_cfg_Button.setEnabled(False)
         print("loading", self.cfg_LineEdit.text())
         self._mmc.loadSystemConfiguration(self.cfg_LineEdit.text())
+        print(f"Loaded Devices: {self._mmc.getLoadedDevices()}")
 
     def _refresh_camera_options(self):
         cam_device = self._mmc.getCameraDevice()
@@ -299,6 +300,12 @@ class MainWindow(QtW.QWidget, _MainUI):
                     self._mmc.getCurrentConfig("Channel")
                 )
 
+    def _refresh_focusing_device(self):
+        print(
+            f"getFocusDevice: {self._mmc.getFocusDevice()}, "
+            f"getAutoFocusDevice: {self._mmc.getAutoFocusDevice()}"
+        )
+
     def _refresh_positions(self):
         if self._mmc.getXYStageDevice():
             x, y = self._mmc.getXPosition(), self._mmc.getYPosition()
@@ -311,6 +318,7 @@ class MainWindow(QtW.QWidget, _MainUI):
         self._refresh_objective_options()
         self._refresh_channel_list()
         self._refresh_positions()
+        self._refresh_focusing_device()
 
     def bit_changed(self):
         if self.bit_comboBox.count() > 0:
