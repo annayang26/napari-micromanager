@@ -142,12 +142,14 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.up_Button.clicked.connect(self.stage_z_up)
         self.down_Button.clicked.connect(self.stage_z_down)
 
+        # offset
         self.offset_up_Button.clicked.connect(self.stage_z_up)
         self.offset_down_Button.clicked.connect(self.stage_z_down)
+        self.offset_Z_groupBox.toggled.connect(self.toggle_pfs)
 
         self.snap_Button.clicked.connect(self.snap)
         self.live_Button.clicked.connect(self.toggle_live)
-
+        
         # connect comboBox
         self.objective_comboBox.currentIndexChanged.connect(self.change_objective)
         self.bit_comboBox.currentIndexChanged.connect(self.bit_changed)
@@ -306,7 +308,25 @@ class MainWindow(QtW.QWidget, _MainUI):
             f"getFocusDevice: {self._mmc.getFocusDevice()}\n"
             f"getAutoFocusDevice: {self._mmc.getAutoFocusDevice()}\n"
             f"isContinuousFocusEnabled: {self._mmc.isContinuousFocusEnabled()}"
+            f"isContinuousFocusLocked: {self._mmc.isContinuousFocusLocked()}\n"
         )
+
+    def toggle_pfs(self):
+        if self._mmc.getAutoFocusDevice():
+            
+            if self._mmc.isContinuousFocusEnabled():
+                self._mmc.enableContinuousFocus(False)
+            else:
+                self._mmc.enableContinuousFocus(True)
+                self._mmc.setFocusDevice(self._mmc.getAutoFocusDevice())
+               
+            print(
+                "\n"
+                f"getFocusDevice: {self._mmc.getFocusDevice()}\n"
+                f"getAutoFocusDevice: {self._mmc.getAutoFocusDevice()}\n"
+                f"isContinuousFocusEnabled: {self._mmc.isContinuousFocusEnabled()}\n"
+                f"isContinuousFocusLocked: {self._mmc.isContinuousFocusLocked()}\n"
+            )
 
         # isContinuousFocusDrive(stageLabel), isContinuousFocusEnabled(),
         # isContinuousFocusLocked(), enableContinuousFocus(True),
