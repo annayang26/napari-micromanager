@@ -708,7 +708,7 @@
          <item row="2" column="0" alignment="Qt::AlignHCenter">
           <widget class="QPushButton" name="offset_down_Button">
            <property name="enabled">
-            <bool>false</bool>
+            <bool>true</bool>
            </property>
            <property name="maximumSize">
             <size>
@@ -724,7 +724,7 @@
          <item row="1" column="0" alignment="Qt::AlignHCenter|Qt::AlignVCenter">
           <widget class="QDoubleSpinBox" name="offset_z_step_size_doubleSpinBox">
            <property name="enabled">
-            <bool>false</bool>
+            <bool>true</bool>
            </property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -767,7 +767,7 @@
          <item row="0" column="0" alignment="Qt::AlignHCenter">
           <widget class="QPushButton" name="offset_up_Button">
            <property name="enabled">
-            <bool>false</bool>
+            <bool>true</bool>
            </property>
            <property name="maximumSize">
             <size>
@@ -788,6 +788,9 @@
          </item>
          <item row="3" column="0">
           <widget class="QCheckBox" name="offset_snap_on_click_z_checkBox">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
            <property name="text">
             <string>snap on click</string>
            </property>
