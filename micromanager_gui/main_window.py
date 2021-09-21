@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
+from pydantic.tools import parse_file_as
 from pymmcore_plus import CMMCorePlus, RemoteMMCore
 from qtpy import QtWidgets as QtW
 from qtpy import uic
@@ -132,6 +133,8 @@ class MainWindow(QtW.QWidget, _MainUI):
         sig.channelGroupChanged.connect(self._refresh_channel_list)
         sig.configSet.connect(self._on_config_set)
 
+        sig.propertyChanged.connect(self._change_pfs_offset_group)
+
         # connect buttons
         self.load_cfg_Button.clicked.connect(self.load_cfg)
         self.browse_cfg_Button.clicked.connect(self.browse_cfg)
@@ -143,9 +146,8 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.down_Button.clicked.connect(self.stage_z_down)
 
         # offset
-        self.offset_up_Button.clicked.connect(self.stage_z_up)
-        self.offset_down_Button.clicked.connect(self.stage_z_down)
-        self.offset_Z_groupBox.toggled.connect(self.toggle_pfs)
+        self.offset_up_Button.clicked.connect(self.offset_up)
+        self.offset_down_Button.clicked.connect(self.offset_down)
 
         self.snap_Button.clicked.connect(self.snap)
         self.live_Button.clicked.connect(self.toggle_live)
@@ -302,35 +304,45 @@ class MainWindow(QtW.QWidget, _MainUI):
                     self._mmc.getCurrentConfig("Channel")
                 )
 
-    def _refresh_focusing_device(self):
-        print(
-            "\n"
-            f"getFocusDevice: {self._mmc.getFocusDevice()}\n"
-            f"getAutoFocusDevice: {self._mmc.getAutoFocusDevice()}\n"
-            f"isContinuousFocusEnabled: {self._mmc.isContinuousFocusEnabled()}"
-            f"isContinuousFocusLocked: {self._mmc.isContinuousFocusLocked()}\n"
-        )
+    def _change_pfs_offset_group(self):
 
-    def toggle_pfs(self):
         if self._mmc.getAutoFocusDevice():
-            
+
             if self._mmc.isContinuousFocusEnabled():
-                self._mmc.enableContinuousFocus(False)
+                self.offset_Z_groupBox.setEnabled(True)
+                self.Z_groupBox.setEnabled(False)
             else:
-                self._mmc.enableContinuousFocus(True)
-                self._mmc.setFocusDevice(self._mmc.getAutoFocusDevice())
-               
+                self.offset_Z_groupBox.setEnabled(False)
+                self.Z_groupBox.setEnabled(True)
+
+    def offset_up(self):
+        if self._mmc.isContinuousFocusLocked():
+
+            current_offset = float(self._mmc.getProperty('TIPFSOffset', 'Position'))
+            new_offset = current_offset + float(self.offset_z_step_size_doubleSpinBox.value())
+            self._mmc.setProperty('TIPFSOffset', 'Position', new_offset)
+
             print(
-                "\n"
-                f"getFocusDevice: {self._mmc.getFocusDevice()}\n"
-                f"getAutoFocusDevice: {self._mmc.getAutoFocusDevice()}\n"
-                f"isContinuousFocusEnabled: {self._mmc.isContinuousFocusEnabled()}\n"
-                f"isContinuousFocusLocked: {self._mmc.isContinuousFocusLocked()}\n"
+                f"Current_offset: {self._mmc.getProperty('TIPFSOffset', 'Position')}\n"
+                ""
             )
 
-        # isContinuousFocusDrive(stageLabel), isContinuousFocusEnabled(),
-        # isContinuousFocusLocked(), enableContinuousFocus(True),
-        # fullFocus(), getAutoFocusOffset()
+            if self.offset_snap_on_click_z_checkBox.isChecked():
+                self.snap()
+
+    def offset_down(self):
+        if self._mmc.isContinuousFocusLocked():
+            current_offset = float(self._mmc.getProperty('TIPFSOffset', 'Position'))
+            new_offset = current_offset - float(self.offset_z_step_size_doubleSpinBox.value())
+            self._mmc.setProperty('TIPFSOffset', 'Position', new_offset)
+
+            print(
+                f"Current_offset: {self._mmc.getProperty('TIPFSOffset', 'Position')}\n"
+                ""
+            )
+
+            if self.offset_snap_on_click_z_checkBox.isChecked():
+                self.snap()
 
     def _refresh_positions(self):
         if self._mmc.getXYStageDevice():
@@ -344,7 +356,6 @@ class MainWindow(QtW.QWidget, _MainUI):
         self._refresh_objective_options()
         self._refresh_channel_list()
         self._refresh_positions()
-        self._refresh_focusing_device()
 
     def bit_changed(self):
         if self.bit_comboBox.count() > 0:
