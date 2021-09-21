@@ -297,6 +297,7 @@ class MainWindow(QtW.QWidget, _MainUI):
         print("loading", self.cfg_LineEdit.text())
         self._mmc.loadSystemConfiguration(self.cfg_LineEdit.text())
         self.px_size_in_cfg = bool(self._mmc.getAvailablePixelSizeConfigs())
+        print(f"Loaded Devices: {self._mmc.getLoadedDevices()}")
 
     def _refresh_camera_options(self):
         cam_device = self._mmc.getCameraDevice()
