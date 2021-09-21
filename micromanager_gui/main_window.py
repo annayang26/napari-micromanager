@@ -302,9 +302,15 @@ class MainWindow(QtW.QWidget, _MainUI):
 
     def _refresh_focusing_device(self):
         print(
-            f"getFocusDevice: {self._mmc.getFocusDevice()}, "
-            f"getAutoFocusDevice: {self._mmc.getAutoFocusDevice()}"
+            "\n"
+            f"getFocusDevice: {self._mmc.getFocusDevice()}\n"
+            f"getAutoFocusDevice: {self._mmc.getAutoFocusDevice()}\n"
+            f"isContinuousFocusEnabled: {self._mmc.isContinuousFocusEnabled()}"
         )
+
+        # isContinuousFocusDrive(stageLabel), isContinuousFocusEnabled(),
+        # isContinuousFocusLocked(), enableContinuousFocus(True),
+        # fullFocus(), getAutoFocusOffset()
 
     def _refresh_positions(self):
         if self._mmc.getXYStageDevice():

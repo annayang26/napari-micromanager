@@ -693,7 +693,13 @@
          </size>
         </property>
         <property name="title">
-         <string>Offset</string>
+         <string>PFS Offset</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
         </property>
         <layout class="QGridLayout" name="gridLayout_12">
          <property name="topMargin">
@@ -702,7 +708,7 @@
          <item row="2" column="0" alignment="Qt::AlignHCenter">
           <widget class="QPushButton" name="offset_down_Button">
            <property name="enabled">
-            <bool>true</bool>
+            <bool>false</bool>
            </property>
            <property name="maximumSize">
             <size>
@@ -718,7 +724,7 @@
          <item row="1" column="0" alignment="Qt::AlignHCenter|Qt::AlignVCenter">
           <widget class="QDoubleSpinBox" name="offset_z_step_size_doubleSpinBox">
            <property name="enabled">
-            <bool>true</bool>
+            <bool>false</bool>
            </property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -761,7 +767,7 @@
          <item row="0" column="0" alignment="Qt::AlignHCenter">
           <widget class="QPushButton" name="offset_up_Button">
            <property name="enabled">
-            <bool>true</bool>
+            <bool>false</bool>
            </property>
            <property name="maximumSize">
             <size>
