@@ -33,7 +33,7 @@ OBJ_PTRN = re.compile("(TINosePiece|Nosepiece|Objective|obj)s?", re.IGNORECASE)
 
 
 class _MainUI:
-    UI_FILE = str(Path(__file__).parent / "_ui" / "micromanager_gui_pfs.ui")
+    UI_FILE = str(Path(__file__).parent / "_ui" / "micromanager_gui.ui")
 
     # The UI_FILE above contains these objects:
     cfg_LineEdit: QtW.QLineEdit
