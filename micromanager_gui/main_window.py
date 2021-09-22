@@ -308,7 +308,7 @@ class MainWindow(QtW.QWidget, _MainUI):
 
         if self._mmc.getAutoFocusDevice():
 
-            if self._mmc.isContinuousFocusEnabled():
+            if self._mmc.isContinuousFocusEnabled() and self._mmc.isContinuousFocusLocked():
                 self.offset_Z_groupBox.setEnabled(True)
                 self.Z_groupBox.setEnabled(False)
             else:
