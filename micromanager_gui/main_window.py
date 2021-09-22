@@ -402,7 +402,7 @@ class MainWindow(QtW.QWidget, _MainUI):
 
         if self._mmc.getAutoFocusDevice():
 
-            if self._mmc.isContinuousFocusEnabled():
+            if self._mmc.isContinuousFocusEnabled() and self._mmc.isContinuousFocusLocked():
                 self.offset_Z_groupBox.setEnabled(True)
                 self.Z_groupBox.setEnabled(False)
             else:
@@ -418,7 +418,6 @@ class MainWindow(QtW.QWidget, _MainUI):
 
             print(
                 f"Current_offset: {self._mmc.getProperty('TIPFSOffset', 'Position')}\n"
-                ""
             )
 
             if self.offset_snap_on_click_z_checkBox.isChecked():
