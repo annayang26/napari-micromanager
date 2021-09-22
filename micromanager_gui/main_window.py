@@ -64,6 +64,7 @@ class _MainUI:
     offset_up_Button: QtW.QPushButton
     offset_down_Button: QtW.QPushButton
     offset_z_step_size_doubleSpinBox: QtW.QDoubleSpinBox
+
     tabWidget: QtW.QTabWidget
     snap_live_tab: QtW.QWidget
     multid_tab: QtW.QWidget
@@ -85,6 +86,9 @@ class _MainUI:
     snap_on_click_z_checkBox: QtW.QCheckBox
     offset_snap_on_click_z_checkBox: QtW.QCheckBox
 
+    snap_on_click_xy_checkBox: QtW.QCheckBox
+    snap_on_click_z_checkBox: QtW.QCheckBox
+
     def setup_ui(self):
         uic.loadUi(self.UI_FILE, self)  # load QtDesigner .ui file
 
@@ -101,6 +105,8 @@ class _MainUI:
             ("down_Button", "down_arrow_1_green.svg"),
             ("snap_Button", "cam.svg"),
             ("live_Button", "vcam.svg"),
+            ("offset_up_Button", "up_arrow_1_green.svg"),
+            ("offset_down_Button", "down_arrow_1_green.svg"),
         ]:
             btn = getattr(self, attr)
             btn.setIcon(QIcon(str(ICONS / icon)))
@@ -141,6 +147,8 @@ class MainWindow(QtW.QWidget, _MainUI):
         sig.channelGroupChanged.connect(self._refresh_channel_list)
         sig.configSet.connect(self._on_config_set)
 
+        sig.propertyChanged.connect(self._change_pfs_offset_group)
+
         # connect buttons
         self.load_cfg_Button.clicked.connect(self.load_cfg)
         self.browse_cfg_Button.clicked.connect(self.browse_cfg)
@@ -150,6 +158,10 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.y_down_Button.clicked.connect(self.stage_y_down)
         self.up_Button.clicked.connect(self.stage_z_up)
         self.down_Button.clicked.connect(self.stage_z_down)
+
+        # offset
+        self.offset_up_Button.clicked.connect(self.offset_up)
+        self.offset_down_Button.clicked.connect(self.offset_down)
 
         self.snap_Button.clicked.connect(self.snap)
         self.live_Button.clicked.connect(self.toggle_live)
@@ -373,6 +385,46 @@ class MainWindow(QtW.QWidget, _MainUI):
                     self._mmc.getCurrentConfig("Channel")
                 )
 
+    def _change_pfs_offset_group(self):
+
+        if self._mmc.getAutoFocusDevice():
+
+            if self._mmc.isContinuousFocusEnabled():
+                self.offset_Z_groupBox.setEnabled(True)
+                self.Z_groupBox.setEnabled(False)
+            else:
+                self.offset_Z_groupBox.setEnabled(False)
+                self.Z_groupBox.setEnabled(True)
+
+    def offset_up(self):
+        if self._mmc.isContinuousFocusLocked():
+
+            current_offset = float(self._mmc.getProperty('TIPFSOffset', 'Position'))
+            new_offset = current_offset + float(self.offset_z_step_size_doubleSpinBox.value())
+            self._mmc.setProperty('TIPFSOffset', 'Position', new_offset)
+
+            print(
+                f"Current_offset: {self._mmc.getProperty('TIPFSOffset', 'Position')}\n"
+                ""
+            )
+
+            if self.offset_snap_on_click_z_checkBox.isChecked():
+                self.snap()
+
+    def offset_down(self):
+        if self._mmc.isContinuousFocusLocked():
+            current_offset = float(self._mmc.getProperty('TIPFSOffset', 'Position'))
+            new_offset = current_offset - float(self.offset_z_step_size_doubleSpinBox.value())
+            self._mmc.setProperty('TIPFSOffset', 'Position', new_offset)
+
+            print(
+                f"Current_offset: {self._mmc.getProperty('TIPFSOffset', 'Position')}\n"
+                ""
+            )
+
+            if self.offset_snap_on_click_z_checkBox.isChecked():
+                self.snap()
+
     def _refresh_positions(self):
         if self._mmc.getXYStageDevice():
             x, y = self._mmc.getXPosition(), self._mmc.getYPosition()
@@ -425,8 +477,14 @@ class MainWindow(QtW.QWidget, _MainUI):
         if self.snap_on_click_xy_checkBox.isChecked():
             self.snap()
 
+        if self.snap_on_click_xy_checkBox.isChecked():
+            self.snap()
+
     def stage_x_right(self):
         self._mmc.setRelativeXYPosition(float(self.xy_step_size_SpinBox.value()), 0.0)
+        if self.snap_on_click_xy_checkBox.isChecked():
+            self.snap()
+
         if self.snap_on_click_xy_checkBox.isChecked():
             self.snap()
 
@@ -438,6 +496,9 @@ class MainWindow(QtW.QWidget, _MainUI):
         if self.snap_on_click_xy_checkBox.isChecked():
             self.snap()
 
+        if self.snap_on_click_xy_checkBox.isChecked():
+            self.snap()
+
     def stage_y_down(self):
         self._mmc.setRelativeXYPosition(
             0.0,
@@ -446,10 +507,16 @@ class MainWindow(QtW.QWidget, _MainUI):
         if self.snap_on_click_xy_checkBox.isChecked():
             self.snap()
 
+        if self.snap_on_click_xy_checkBox.isChecked():
+            self.snap()
+
     def stage_z_up(self):
         self._mmc.setRelativeXYZPosition(
             0.0, 0.0, float(self.z_step_size_doubleSpinBox.value())
         )
+        if self.snap_on_click_z_checkBox.isChecked():
+            self.snap()
+
         if self.snap_on_click_z_checkBox.isChecked():
             self.snap()
 
