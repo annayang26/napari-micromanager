@@ -356,14 +356,14 @@ class MainWindow(QtW.QWidget, _MainUI):
                 objective_comboBox_index = cfg_groups_options.index(current_cfg)
 
                 cfg_groups_options_keys = (
-                        self._mmc.getConfigData(cfg, current_cfg)
-                    ).dict()
+                    self._mmc.getConfigData(cfg, current_cfg)
+                ).dict()
 
                 self.objectives_device = [
-                        k
-                        for idx, k in enumerate(cfg_groups_options_keys.keys())
-                        if idx == 0
-                    ][0]
+                    k
+                    for idx, k in enumerate(cfg_groups_options_keys.keys())
+                    if idx == 0
+                ][0]
 
                 self.objectives_cfg = cfg
 
@@ -402,7 +402,10 @@ class MainWindow(QtW.QWidget, _MainUI):
 
         if self._mmc.getAutoFocusDevice():
 
-            if self._mmc.isContinuousFocusEnabled() and self._mmc.isContinuousFocusLocked():
+            if (
+                self._mmc.isContinuousFocusEnabled()
+                and self._mmc.isContinuousFocusLocked()
+            ):
                 self.offset_Z_groupBox.setEnabled(True)
                 self.Z_groupBox.setEnabled(False)
             else:
@@ -412,9 +415,11 @@ class MainWindow(QtW.QWidget, _MainUI):
     def offset_up(self):
         if self._mmc.isContinuousFocusLocked():
 
-            current_offset = float(self._mmc.getProperty('TIPFSOffset', 'Position'))
-            new_offset = current_offset + float(self.offset_z_step_size_doubleSpinBox.value())
-            self._mmc.setProperty('TIPFSOffset', 'Position', new_offset)
+            current_offset = float(self._mmc.getProperty("TIPFSOffset", "Position"))
+            new_offset = current_offset + float(
+                self.offset_z_step_size_doubleSpinBox.value()
+            )
+            self._mmc.setProperty("TIPFSOffset", "Position", new_offset)
 
             print(
                 f"Current_offset: {self._mmc.getProperty('TIPFSOffset', 'Position')}\n"
@@ -425,9 +430,11 @@ class MainWindow(QtW.QWidget, _MainUI):
 
     def offset_down(self):
         if self._mmc.isContinuousFocusLocked():
-            current_offset = float(self._mmc.getProperty('TIPFSOffset', 'Position'))
-            new_offset = current_offset - float(self.offset_z_step_size_doubleSpinBox.value())
-            self._mmc.setProperty('TIPFSOffset', 'Position', new_offset)
+            current_offset = float(self._mmc.getProperty("TIPFSOffset", "Position"))
+            new_offset = current_offset - float(
+                self.offset_z_step_size_doubleSpinBox.value()
+            )
+            self._mmc.setProperty("TIPFSOffset", "Position", new_offset)
 
             print(
                 f"Current_offset: {self._mmc.getProperty('TIPFSOffset', 'Position')}\n"
