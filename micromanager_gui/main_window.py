@@ -229,6 +229,19 @@ class MainWindow(QtW.QWidget, _MainUI):
 
     def _on_mda_finished(self, sequence: useq.MDASequence):
         """Save layer and add increment to save name."""
+
+        if sequence.z_plan:
+            print(
+                sequence.z_plan.step,
+                self._mmc.getPixelSizeUm(),
+                sequence.z_plan.step / self._mmc.getPixelSizeUm(),
+            )
+
+            for layer in self.viewer.layers:
+                if layer.metadata["uid"] == sequence.uid:
+                    layer.scale[-3] = sequence.z_plan.step / self._mmc.getPixelSizeUm()
+                    print(layer.scale)
+
         meta = self.mda.SEQUENCE_META.pop(sequence, SequenceMeta())
         save_sequence(sequence, self.viewer.layers, meta)
         # reactivate gui when mda finishes.
