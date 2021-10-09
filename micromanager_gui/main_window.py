@@ -231,16 +231,25 @@ class MainWindow(QtW.QWidget, _MainUI):
         """Save layer and add increment to save name."""
 
         if sequence.z_plan:
-            print(
-                sequence.z_plan.step,
-                self._mmc.getPixelSizeUm(),
-                sequence.z_plan.step / self._mmc.getPixelSizeUm(),
-            )
 
             for layer in self.viewer.layers:
                 if layer.metadata["uid"] == sequence.uid:
-                    layer.scale[-3] = sequence.z_plan.step / self._mmc.getPixelSizeUm()
-                    print(layer.scale)
+
+                    zxy = [
+                        sequence.z_plan.step,
+                        self._mmc.getPixelSizeUm(),
+                        self._mmc.getPixelSizeUm(),
+                    ]
+
+                    n = [1] * (len(layer.data.shape) - 3)
+
+                    spacing = np.array(n + zxy)
+
+                    layer.scale = spacing
+
+                    print("spacing", spacing, "scale", layer.scale)
+
+                    self.viewer.reset_view()
 
         meta = self.mda.SEQUENCE_META.pop(sequence, SequenceMeta())
         save_sequence(sequence, self.viewer.layers, meta)
