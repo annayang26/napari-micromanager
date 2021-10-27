@@ -29,6 +29,8 @@ ICONS = Path(__file__).parent / "icons"
 CAM_ICON = QIcon(str(ICONS / "vcam.svg"))
 CAM_STOP_ICON = QIcon(str(ICONS / "cam_stop.svg"))
 
+OBJECTIVE = "TINosePiece"
+
 
 class _MainUI:
     UI_FILE = str(Path(__file__).parent / "_ui" / "micromanager_gui.ui")
@@ -322,12 +324,12 @@ class MainWindow(QtW.QWidget, _MainUI):
                 )
 
     def _refresh_objective_options(self):
-        if "Objective" in self._mmc.getLoadedDevices():
+        if OBJECTIVE in self._mmc.getLoadedDevices():
             with blockSignals(self.objective_comboBox):
                 self.objective_comboBox.clear()
-                self.objective_comboBox.addItems(self._mmc.getStateLabels("Objective"))
+                self.objective_comboBox.addItems(self._mmc.getStateLabels(OBJECTIVE))
                 self.objective_comboBox.setCurrentText(
-                    self._mmc.getStateLabel("Objective")
+                    self._mmc.getStateLabel(OBJECTIVE)
                 )
 
     def _refresh_channel_list(self, channel_group: str = None):
@@ -503,16 +505,14 @@ class MainWindow(QtW.QWidget, _MainUI):
         currentZ = self._mmc.getZPosition()
         self._mmc.setPosition(zdev, 0)
         self._mmc.waitForDevice(zdev)
-        self._mmc.setProperty(
-            "Objective", "Label", self.objective_comboBox.currentText()
-        )
-        self._mmc.waitForDevice("Objective")
+        self._mmc.setProperty(OBJECTIVE, "Label", self.objective_comboBox.currentText())
+        self._mmc.waitForDevice(OBJECTIVE)
         self._mmc.setPosition(zdev, currentZ)
         self._mmc.waitForDevice(zdev)
 
         # define and set pixel size Config
         self._mmc.deletePixelSizeConfig(self._mmc.getCurrentPixelSizeConfig())
-        curr_obj_name = self._mmc.getProperty("Objective", "Label")
+        curr_obj_name = self._mmc.getProperty(OBJECTIVE, "Label")
         self._mmc.definePixelSizeConfig(curr_obj_name)
         self._mmc.setPixelSizeConfig(curr_obj_name)
 
