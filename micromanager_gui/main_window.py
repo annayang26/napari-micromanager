@@ -346,14 +346,17 @@ class MainWindow(QtW.QWidget, _MainUI):
 
     def _change_pfs_offset_group(self):
 
-        if self._mmc.getAutoFocusDevice():
+       if self._mmc.getAutoFocusDevice():
 
-            if (
-                self._mmc.isContinuousFocusEnabled()
-                and self._mmc.isContinuousFocusLocked()
-            ):
-                self.offset_Z_groupBox.setEnabled(True)
-                self.Z_groupBox.setEnabled(False)
+            if self._mmc.isContinuousFocusEnabled():
+
+                if (
+                    self._mmc.isContinuousFocusLocked()
+                    or self._mmc.getProperty("TIPFSStatus", "State") == "Focusing"
+                ):
+                    self.offset_Z_groupBox.setEnabled(True)
+                    self.Z_groupBox.setEnabled(False)
+
             else:
                 self.offset_Z_groupBox.setEnabled(False)
                 self.Z_groupBox.setEnabled(True)
