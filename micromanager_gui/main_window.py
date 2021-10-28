@@ -117,7 +117,7 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.streaming_timer = None
 
         # create connection to mmcore server or process-local variant
-        self._mmc = RemoteMMCore() if remote else CMMCorePlus()
+        self._mmc = RemoteMMCore(verbose=True) if remote else CMMCorePlus()
 
         # tab widgets
         self.mda = MultiDWidget(self._mmc)
@@ -348,7 +348,7 @@ class MainWindow(QtW.QWidget, _MainUI):
 
     def _change_pfs_offset_group(self):
 
-       if self._mmc.getAutoFocusDevice():
+        if self._mmc.getAutoFocusDevice():
 
             if self._mmc.isContinuousFocusEnabled():
 
