@@ -31,6 +31,7 @@ CAM_ICON = QIcon(str(ICONS / "vcam.svg"))
 CAM_STOP_ICON = QIcon(str(ICONS / "cam_stop.svg"))
 
 OBJECTIVE = "TINosePiece"
+# OBJECTIVE = "Objective"
 
 
 class _MainUI:
@@ -142,8 +143,6 @@ class MainWindow(QtW.QWidget, _MainUI):
 
         sig.propertyChanged.connect(self._change_pfs_offset_group)
 
-        sig.propertyChanged.connect(self._on_prop_changed)  # to test prop changed
-
         # connect buttons
         self.load_cfg_Button.clicked.connect(self.load_cfg)
         self.browse_cfg_Button.clicked.connect(self.browse_cfg)
@@ -181,8 +180,9 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.viewer.layers.selection.events.active.connect(self.update_max_min)
         self.viewer.dims.events.current_step.connect(self.update_max_min)
 
-    def _on_prop_changed(self, p1, p2, p3):
-        logger.debug(f"{p1} {p2} {p3}")
+        @sig.propertyChanged.connect
+        def prop_changed(device, prop, value):
+            logger.debug(f"{device}.{prop} -> {value}")
 
     def illumination(self):
         if not hasattr(self, "_illumination"):
