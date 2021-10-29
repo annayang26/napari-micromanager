@@ -182,8 +182,7 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.viewer.dims.events.current_step.connect(self.update_max_min)
 
     def _on_prop_changed(self, p1, p2, p3):
-        logger.debug(f"{p1} {p2} {p3}")
-        # print(p1, p2, p3)
+        logger.debug(f"\n{p1} {p2} {p3}")
 
     def illumination(self):
         if not hasattr(self, "_illumination"):
