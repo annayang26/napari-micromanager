@@ -131,7 +131,7 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.objectives_cfg = None
 
         # create connection to mmcore server or process-local variant
-        self._mmc = RemoteMMCore() if remote else CMMCorePlus()
+        self._mmc = RemoteMMCore(verbose=True) if remote else CMMCorePlus()
 
         # tab widgets
         self.mda = MultiDWidget(self._mmc)
