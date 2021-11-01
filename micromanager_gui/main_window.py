@@ -203,8 +203,8 @@ class MainWindow(QtW.QWidget, _MainUI):
         @sig.pixelSizeChanged.connect
         def _on_px_size_changed(value):
             logger.debug(
-                f"\ncurrent pixel config: "
-                f"{self._mmc.getCurrentPixelSizeConfig()} \npixel size: {value}"
+                f"pixel config: {self._mmc.getCurrentPixelSizeConfig()}"
+                f" -> {value} um/px"
             )
 
         @sig.propertyChanged.connect
