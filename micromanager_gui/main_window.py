@@ -219,7 +219,6 @@ class MainWindow(QtW.QWidget, _MainUI):
         table = self.groups_and_presets.tb
         # Channels -> change comboboxes (main gui and group table)
         channel_group = self._mmc.getChannelGroup()
-        print("channel_group -> ", channel_group, "  |  group -> ", group)
         if channel_group == group:
             # main gui
             self.snap_channel_comboBox.setCurrentText(preset)
