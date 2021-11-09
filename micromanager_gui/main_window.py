@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import napari
 import numpy as np
 from loguru import logger
-from pymmcore_plus import CMMCorePlus, RemoteMMCore
+from pymmcore_plus import CMMCorePlus, DeviceType, RemoteMMCore
 from qtpy import QtWidgets as QtW
 from qtpy import uic
 from qtpy.QtCore import QSize, Qt, QTimer
@@ -39,6 +39,7 @@ CAM_ICON = QIcon(str(ICONS / "vcam.svg"))
 CAM_STOP_ICON = QIcon(str(ICONS / "cam_stop.svg"))
 
 EXP_PROP = re.compile("(.+)?(exp(osure)?)", re.IGNORECASE)
+OBJECTIVE = "TINosePiece"
 
 
 class _MainUI:
@@ -59,15 +60,27 @@ class _MainUI:
     z_lineEdit: QtW.QLineEdit
     stage_groupBox: QtW.QGroupBox
     XY_groupBox: QtW.QGroupBox
+    xy_device_comboBox: QtW.QComboBox
+
     Z_groupBox: QtW.QGroupBox
+    focus_device_comboBox: QtW.QComboBox
+    up_Button: QtW.QPushButton
+    down_Button: QtW.QPushButton
+    z_step_size_doubleSpinBox: QtW.QDoubleSpinBox
+
+    offset_Z_groupBox: QtW.QGroupBox
+    offset_device_comboBox: QtW.QComboBox
+    offset_up_Button: QtW.QPushButton
+    offset_down_Button: QtW.QPushButton
+    offset_z_step_size_doubleSpinBox: QtW.QDoubleSpinBox
+
+    offset_snap_on_click_z_checkBox: QtW.QCheckBox
+
     left_Button: QtW.QPushButton
     right_Button: QtW.QPushButton
     y_up_Button: QtW.QPushButton
     y_down_Button: QtW.QPushButton
-    up_Button: QtW.QPushButton
-    down_Button: QtW.QPushButton
     xy_step_size_SpinBox: QtW.QSpinBox
-    z_step_size_doubleSpinBox: QtW.QDoubleSpinBox
     tabWidget: QtW.QTabWidget
     snap_live_tab: QtW.QWidget
     multid_tab: QtW.QWidget
@@ -80,8 +93,7 @@ class _MainUI:
     px_size_doubleSpinBox: QtW.QDoubleSpinBox
     properties_Button: QtW.QPushButton
     illumination_Button: QtW.QPushButton
-    snap_on_click_xy_checkBox: QtW.QCheckBox
-    snap_on_click_z_checkBox: QtW.QCheckBox
+    snap_on_click_checkBox: QtW.QCheckBox
 
     def setup_ui(self):
         uic.loadUi(self.UI_FILE, self)  # load QtDesigner .ui file
@@ -97,6 +109,8 @@ class _MainUI:
             ("y_down_Button", "down_arrow_1_green.svg"),
             ("up_Button", "up_arrow_1_green.svg"),
             ("down_Button", "down_arrow_1_green.svg"),
+            ("offset_up_Button", "up_arrow_1_green.svg"),
+            ("offset_down_Button", "down_arrow_1_green.svg"),
             ("snap_Button", "cam.svg"),
             ("live_Button", "vcam.svg"),
         ]:
@@ -112,6 +126,7 @@ class MainWindow(QtW.QWidget, _MainUI):
 
         self.viewer = viewer
         self.streaming_timer = None
+        self.available_focus_devs = []
 
         self.objectives_device = None
         self.objectives_cfg = None
@@ -150,6 +165,8 @@ class MainWindow(QtW.QWidget, _MainUI):
         sig.configSet.connect(self._on_cfg_set)
         sig.propertyChanged.connect(self._on_prop_changed)
         sig.configGroupChanged.connect(self._on_cfg_changed)
+        sig.channelGroupChanged.connect(self._refresh_channel_list)
+        sig.propertyChanged.connect(self._on_offset_status_changed)
 
         # connect buttons
         self.load_cfg_Button.clicked.connect(self.load_cfg)
@@ -160,6 +177,10 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.y_down_Button.clicked.connect(self.stage_y_down)
         self.up_Button.clicked.connect(self.stage_z_up)
         self.down_Button.clicked.connect(self.stage_z_down)
+
+        # offset
+        self.offset_up_Button.clicked.connect(self.offset_up)
+        self.offset_down_Button.clicked.connect(self.offset_down)
 
         self.snap_Button.clicked.connect(self.snap)
         self.live_Button.clicked.connect(self.toggle_live)
@@ -186,6 +207,10 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.bit_comboBox.currentIndexChanged.connect(self.bit_changed)
         self.bin_comboBox.currentIndexChanged.connect(self.bin_changed)
         self.snap_channel_comboBox.currentTextChanged.connect(self._channel_changed)
+        self.focus_device_comboBox.currentTextChanged.connect(self._set_focus_device)
+        self.offset_device_comboBox.currentTextChanged.connect(
+            self._set_autofocus_device
+        )
 
         # connect spinboxes
         self.exp_spinBox.valueChanged.connect(self._update_exp)
@@ -329,9 +354,9 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.objective_groupBox.setEnabled(enabled)
         self.camera_groupBox.setEnabled(enabled)
         self.XY_groupBox.setEnabled(enabled)
+        self.snap_live_tab.setEnabled(enabled)
+        self.snap_live_tab.setEnabled(enabled)
         self.Z_groupBox.setEnabled(enabled)
-        self.snap_live_tab.setEnabled(enabled)
-        self.snap_live_tab.setEnabled(enabled)
 
     def _update_exp(self, exposure: float):
         self._mmc.setExposure(exposure)
@@ -407,15 +432,24 @@ class MainWindow(QtW.QWidget, _MainUI):
         # reactivate gui when mda finishes.
         self._set_enabled(True)
 
-    def browse_cfg(self):
-        self._mmc.unloadAllDevices()  # unload all devicies
-        print(f"Loaded Devices: {self._mmc.getLoadedDevices()}")
-
-        # clear spinbox/combobox
+    def clear_comboboxes(self):
         self.objective_comboBox.clear()
         self.bin_comboBox.clear()
         self.bit_comboBox.clear()
         self.snap_channel_comboBox.clear()
+        self.xy_device_comboBox.clear()
+        self.focus_device_comboBox.clear()
+        self.offset_device_comboBox.clear()
+        self.mda.clear_channel()
+        self.mda.clear_positions()
+        self.explorer.clear_channel()
+
+    def browse_cfg(self):
+        self._mmc.unloadAllDevices()  # unload all devicies
+        print(f"Loaded Devices: {self._mmc.getLoadedDevices()}")
+
+        # clear combobox
+        self.clear_comboboxes()
 
         self.objectives_device = None
         self.objectives_cfg = None
@@ -574,11 +608,67 @@ class MainWindow(QtW.QWidget, _MainUI):
         if self._mmc.getFocusDevice():
             self.z_lineEdit.setText(f"{self._mmc.getZPosition():.1f}")
 
+    def _refresh_focus_device(self):
+        # for Nikon PFS:
+        # getAutoFocusDevice() -> TIPFStatus
+        # to change the offset -> TIPFSOffset
+        self.focus_device_comboBox.clear()
+        self.offset_device_comboBox.clear()
+
+        xy_stage_dev = [
+            dev for dev in self._mmc.getLoadedDevicesOfType(DeviceType.XYStageDevice)
+        ]
+
+        focus_devs = []
+        for dev in self._mmc.getLoadedDevicesOfType(DeviceType.StageDevice):
+            if "TIPFS" in dev:  # for Nikon PFS for now
+                self.offset_z_stage = dev
+            else:  # to remove Nikon TIPFSOffset from the list
+                focus_devs.append(dev)
+
+        offset_devs = [
+            dev for dev in self._mmc.getLoadedDevicesOfType(DeviceType.AutoFocusDevice)
+        ]
+
+        if not xy_stage_dev:
+            self.xy_device_comboBox.setEnabled(False)
+        else:
+            self.xy_device_comboBox.addItems(xy_stage_dev)
+            self._set_xy_stage_device()
+
+        if not focus_devs:
+            self.focus_device_comboBox.setEnabled(False)
+        else:
+            self.focus_device_comboBox.addItems(focus_devs)
+            self._set_focus_device()
+
+        if not offset_devs:
+            self.offset_device_comboBox.setEnabled(False)
+        else:
+            self.offset_device_comboBox.addItems(offset_devs)
+            self._set_autofocus_device()
+
     def _refresh_options(self):
         self._refresh_camera_options()
         self._refresh_objective_options()
         self._refresh_channel_list()
         self._refresh_positions()
+        self._refresh_focus_device()
+
+    def _set_xy_stage_device(self):
+        if not self.xy_device_comboBox.count():
+            return
+        self._mmc.setXYStageDevice(self.xy_device_comboBox.currentText())
+
+    def _set_focus_device(self):
+        if not self.focus_device_comboBox.count():
+            return
+        self._mmc.setFocusDevice(self.focus_device_comboBox.currentText())
+
+    def _set_autofocus_device(self):
+        if not self.offset_device_comboBox.count():
+            return
+        self._mmc.setAutoFocusDevice(self.offset_device_comboBox.currentText())
 
         self.groups_and_presets._add_to_table()
 
@@ -609,12 +699,12 @@ class MainWindow(QtW.QWidget, _MainUI):
 
     def stage_x_left(self):
         self._mmc.setRelativeXYPosition(-float(self.xy_step_size_SpinBox.value()), 0.0)
-        if self.snap_on_click_xy_checkBox.isChecked():
+        if self.snap_on_click_checkBox.isChecked():
             self.snap()
 
     def stage_x_right(self):
         self._mmc.setRelativeXYPosition(float(self.xy_step_size_SpinBox.value()), 0.0)
-        if self.snap_on_click_xy_checkBox.isChecked():
+        if self.snap_on_click_checkBox.isChecked():
             self.snap()
 
     def stage_y_up(self):
@@ -622,7 +712,7 @@ class MainWindow(QtW.QWidget, _MainUI):
             0.0,
             float(self.xy_step_size_SpinBox.value()),
         )
-        if self.snap_on_click_xy_checkBox.isChecked():
+        if self.snap_on_click_checkBox.isChecked():
             self.snap()
 
     def stage_y_down(self):
@@ -630,22 +720,65 @@ class MainWindow(QtW.QWidget, _MainUI):
             0.0,
             -float(self.xy_step_size_SpinBox.value()),
         )
-        if self.snap_on_click_xy_checkBox.isChecked():
+        if self.snap_on_click_checkBox.isChecked():
             self.snap()
 
     def stage_z_up(self):
         self._mmc.setRelativeXYZPosition(
             0.0, 0.0, float(self.z_step_size_doubleSpinBox.value())
         )
-        if self.snap_on_click_z_checkBox.isChecked():
+        if self.snap_on_click_checkBox.isChecked():
             self.snap()
 
     def stage_z_down(self):
         self._mmc.setRelativeXYZPosition(
             0.0, 0.0, -float(self.z_step_size_doubleSpinBox.value())
         )
-        if self.snap_on_click_z_checkBox.isChecked():
+        if self.snap_on_click_checkBox.isChecked():
             self.snap()
+
+    def _on_offset_status_changed(self):
+
+        if self._mmc.getAutoFocusDevice():
+
+            print(self._mmc.getAutoFocusDevice())
+
+            if self._mmc.isContinuousFocusEnabled():
+                if (
+                    self._mmc.isContinuousFocusLocked()
+                    or self._mmc.getProperty(self._mmc.getAutoFocusDevice(), "State")
+                    == "Focusing"
+                ):
+                    self.offset_Z_groupBox.setEnabled(True)
+                    self.Z_groupBox.setEnabled(False)
+
+            else:
+                self.offset_Z_groupBox.setEnabled(False)
+                self.Z_groupBox.setEnabled(True)
+
+    def offset_up(self):
+        if self._mmc.isContinuousFocusLocked():
+            current_offset = float(
+                self._mmc.getProperty(self.offset_z_stage, "Position")
+            )
+            new_offset = current_offset + float(
+                self.offset_z_step_size_doubleSpinBox.value()
+            )
+            self._mmc.setProperty(self.offset_z_stage, "Position", new_offset)
+            if self.snap_on_click_checkBox.isChecked():
+                self.snap()
+
+    def offset_down(self):
+        if self._mmc.isContinuousFocusLocked():
+            current_offset = float(
+                self._mmc.getProperty(self.offset_z_stage, "Position")
+            )
+            new_offset = current_offset - float(
+                self.offset_z_step_size_doubleSpinBox.value()
+            )
+            self._mmc.setProperty(self.offset_z_stage, "Position", new_offset)
+            if self.snap_on_click_checkBox.isChecked():
+                self.snap()
 
     def change_objective(self):
         if self.objective_comboBox.count() <= 0:
