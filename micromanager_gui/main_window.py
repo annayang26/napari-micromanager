@@ -169,7 +169,6 @@ class MainWindow(QtW.QWidget, _MainUI):
         sig.propertyChanged.connect(self._on_prop_changed)
         sig.configGroupChanged.connect(self._on_cfg_changed)
         sig.channelGroupChanged.connect(self._refresh_channel_list)
-        sig.propertyChanged.connect(self._on_offset_status_changed)
 
         # connect buttons
         self.load_cfg_Button.clicked.connect(self.load_cfg)
@@ -270,6 +269,19 @@ class MainWindow(QtW.QWidget, _MainUI):
             self._refresh_camera_options()
             if EXP_PROP.match(prop):
                 self.exp_spinBox.setValue(float(val))
+        
+        if self._mmc.getAutoFocusDevice():
+            if self._mmc.isContinuousFocusEnabled():
+                if (
+                    self._mmc.isContinuousFocusLocked()
+                    or self._mmc.getProperty(self._mmc.getAutoFocusDevice(), "State")
+                    == "Focusing"
+                ):
+                    self.offset_Z_groupBox.setEnabled(True)
+                    self.Z_groupBox.setEnabled(False)
+            else:
+                self.offset_Z_groupBox.setEnabled(False)
+                self.Z_groupBox.setEnabled(True)
 
     def _on_cfg_changed(self, group: str, preset: str):
         logger.debug(f"CONFIG GROUP CHANGED: {group} -> {preset}")
@@ -744,26 +756,7 @@ class MainWindow(QtW.QWidget, _MainUI):
         )
         if self.snap_on_click_checkBox.isChecked():
             self.snap()
-
-    def _on_offset_status_changed(self):
-
-        if self._mmc.getAutoFocusDevice():
-
-            print(self._mmc.getAutoFocusDevice())
-
-            if self._mmc.isContinuousFocusEnabled():
-                if (
-                    self._mmc.isContinuousFocusLocked()
-                    or self._mmc.getProperty(self._mmc.getAutoFocusDevice(), "State")
-                    == "Focusing"
-                ):
-                    self.offset_Z_groupBox.setEnabled(True)
-                    self.Z_groupBox.setEnabled(False)
-
-            else:
-                self.offset_Z_groupBox.setEnabled(False)
-                self.Z_groupBox.setEnabled(True)
-
+    
     def offset_up(self):
         if self._mmc.isContinuousFocusLocked():
             current_offset = float(
