@@ -14,6 +14,7 @@ from qtpy.QtCore import QSize, Qt, QTimer
 from qtpy.QtGui import QColor, QIcon
 
 from ._group_and_presets_tab import GroupPresetWidget
+from ._camera_roi import CameraROI
 from ._illumination import IlluminationDialog
 from ._properties_table_with_checkbox import GroupConfigurations
 from ._saving import save_sequence
@@ -92,6 +93,8 @@ class _MainUI:
     max_min_val_label: QtW.QLabel
     px_size_doubleSpinBox: QtW.QDoubleSpinBox
     properties_Button: QtW.QPushButton
+    cam_roi_comboBox: QtW.QComboBox
+    crop_Button: QtW.QPushButton
     illumination_Button: QtW.QPushButton
     snap_on_click_checkBox: QtW.QCheckBox
 
@@ -210,6 +213,10 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.focus_device_comboBox.currentTextChanged.connect(self._set_focus_device)
         self.offset_device_comboBox.currentTextChanged.connect(
             self._set_autofocus_device
+        )
+
+        self.cam_roi = CameraROI(
+            self.viewer, self._mmc, self.cam_roi_comboBox, self.crop_Button
         )
 
         # connect spinboxes
@@ -357,6 +364,7 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.snap_live_tab.setEnabled(enabled)
         self.snap_live_tab.setEnabled(enabled)
         self.Z_groupBox.setEnabled(enabled)
+        self.crop_Button.setEnabled(enabled)
 
     def _update_exp(self, exposure: float):
         self._mmc.setExposure(exposure)
