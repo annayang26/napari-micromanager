@@ -135,7 +135,7 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.objectives_cfg = None
 
         # create connection to mmcore server or process-local variant
-        self._mmc = RemoteMMCore() if remote else CMMCorePlus()
+        self._mmc = RemoteMMCore(verbose=False) if remote else CMMCorePlus()
 
         # tab widgets
         # create groups and presets tab
@@ -165,10 +165,12 @@ class MainWindow(QtW.QWidget, _MainUI):
         sig.exposureChanged.connect(self._on_exp_change)
         sig.frameReady.connect(self._on_mda_frame)
 
-        sig.configSet.connect(self._on_cfg_set)
         sig.propertyChanged.connect(self._on_prop_changed)
-        sig.configGroupChanged.connect(self._on_cfg_changed)
         sig.channelGroupChanged.connect(self._refresh_channel_list)
+        # sig.configSet.connect(self._on_cfg_set)
+        sig.configSet.connect(self._on_update_widget)
+        # sig.configGroupChanged.connect(self._on_cfg_changed)
+        sig.configGroupChanged.connect(self._on_update_table_status)
 
         # connect buttons
         self.load_cfg_Button.clicked.connect(self.load_cfg)
@@ -229,62 +231,18 @@ class MainWindow(QtW.QWidget, _MainUI):
         self.viewer.layers.selection.events.active.connect(self.update_max_min)
         self.viewer.dims.events.current_step.connect(self.update_max_min)
 
-        @sig.pixelSizeChanged.connect
-        def _on_px_size_changed(value):
-            logger.debug(
-                f"current pixel config: "
-                f"{self._mmc.getCurrentPixelSizeConfig()} -> pixel size: {value}"
-            )
+        # @sig.pixelSizeChanged.connect
+        # def _on_px_size_changed(value):
+        #     logger.debug(
+        #         f"current pixel config: "
+        #         f"{self._mmc.getCurrentPixelSizeConfig()} -> pixel size: {value}"
+        #     )
 
-    def _match_and_set(self, group: str, table: Table, preset: str):
-        try:
-            matching_ch_group = table.native.findItems(group, Qt.MatchContains)
-            table_row = matching_ch_group[0].row()
-            wdg = table.data[table_row, 1]
-            wdg.value = preset or self._mmc.getCurrentConfig(group)
-        except IndexError:
-            pass
-
-    def _on_cfg_set(self, group: str, preset: str):
-        logger.debug(f"CONFIG SET: {group} -> {preset}")
-        table = self.groups_and_presets.tb
-        # Channels -> change comboboxes (main gui and group table)
-        channel_group = self._mmc.getChannelGroup()
-        if channel_group == group:
-            # main gui
-            self.snap_channel_comboBox.setCurrentText(preset)
-            # group/preset table
-            self._match_and_set(group, table, preset)
-        # Objective -> change comboboxes (main gui and group table)
-        if self.objectives_cfg and group == self.objectives_cfg:
-            # main gui
-            self.objective_comboBox.setCurrentText(preset)
-            # group/preset table
-            self._match_and_set(group, table, preset)
-
-    def _on_prop_changed(self, dev, prop, val):
-        logger.debug(f"PROP CHANGED: {dev}.{prop} -> {val}")
-        # Camera/Exposure time -> change gui widgets
-        if dev == self._mmc.getCameraDevice():
-            self._refresh_camera_options()
-            if EXP_PROP.match(prop):
-                self.exp_spinBox.setValue(float(val))
-        
-        if self._mmc.getAutoFocusDevice():
-            if self._mmc.isContinuousFocusEnabled():
-                if (
-                    self._mmc.isContinuousFocusLocked()
-                    or self._mmc.getProperty(self._mmc.getAutoFocusDevice(), "State")
-                    == "Focusing"
-                ):
-                    self.offset_Z_groupBox.setEnabled(True)
-                    self.Z_groupBox.setEnabled(False)
-            else:
-                self.offset_Z_groupBox.setEnabled(False)
-                self.Z_groupBox.setEnabled(True)
-
-    def _on_cfg_changed(self, group: str, preset: str):
-        logger.debug(f"CONFIG GROUP CHANGED: {group} -> {preset}")
+    # def _on_cfg_changed(self, group: str, preset: str):
+    def _on_update_table_status(self, group: str, preset: str):
+        # logger.debug(f"CONFIG GROUP CHANGED: {group} -> {preset}")
+        if f"{group} {preset}" != "update table status":
+            return
         # populate objective combobox when creating/modifying objective group
         if self.objectives_cfg:
             obj_gp_list = [
@@ -312,6 +270,59 @@ class MainWindow(QtW.QWidget, _MainUI):
             cbox_list.sort()
             if channel_list != cbox_list:
                 self._refresh_channel_list()
+
+    def _match_and_set(self, group: str, table: Table, preset: str):
+        try:
+            matching_ch_group = table.native.findItems(group, Qt.MatchContains)
+            table_row = matching_ch_group[0].row()
+            wdg = table.data[table_row, 1]
+            wdg.value = preset or self._mmc.getCurrentConfig(group)
+        except IndexError:
+            pass
+
+    def _on_update_widget(self, group_preset: str, update_str: str):
+        # logger.debug(f"CONFIG SET: {group_preset} -> {update_str}")
+        if update_str != f"update widgets":
+            return
+        preset = group_preset.split('*_*')[-1]
+        group = group_preset.split('*_*')[0]
+        table = self.groups_and_presets.tb
+        # Channels -> change comboboxes (main gui and group table)
+        channel_group = self._mmc.getChannelGroup()
+        if channel_group == group:
+            # main gui
+            # self._mmc.getCurrentConfig(channel_group) does not work for some reason...
+            self.snap_channel_comboBox.setCurrentText(preset)
+            # group/preset table
+            self._match_and_set(group, table, preset)
+        # Objective -> change comboboxes (main gui and group table)
+        if self.objectives_cfg == group:
+            # main gui
+            current_obj = self._mmc.getCurrentConfig(self.objectives_cfg)
+            self.objective_comboBox.setCurrentText(current_obj)
+            # group/preset table
+            self._match_and_set(group, table, current_obj)
+
+    def _on_prop_changed(self, dev, prop, val):
+        # logger.debug(f"PROP CHANGED: {dev}.{prop} -> {val}")
+        # Camera/Exposure time -> change gui widgets
+        if dev == self._mmc.getCameraDevice():
+            self._refresh_camera_options()
+            if EXP_PROP.match(prop):
+                self.exp_spinBox.setValue(float(val))
+        
+        if self._mmc.getAutoFocusDevice():
+            if self._mmc.isContinuousFocusEnabled():
+                if (
+                    self._mmc.isContinuousFocusLocked()
+                    or self._mmc.getProperty(self._mmc.getAutoFocusDevice(), "State")
+                    == "Focusing"
+                ):
+                    self.offset_Z_groupBox.setEnabled(True)
+                    self.Z_groupBox.setEnabled(False)
+            else:
+                self.offset_Z_groupBox.setEnabled(False)
+                self.Z_groupBox.setEnabled(True)
 
     def illumination(self):
         if not hasattr(self, "_illumination"):
@@ -706,6 +717,10 @@ class MainWindow(QtW.QWidget, _MainUI):
     def _channel_changed(self, newChannel: str):
         try:
             self._mmc.setConfig(self._mmc.getChannelGroup(), newChannel)
+
+            self._mmc.events.configSet.emit(
+                f"{self._mmc.getChannelGroup()}*_*{newChannel}", "update widgets"
+            )
         except ValueError:
             pass
 
@@ -788,11 +803,11 @@ class MainWindow(QtW.QWidget, _MainUI):
         if self.objectives_device == "":
             return
 
-        zdev = self._mmc.getFocusDevice()
+        # zdev = self._mmc.getFocusDevice()
 
-        currentZ = self._mmc.getZPosition()
-        self._mmc.setPosition(zdev, 0)
-        self._mmc.waitForDevice(zdev)
+        # currentZ = self._mmc.getZPosition()
+        # self._mmc.setPosition(zdev, 0)
+        # self._mmc.waitForDevice(zdev)
 
         try:
             self._mmc.setConfig(
@@ -803,11 +818,17 @@ class MainWindow(QtW.QWidget, _MainUI):
                 self.objectives_device, "Label", self.objective_comboBox.currentText()
             )
 
-        self._mmc.waitForDevice(self.objectives_device)
-        self._mmc.setPosition(zdev, currentZ)
-        self._mmc.waitForDevice(zdev)
+        # self._mmc.waitForDevice(self.objectives_device)
+        # self._mmc.setPosition(zdev, currentZ)
+        # self._mmc.waitForDevice(zdev)
 
         self.set_pixel_size()
+
+        if self.objectives_cfg:
+            curr_obj = self.objective_comboBox.currentText()
+            self._mmc.events.configSet.emit(
+                f"{self.objectives_cfg}*_*{curr_obj}", "update widgets"
+            )
 
     def update_viewer(self, data=None):
         # TODO: - fix the fact that when you change the objective
