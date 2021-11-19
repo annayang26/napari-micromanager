@@ -180,6 +180,9 @@ class MainWindow(QtW.QWidget, _MainUI):
     def _on_mda_frame(self, image: np.ndarray, event: useq.MDAEvent):
         meta = self.mda.SEQUENCE_META.get(event.sequence) or SequenceMeta()
 
+        print("EVENT:")
+        print(event)
+
         if meta.mode != "mda":
             return
 
@@ -208,8 +211,15 @@ class MainWindow(QtW.QWidget, _MainUI):
             new_array[im_idx] = image
             # set layer data
             layer.data = new_array
+
             for a, v in enumerate(im_idx):
+                print("a, v -> ", a, v)
                 self.viewer.dims.set_point(a, v)
+
+            print("shape -> ", layer.data.shape)
+            # print('scale -> ', layer.scale)
+            print("labels -> ", self.viewer.dims.axis_labels)
+            print()
 
         except KeyError:  # add the new layer to the viewer
             seq = event.sequence
@@ -218,7 +228,10 @@ class MainWindow(QtW.QWidget, _MainUI):
 
             # dimensions labels
             labels = [i for i in seq.axis_order if i in event.index] + ["y", "x"]
-            self.viewer.dims.axis_labels = labels
+            try:
+                self.viewer.dims.axis_labels = labels
+            except IndexError:
+                pass
 
             # add metadata to layer
             layer.metadata["useq_sequence"] = seq
@@ -227,29 +240,44 @@ class MainWindow(QtW.QWidget, _MainUI):
             # possible to have two of the same channel in one sequence.
             layer.metadata["ch_id"] = f'{event.channel.config}_idx{event.index["c"]}'
 
+            print("shape -> ", layer.data.shape)
+            print("scale -> ", layer.scale)
+            print("labels -> ", labels)
+            print()
+
+        # if event.sequence.z_plan:
+        #     z = event.sequence.z_plan.step
+        #     px = self._mmc.getPixelSizeUm()
+        #     lb = self.viewer.dims.axis_labels
+        #     z_idx = lb.index('z')
+        #     z_scale = z / px
+
+        #     scale_list = [1] * len(layer.data.shape)
+        #     scale_list[z_idx] = z_scale
+        #     layer.scale = scale_list
+        #     print('px size -> ', px)
+        #     print('scale -> ', layer.scale)
+
     def _on_mda_finished(self, sequence: useq.MDASequence):
         """Save layer and add increment to save name."""
 
         if sequence.z_plan:
 
             for layer in self.viewer.layers:
+
                 if layer.metadata["uid"] == sequence.uid:
 
-                    zxy = [
-                        sequence.z_plan.step,
-                        self._mmc.getPixelSizeUm(),
-                        self._mmc.getPixelSizeUm(),
-                    ]
+                    z = sequence.z_plan.step
+                    px = self._mmc.getPixelSizeUm()
+                    lb = self.viewer.dims.axis_labels
+                    z_idx = lb.index("z")
+                    z_scale = z / px
 
-                    n = [1] * (len(layer.data.shape) - 3)
-
-                    spacing = np.array(n + zxy)
-
-                    layer.scale = spacing
-
-                    print("spacing", spacing, "scale", layer.scale)
-
-                    self.viewer.reset_view()
+                    scale_list = [1] * len(layer.data.shape)
+                    scale_list[z_idx] = z_scale
+                    layer.scale = scale_list
+                    print("px size -> ", px)
+                    print("scale -> ", layer.scale)
 
         meta = self.mda.SEQUENCE_META.pop(sequence, SequenceMeta())
         save_sequence(sequence, self.viewer.layers, meta)
