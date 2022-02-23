@@ -72,7 +72,7 @@ class IlluminationDialog(QDialog):
                     label=f"{prop.device} {prop.name}",
                 )
 
-                push_button = PushButton("TEST")
+                push_button = PushButton(text="TEST")
         else:
             wdg = LineEdit(value=prop.value)
 
