@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 from qtpy import QtWidgets as QtW
@@ -21,6 +23,9 @@ class MMConfigurationWidget(QtW.QWidget):
         self._mmc = mmc
 
         self.setup_gui()
+
+        self.browse_cfg_Button.clicked.connect(self.browse_cfg)
+        self.load_cfg_Button.clicked.connect(self.load_cfg)
 
     def setup_gui(self):
 
