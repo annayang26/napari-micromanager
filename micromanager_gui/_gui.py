@@ -24,6 +24,9 @@ class MicroManagerWidget(QtW.QWidget):
         super().__init__()
         self._mmc = mmc
 
+        print("mmc_gui:", self._mmc)
+        print("XY_stage_gui", self._mmc.getXYStageDevice())
+
         # sub_widgets
         self.mm_configuration = MMConfigurationWidget()
         self.mm_objectives = MMObjectivesWidget()

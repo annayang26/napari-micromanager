@@ -123,7 +123,8 @@ class MainWindow(MicroManagerWidget):
         self.tab.exp_spinBox.setKeyboardTracking(False)
 
         # refresh options in case a config is already loaded by another remote
-        self._refresh_options()
+        if remote:
+            self._refresh_options()
 
         self.viewer.layers.events.connect(self.update_max_min)
         self.viewer.layers.selection.events.active.connect(self.update_max_min)
@@ -131,8 +132,8 @@ class MainWindow(MicroManagerWidget):
 
     def _on_system_cfg_loaded(self):
         if len(self._mmc.getLoadedDevices()) > 1:
-            print("stage_1", self._mmc.getXYStageDevice())
-            print("mmc_1:", self._mmc)
+            print("mmc_main_window:", self._mmc)
+            print("XY_stage_main_window", self._mmc.getXYStageDevice())
             self._set_enabled(True)
             self._refresh_options()
 
