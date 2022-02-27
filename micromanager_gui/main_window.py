@@ -144,15 +144,12 @@ class MainWindow(MicroManagerWidget):
 
     def _on_system_cfg_loaded(self):
         if len(self._mmc.getLoadedDevices()) > 1:
-            print("stageeeeeeeee_1", self._mmc.getXYStageDevice())
+            print("stage_1", self._mmc.getXYStageDevice())
             print("mmc_1:", self._mmc)
             self._set_enabled(True)
             self._refresh_options()
 
     def _set_enabled(self, enabled):
-
-        print("stageeeeeeeee_2", self._mmc.getXYStageDevice())
-        print("mmc_2:", self._mmc)
 
         if self._mmc.getCameraDevice():
             self._camera_group_wdg(enabled)
@@ -220,8 +217,6 @@ class MainWindow(MicroManagerWidget):
         self._mmc.loadSystemConfiguration(cfg)
 
     def _refresh_options(self):
-        print("stageeeeeeeee_3", self._mmc.getXYStageDevice())
-        print("mmc_3:", self._mmc)
         self._refresh_objective_options()
         self._refresh_channel_list()
         self.stages._refresh_positions()
