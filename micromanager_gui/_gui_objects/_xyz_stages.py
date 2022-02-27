@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from pymmcore_plus import DeviceType
 from qtpy import QtWidgets as QtW
+from qtpy import uic
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QIcon
 
@@ -53,6 +54,8 @@ class MMStagesWidget(QtW.QWidget):
         super().__init__()
 
         self._mmc = mmc
+
+        uic.loadUi(self.MM_XYZ_STAGE, self)
 
         print("mmc_0:", self._mmc)
 
