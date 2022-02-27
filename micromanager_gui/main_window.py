@@ -46,10 +46,15 @@ class MainWindow(MicroManagerWidget):
         mmc: CMMCorePlus | RemoteMMCore = None,
     ):
 
-        self.viewer = viewer
-        self._mmc = RemoteMMCore() if remote else CMMCorePlus()
+        # create connection to mmcore server or process-local variant
+        if mmc is not None:
+            self._mmc = mmc
+        else:
+            self._mmc = RemoteMMCore() if remote else CMMCorePlus.instance()
 
         super().__init__(self._mmc)
+
+        self.viewer = viewer
 
         self.cfg = self.mm_configuration
         self.obj = self.mm_objectives
