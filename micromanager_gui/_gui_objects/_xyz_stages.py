@@ -1,14 +1,18 @@
-from pathlib import Path
+from __future__ import annotations
 
-from pymmcore_plus import CMMCorePlus, DeviceType
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from pymmcore_plus import DeviceType
 from qtpy import QtWidgets as QtW
-from qtpy import uic
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QIcon
 
 # to add when merging "move_tab_methods_in_tab_widget"
 # from _tab_widget import MMTabWidget
 
+if TYPE_CHECKING:
+    from pymmcore_plus import CMMCorePlus, RemoteMMCore
 
 ICONS = Path(__file__).parent.parent / "icons"
 
@@ -45,7 +49,7 @@ class MMStagesWidget(QtW.QWidget):
 
     snap_on_click_checkBox: QtW.QCheckBox
 
-    def __init__(self, mmc: CMMCorePlus = None):
+    def __init__(self, mmc: CMMCorePlus | RemoteMMCore = None):
         super().__init__()
 
         self._mmc = mmc
@@ -60,8 +64,6 @@ class MMStagesWidget(QtW.QWidget):
         sig = self._mmc.events
         sig.XYStagePositionChanged.connect(self._on_xy_stage_position_changed)
         sig.stagePositionChanged.connect(self._on_stage_position_changed)
-
-        uic.loadUi(self.MM_XYZ_STAGE, self)
 
         self.left_Button.clicked.connect(self.stage_x_left)
         self.right_Button.clicked.connect(self.stage_x_right)

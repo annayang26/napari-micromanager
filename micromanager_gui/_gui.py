@@ -16,11 +16,11 @@ from ._gui_objects._tab_widget import MMTabWidget
 from ._gui_objects._xyz_stages import MMStagesWidget
 
 if TYPE_CHECKING:
-    from pymmcore_plus import CMMCorePlus
+    from pymmcore_plus import CMMCorePlus, RemoteMMCore
 
 
 class MicroManagerWidget(QtW.QWidget):
-    def __init__(self, mmc: CMMCorePlus = None):
+    def __init__(self, mmc: CMMCorePlus | RemoteMMCore = None):
         super().__init__()
         self._mmc = mmc
 
