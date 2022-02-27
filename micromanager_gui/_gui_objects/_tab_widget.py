@@ -1,9 +1,20 @@
-from pathlib import Path
+from __future__ import annotations
 
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+import napari
 from qtpy import QtCore
 from qtpy import QtWidgets as QtW
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QIcon
+
+from .._util import blockSignals
+
+if TYPE_CHECKING:
+    import napari.viewer
+    from pymmcore_plus import CMMCorePlus, RemoteMMCore
+
 
 ICONS = Path(__file__).parent.parent / "icons"
 
@@ -23,9 +34,18 @@ class MMTabWidget(QtW.QWidget):
     max_min_val_label: QtW.QLabel
     """
 
-    def __init__(self):
+    def __init__(
+        self, viewer: napari.viewer.Viewer, mmc: CMMCorePlus | RemoteMMCore = None
+    ):
         super().__init__()
         self.setup_gui()
+
+        self.viewer = viewer
+        self._mmc = mmc
+
+        sig = self._mmc.events
+
+        sig.systemConfigurationLoaded.connect(self._on_system_cfg_loaded)
 
         for attr, icon in [
             ("snap_Button", "cam.svg"),
@@ -121,6 +141,11 @@ class MMTabWidget(QtW.QWidget):
 
         self.main_layout.addWidget(self.tabWidget)
         self.setLayout(self.main_layout)
+
+    def _on_system_cfg_loaded(self):
+        with blockSignals(self.snap_channel_comboBox):
+            self.snap_channel_comboBox.clear()
+            self.max_min_val_label.setText("None")
 
 
 if __name__ == "__main__":

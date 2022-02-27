@@ -1,4 +1,11 @@
+from typing import TYPE_CHECKING
+
 from qtpy import QtWidgets as QtW
+
+from .._util import blockSignals
+
+if TYPE_CHECKING:
+    from pymmcore_plus import CMMCorePlus, RemoteMMCore
 
 
 class MMObjectivesWidget(QtW.QWidget):
@@ -8,9 +15,17 @@ class MMObjectivesWidget(QtW.QWidget):
     objective_comboBox: QtW.QComboBox
     """
 
-    def __init__(self):
+    def __init__(self, mmc: CMMCorePlus | RemoteMMCore = None):
         super().__init__()
         self.setup_gui()
+
+        self._mmc = mmc
+        self.objectives_device = None
+        self.objectives_cfg = None
+
+        sig = self._mmc.events
+
+        sig.systemConfigurationLoaded.connect(self._on_system_cfg_loaded)
 
     def setup_gui(self):
 
@@ -30,6 +45,12 @@ class MMObjectivesWidget(QtW.QWidget):
         self.main_layout.addWidget(self.objective_comboBox, 0, 1)
 
         self.setLayout(self.main_layout)
+
+    def _on_system_cfg_loaded(self):
+        with blockSignals(self.objective_comboBox):
+            self.objective_comboBox.clear()
+            self.objectives_device = None
+            self.objectives_cfg = None
 
 
 if __name__ == "__main__":

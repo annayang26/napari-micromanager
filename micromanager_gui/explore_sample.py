@@ -86,6 +86,7 @@ class ExploreSample(QtW.QWidget):
         mmcore.events.frameReady.connect(self._on_explorer_frame)
         mmcore.events.sequenceFinished.connect(self._on_mda_finished)
         mmcore.events.sequenceFinished.connect(self._refresh_positions)
+        mmcore.events.systemConfigurationLoaded.connect(self._on_system_cfg_loaded)
 
         @self.viewer.mouse_drag_callbacks.append
         def get_event(viewer, event):
@@ -107,6 +108,9 @@ class ExploreSample(QtW.QWidget):
 
             self.x_lineEdit.setText(x)
             self.y_lineEdit.setText(y)
+
+    def _on_system_cfg_loaded(self):
+        self.clear_channel()
 
     def _on_mda_started(self, sequence: useq.MDASequence):
         """Block gui when mda starts."""

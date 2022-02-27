@@ -1,4 +1,9 @@
+from typing import TYPE_CHECKING
+
 from qtpy import QtWidgets as QtW
+
+if TYPE_CHECKING:
+    from pymmcore_plus import CMMCorePlus, RemoteMMCore
 
 
 class MMConfigurationWidget(QtW.QWidget):
@@ -10,8 +15,11 @@ class MMConfigurationWidget(QtW.QWidget):
     load_cfg_Button: QtW.QPushButton
     """
 
-    def __init__(self):
+    def __init__(self, mmc: CMMCorePlus | RemoteMMCore = None):
         super().__init__()
+
+        self._mmc = mmc
+
         self.setup_gui()
 
     def setup_gui(self):
@@ -43,6 +51,22 @@ class MMConfigurationWidget(QtW.QWidget):
         self.cfg_groupBox.setLayout(self.cfg_groupBox_layout)
 
         self.setLayout(self.main_layout)
+
+    def browse_cfg(self):
+        (filename, _) = QtW.QFileDialog.getOpenFileName(self, "", "", "cfg(*.cfg)")
+        if filename:
+            self.cfg_LineEdit.setText(filename)
+            self.load_cfg_Button.setEnabled(True)
+
+    def load_cfg(self):
+
+        self._mmc.unloadAllDevices()  # unload all devicies
+
+        self.load_cfg_Button.setEnabled(False)
+        cfg = self.cfg_LineEdit.text()
+        if cfg == "":
+            cfg = "MMConfig_demo.cfg"
+        self._mmc.loadSystemConfiguration(cfg)
 
 
 if __name__ == "__main__":

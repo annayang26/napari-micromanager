@@ -8,7 +8,6 @@ import napari
 import numpy as np
 from pymmcore_plus import CMMCorePlus, DeviceType, RemoteMMCore
 from pymmcore_plus._util import find_micromanager
-from qtpy import QtWidgets as QtW
 from qtpy.QtCore import Qt, QTimer
 from qtpy.QtGui import QColor, QIcon
 from superqt.utils import create_worker
@@ -45,7 +44,6 @@ class MainWindow(MicroManagerWidget):
         remote=False,
         mmc: CMMCorePlus | RemoteMMCore = None,
     ):
-        super().__init__()
 
         # create connection to mmcore server or process-local variant
         if mmc is not None:
@@ -54,6 +52,8 @@ class MainWindow(MicroManagerWidget):
             self._mmc = RemoteMMCore() if remote else CMMCorePlus.instance()
 
         self.viewer = viewer
+
+        super().__init__(self.viewer, self._mmc)
 
         self.cfg = self.mm_configuration
         self.obj = self.mm_objectives
@@ -100,8 +100,6 @@ class MainWindow(MicroManagerWidget):
         sig.frameReady.connect(self._on_mda_frame)
 
         # connect buttons
-        self.cfg.load_cfg_Button.clicked.connect(self.load_cfg)
-        self.cfg.browse_cfg_Button.clicked.connect(self.browse_cfg)
         self.stages.left_Button.clicked.connect(self.stage_x_left)
         self.stages.right_Button.clicked.connect(self.stage_x_right)
         self.stages.y_up_Button.clicked.connect(self.stage_y_up)
@@ -185,40 +183,6 @@ class MainWindow(MicroManagerWidget):
         self.cam.px_size_doubleSpinBox.setEnabled(enabled)
         self.cam.cam_roi_comboBox.setEnabled(enabled)
         self.cam.crop_Button.setEnabled(enabled)
-
-    def browse_cfg(self):
-        (filename, _) = QtW.QFileDialog.getOpenFileName(self, "", "", "cfg(*.cfg)")
-        if filename:
-            self.cfg.cfg_LineEdit.setText(filename)
-            self.tab.max_min_val_label.setText("None")
-            self.cfg.load_cfg_Button.setEnabled(True)
-
-    def load_cfg(self):
-
-        # clear spinbox/combobox without accidently setting properties
-        boxes = [
-            self.obj.objective_comboBox,
-            self.tab.snap_channel_comboBox,
-        ]
-        with blockSignals(boxes):
-            for box in boxes:
-                box.clear()
-
-        self.mda.clear_channel()
-        self.mda.clear_positions()
-        self.explorer.clear_channel()
-
-        self.objectives_device = None
-        self.objectives_cfg = None
-
-        self._mmc.unloadAllDevices()  # unload all devicies
-        # disable gui
-        self._set_enabled(False)
-        self.cfg.load_cfg_Button.setEnabled(False)
-        cfg = self.cfg.cfg_LineEdit.text()
-        if cfg == "":
-            cfg = "MMConfig_demo.cfg"
-        self._mmc.loadSystemConfiguration(cfg)
 
     def _refresh_options(self):
         self._refresh_objective_options()

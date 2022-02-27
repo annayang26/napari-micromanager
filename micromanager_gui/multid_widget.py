@@ -142,6 +142,11 @@ class MultiDWidget(QtW.QWidget, _MultiDUI):
         mmcore.events.sequenceStarted.connect(self._on_mda_started)
         mmcore.events.sequenceFinished.connect(self._on_mda_finished)
         mmcore.events.sequencePauseToggled.connect(self._on_mda_paused)
+        mmcore.events.systemConfigurationLoaded.connect(self._on_system_cfg_loaded)
+
+    def _on_system_cfg_loaded(self):
+        self.clear_channel()
+        self.clear_positions()
 
     def _set_enabled(self, enabled: bool):
         self.save_groupBox.setEnabled(enabled)
