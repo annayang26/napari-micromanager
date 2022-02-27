@@ -163,9 +163,17 @@ class MainWindow(MicroManagerWidget):
             self.tab.snap_live_tab.setEnabled(False)
             self.tab.snap_live_tab.setEnabled(False)
 
+        if self._mmc.getXYStageDevice():
+            self.stages.XY_groupBox.setEnabled(enabled)
+        else:
+            self.stages.XY_groupBox.setEnabled(False)
+
+        if self._mmc.getFocusDevice():
+            self.stages.Z_groupBox.setEnabled(enabled)
+        else:
+            self.stages.Z_groupBox.setEnabled(False)
+
         self.stages_coll.setEnabled(True)
-        self.stages.XY_groupBox.setEnabled(enabled)
-        self.stages.Z_groupBox.setEnabled(enabled)
         self.cam_group.setEnabled(True)
         self.pb.properties_Button.setEnabled(enabled)
         self.obj.objective_comboBox.setEnabled(enabled)
