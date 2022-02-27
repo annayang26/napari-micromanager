@@ -100,8 +100,8 @@ class MMStagesWidget(QtW.QWidget):
 
     def _refresh_xyz_devices(self):
 
-        print("stageeeeeeeee_4", self._mmc.getXYStageDevice())
-        print("mmc_4:", self._mmc)
+        print("stage_2", self._mmc.getXYStageDevice())
+        print("mmc_2:", self._mmc)
 
         # since there is no offset control yet:
         self.offset_Z_groupBox.setEnabled(False)
