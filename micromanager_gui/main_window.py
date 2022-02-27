@@ -82,7 +82,6 @@ class MainWindow(MicroManagerWidget):
         self.tab.tabWidget.addTab(self.explorer, "Sample Explorer")
 
         self.streaming_timer = None
-        # self.available_focus_devs = []
         self.objectives_device = None
         self.objectives_cfg = None
 
@@ -97,30 +96,18 @@ class MainWindow(MicroManagerWidget):
         sig.sequenceStarted.connect(self._on_mda_started)
         sig.sequenceFinished.connect(self._on_mda_finished)
         sig.systemConfigurationLoaded.connect(self._on_system_cfg_loaded)
-        # sig.XYStagePositionChanged.connect(self._on_xy_stage_position_changed)
-        # sig.stagePositionChanged.connect(self._on_stage_position_changed)
         sig.exposureChanged.connect(self._on_exp_change)
         sig.frameReady.connect(self._on_mda_frame)
 
         # connect buttons
         self.cfg.load_cfg_Button.clicked.connect(self.load_cfg)
         self.cfg.browse_cfg_Button.clicked.connect(self.browse_cfg)
-        # self.stages.left_Button.clicked.connect(self.stage_x_left)
-        # self.stages.right_Button.clicked.connect(self.stage_x_right)
-        # self.stages.y_up_Button.clicked.connect(self.stage_y_up)
-        # self.stages.y_down_Button.clicked.connect(self.stage_y_down)
-        # self.stages.up_Button.clicked.connect(self.stage_z_up)
-        # self.stages.down_Button.clicked.connect(self.stage_z_down)
 
         self.tab.snap_Button.clicked.connect(self.snap)
         self.tab.live_Button.clicked.connect(self.toggle_live)
 
         self.ill.illumination_Button.clicked.connect(self.illumination)
         self.pb.properties_Button.clicked.connect(self._show_prop_browser)
-
-        # self.stages.focus_device_comboBox.currentTextChanged.connect(
-        #     self._set_focus_device
-        # )
 
         # connect comboBox
         self.obj.objective_comboBox.currentIndexChanged.connect(self.change_objective)
