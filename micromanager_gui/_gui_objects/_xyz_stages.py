@@ -9,8 +9,7 @@ from qtpy import uic
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QIcon
 
-# to add when merging "move_tab_methods_in_tab_widget"
-# from _tab_widget import MMTabWidget
+from ._tab_widget import MMTabWidget
 
 if TYPE_CHECKING:
     from pymmcore_plus import CMMCorePlus, RemoteMMCore
@@ -57,12 +56,9 @@ class MMStagesWidget(QtW.QWidget):
 
         uic.loadUi(self.MM_XYZ_STAGE, self)
 
-        print("mmc_0:", self._mmc)
-
         self.available_focus_devs = []
 
-        # to add when merging "move_tab_methods_in_tab_widget"
-        # self.snap = MMTabWidget.snap()
+        self.tab = MMTabWidget()
 
         sig = self._mmc.events
         sig.XYStagePositionChanged.connect(self._on_xy_stage_position_changed)
@@ -105,9 +101,6 @@ class MMStagesWidget(QtW.QWidget):
 
     def _refresh_xyz_devices(self):
 
-        print("stage_2", self._mmc.getXYStageDevice())
-        print("mmc_2:", self._mmc)
-
         # since there is no offset control yet:
         self.offset_Z_groupBox.setEnabled(False)
 
@@ -146,39 +139,39 @@ class MMStagesWidget(QtW.QWidget):
         if "z" in name.lower():  # hack
             self.z_lineEdit.setText(f"{value:.1f}")
 
-    # def _snap(self):
-    #     if self.snap_on_click_checkBox.isChecked():
-    #         self.snap()
+    def _snap(self):
+        if self.snap_on_click_checkBox.isChecked():
+            self.tab.snap()
 
     def stage_x_left(self):
         self._mmc.setRelativeXYPosition(-float(self.xy_step_size_SpinBox.value()), 0.0)
-        # self._snap()
+        self._snap()
 
     def stage_x_right(self):
         self._mmc.setRelativeXYPosition(float(self.xy_step_size_SpinBox.value()), 0.0)
-        # self._snap()
+        self._snap()
 
     def stage_y_up(self):
         self._mmc.setRelativeXYPosition(
             0.0,
             float(self.xy_step_size_SpinBox.value()),
         )
-        # self._snap()
+        self._snap()
 
     def stage_y_down(self):
         self._mmc.setRelativeXYPosition(
             0.0,
             -float(self.xy_step_size_SpinBox.value()),
         )
-        # self._snap()
+        self._snap()
 
     def stage_z_up(self):
         self._mmc.setRelativePosition(float(self.z_step_size_doubleSpinBox.value()))
-        # self._snap()
+        self._snap()
 
     def stage_z_down(self):
         self._mmc.setRelativePosition(-float(self.z_step_size_doubleSpinBox.value()))
-        # self._snap()
+        self._snap()
 
 
 if __name__ == "__main__":
