@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import napari
 import numpy as np
-from pymmcore_plus import CMMCorePlus, DeviceType, RemoteMMCore
+from pymmcore_plus import CMMCorePlus, RemoteMMCore
 from pymmcore_plus._util import find_micromanager
 from qtpy import QtWidgets as QtW
 from qtpy.QtCore import Qt, QTimer
@@ -45,10 +45,11 @@ class MainWindow(MicroManagerWidget):
         remote=False,
         mmc: CMMCorePlus | RemoteMMCore = None,
     ):
-        super().__init__()
 
         self.viewer = viewer
         self._mmc = RemoteMMCore() if remote else CMMCorePlus()
+
+        super().__init__(self._mmc)
 
         self.cfg = self.mm_configuration
         self.obj = self.mm_objectives
@@ -81,7 +82,7 @@ class MainWindow(MicroManagerWidget):
         self.tab.tabWidget.addTab(self.explorer, "Sample Explorer")
 
         self.streaming_timer = None
-        self.available_focus_devs = []
+        # self.available_focus_devs = []
         self.objectives_device = None
         self.objectives_cfg = None
 
@@ -96,20 +97,20 @@ class MainWindow(MicroManagerWidget):
         sig.sequenceStarted.connect(self._on_mda_started)
         sig.sequenceFinished.connect(self._on_mda_finished)
         sig.systemConfigurationLoaded.connect(self._on_system_cfg_loaded)
-        sig.XYStagePositionChanged.connect(self._on_xy_stage_position_changed)
-        sig.stagePositionChanged.connect(self._on_stage_position_changed)
+        # sig.XYStagePositionChanged.connect(self._on_xy_stage_position_changed)
+        # sig.stagePositionChanged.connect(self._on_stage_position_changed)
         sig.exposureChanged.connect(self._on_exp_change)
         sig.frameReady.connect(self._on_mda_frame)
 
         # connect buttons
         self.cfg.load_cfg_Button.clicked.connect(self.load_cfg)
         self.cfg.browse_cfg_Button.clicked.connect(self.browse_cfg)
-        self.stages.left_Button.clicked.connect(self.stage_x_left)
-        self.stages.right_Button.clicked.connect(self.stage_x_right)
-        self.stages.y_up_Button.clicked.connect(self.stage_y_up)
-        self.stages.y_down_Button.clicked.connect(self.stage_y_down)
-        self.stages.up_Button.clicked.connect(self.stage_z_up)
-        self.stages.down_Button.clicked.connect(self.stage_z_down)
+        # self.stages.left_Button.clicked.connect(self.stage_x_left)
+        # self.stages.right_Button.clicked.connect(self.stage_x_right)
+        # self.stages.y_up_Button.clicked.connect(self.stage_y_up)
+        # self.stages.y_down_Button.clicked.connect(self.stage_y_down)
+        # self.stages.up_Button.clicked.connect(self.stage_z_up)
+        # self.stages.down_Button.clicked.connect(self.stage_z_down)
 
         self.tab.snap_Button.clicked.connect(self.snap)
         self.tab.live_Button.clicked.connect(self.toggle_live)
@@ -117,9 +118,9 @@ class MainWindow(MicroManagerWidget):
         self.ill.illumination_Button.clicked.connect(self.illumination)
         self.pb.properties_Button.clicked.connect(self._show_prop_browser)
 
-        self.stages.focus_device_comboBox.currentTextChanged.connect(
-            self._set_focus_device
-        )
+        # self.stages.focus_device_comboBox.currentTextChanged.connect(
+        #     self._set_focus_device
+        # )
 
         # connect comboBox
         self.obj.objective_comboBox.currentIndexChanged.connect(self.change_objective)
@@ -143,10 +144,15 @@ class MainWindow(MicroManagerWidget):
 
     def _on_system_cfg_loaded(self):
         if len(self._mmc.getLoadedDevices()) > 1:
+            print("stageeeeeeeee_1", self._mmc.getXYStageDevice())
+            print("mmc_1:", self._mmc)
             self._set_enabled(True)
             self._refresh_options()
 
     def _set_enabled(self, enabled):
+
+        print("stageeeeeeeee_2", self._mmc.getXYStageDevice())
+        print("mmc_2:", self._mmc)
 
         if self._mmc.getCameraDevice():
             self._camera_group_wdg(enabled)
@@ -160,18 +166,10 @@ class MainWindow(MicroManagerWidget):
             self.tab.snap_live_tab.setEnabled(False)
             self.tab.snap_live_tab.setEnabled(False)
 
-        if self._mmc.getXYStageDevice():
-            self.stages.XY_groupBox.setEnabled(enabled)
-        else:
-            self.stages.XY_groupBox.setEnabled(False)
-
-        if self._mmc.getFocusDevice():
-            self.stages.Z_groupBox.setEnabled(enabled)
-        else:
-            self.stages.Z_groupBox.setEnabled(False)
-
-        self.cam_group.setEnabled(True)
         self.stages_coll.setEnabled(True)
+        self.stages.XY_groupBox.setEnabled(enabled)
+        self.stages.Z_groupBox.setEnabled(enabled)
+        self.cam_group.setEnabled(True)
         self.pb.properties_Button.setEnabled(enabled)
         self.obj.objective_comboBox.setEnabled(enabled)
         self.ill.illumination_Button.setEnabled(enabled)
@@ -222,10 +220,12 @@ class MainWindow(MicroManagerWidget):
         self._mmc.loadSystemConfiguration(cfg)
 
     def _refresh_options(self):
+        print("stageeeeeeeee_3", self._mmc.getXYStageDevice())
+        print("mmc_3:", self._mmc)
         self._refresh_objective_options()
         self._refresh_channel_list()
-        self._refresh_positions()
-        self._refresh_xyz_devices()
+        self.stages._refresh_positions()
+        self.stages._refresh_xyz_devices()
 
     def update_viewer(self, data=None):
         if data is None:
@@ -574,99 +574,3 @@ class MainWindow(MicroManagerWidget):
         self._mmc.waitForDevice(zdev)
 
         self._update_pixel_size()
-
-    # stages
-    def _refresh_positions(self):
-        if self._mmc.getXYStageDevice():
-            x, y = self._mmc.getXPosition(), self._mmc.getYPosition()
-            self._on_xy_stage_position_changed(self._mmc.getXYStageDevice(), x, y)
-        if self._mmc.getFocusDevice():
-            self.stages.z_lineEdit.setText(f"{self._mmc.getZPosition():.1f}")
-
-    def _refresh_xyz_devices(self):
-
-        # since there is no offset control yet:
-        self.stages.offset_Z_groupBox.setEnabled(False)
-
-        self.stages.focus_device_comboBox.clear()
-        self.stages.xy_device_comboBox.clear()
-
-        xy_stage_devs = list(self._mmc.getLoadedDevicesOfType(DeviceType.XYStageDevice))
-
-        focus_devs = list(self._mmc.getLoadedDevicesOfType(DeviceType.StageDevice))
-
-        if not xy_stage_devs:
-            self.stages.XY_groupBox.setEnabled(False)
-        else:
-            self.stages.XY_groupBox.setEnabled(True)
-            self.stages.xy_device_comboBox.addItems(xy_stage_devs)
-            self._set_xy_stage_device()
-
-        if not focus_devs:
-            self.stages.Z_groupBox.setEnabled(False)
-        else:
-            self.stages.Z_groupBox.setEnabled(True)
-            self.stages.focus_device_comboBox.addItems(focus_devs)
-            self._set_focus_device()
-
-    def _set_xy_stage_device(self):
-        if not self.stages.xy_device_comboBox.count():
-            return
-        self._mmc.setXYStageDevice(self.stages.xy_device_comboBox.currentText())
-
-    def _set_focus_device(self):
-        if not self.stages.focus_device_comboBox.count():
-            return
-        self._mmc.setFocusDevice(self.stages.focus_device_comboBox.currentText())
-
-    def _on_xy_stage_position_changed(self, name, x, y):
-        self.stages.x_lineEdit.setText(f"{x:.1f}")
-        self.stages.y_lineEdit.setText(f"{y:.1f}")
-
-    def _on_stage_position_changed(self, name, value):
-        if "z" in name.lower():  # hack
-            self.stages.z_lineEdit.setText(f"{value:.1f}")
-
-    def stage_x_left(self):
-        self._mmc.setRelativeXYPosition(
-            -float(self.stages.xy_step_size_SpinBox.value()), 0.0
-        )
-        if self.stages.snap_on_click_checkBox.isChecked():
-            self.snap()
-
-    def stage_x_right(self):
-        self._mmc.setRelativeXYPosition(
-            float(self.stages.xy_step_size_SpinBox.value()), 0.0
-        )
-        if self.stages.snap_on_click_checkBox.isChecked():
-            self.snap()
-
-    def stage_y_up(self):
-        self._mmc.setRelativeXYPosition(
-            0.0,
-            float(self.stages.xy_step_size_SpinBox.value()),
-        )
-        if self.stages.snap_on_click_checkBox.isChecked():
-            self.snap()
-
-    def stage_y_down(self):
-        self._mmc.setRelativeXYPosition(
-            0.0,
-            -float(self.stages.xy_step_size_SpinBox.value()),
-        )
-        if self.stages.snap_on_click_checkBox.isChecked():
-            self.snap()
-
-    def stage_z_up(self):
-        self._mmc.setRelativePosition(
-            float(self.stages.z_step_size_doubleSpinBox.value())
-        )
-        if self.stages.snap_on_click_checkBox.isChecked():
-            self.snap()
-
-    def stage_z_down(self):
-        self._mmc.setRelativePosition(
-            -float(self.stages.z_step_size_doubleSpinBox.value())
-        )
-        if self.stages.snap_on_click_checkBox.isChecked():
-            self.snap()

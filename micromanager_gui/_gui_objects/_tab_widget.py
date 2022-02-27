@@ -122,6 +122,9 @@ class MMTabWidget(QtW.QWidget):
         self.main_layout.addWidget(self.tabWidget)
         self.setLayout(self.main_layout)
 
+    def snap():
+        pass
+
 
 if __name__ == "__main__":
     import sys
