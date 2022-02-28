@@ -72,6 +72,7 @@ class MMConfigurationWidget(QtW.QWidget):
         if cfg == "":
             cfg = "MMConfig_demo.cfg"
         self._mmc.loadSystemConfiguration(cfg)
+        self.cfg_LineEdit.setText(cfg)
 
 
 if __name__ == "__main__":
