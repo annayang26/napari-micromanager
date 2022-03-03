@@ -133,7 +133,7 @@ class CameraDeviceWidget(DeviceWidget):
 
         self.device_label = "Camera"
 
-        self.make_tabler_wdg()
+        self.make_table_wdg()
 
     def iter_dev_props(self, dev) -> Iterator[PropertyItem]:
         for prop in self.mmc.getDevicePropertyNames(dev):
