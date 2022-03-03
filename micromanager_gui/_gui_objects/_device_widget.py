@@ -184,7 +184,7 @@ class CameraDeviceWidget(DeviceWidget):
 
         return wdg
 
-    def make_tabler_wdg(self):
+    def make_table_wdg(self):
 
         self.table = PropertyTableWidget()
         data = []
