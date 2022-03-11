@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import warnings
-from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -9,27 +8,19 @@ from qtpy import QtWidgets as QtW
 from qtpy import uic
 from qtpy.QtCore import QSize, Qt
 from qtpy.QtGui import QIcon
-from typing_extensions import Literal
 from useq import MDASequence
 
+from .._core import get_core_singleton
+from .._mda import SEQUENCE_META, SequenceMeta
+
 if TYPE_CHECKING:
-    from pymmcore_plus import RemoteMMCore
+    from pymmcore_plus.mda import PMDAEngine
 
-ICONS = Path(__file__).parent / "icons"
-
-
-@dataclass
-class SequenceMeta:
-    mode: Literal["mda"] | Literal["explorer"] = ""
-    split_channels: bool = False
-    should_save: bool = False
-    file_name: str = ""
-    save_dir: str = ""
-    save_pos: bool = False
+ICONS = Path(__file__).parent.parent / "icons"
 
 
 class _MultiDUI:
-    UI_FILE = str(Path(__file__).parent / "_gui_objects" / "multid_gui.ui")
+    UI_FILE = str(Path(__file__).parent / "multid_gui.ui")
 
     # The UI_FILE above contains these objects:
     save_groupBox: QtW.QGroupBox
@@ -89,17 +80,14 @@ class _MultiDUI:
 
 
 class MultiDWidget(QtW.QWidget, _MultiDUI):
-
-    # metadata associated with a given experiment
-    SEQUENCE_META: dict[MDASequence, SequenceMeta] = {}
-
-    def __init__(self, mmcore: RemoteMMCore, parent=None):
-        self._mmc = mmcore
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.setup_ui()
 
-        self.pause_Button.released.connect(self._mmc.toggle_pause)
-        self.cancel_Button.released.connect(self._mmc.cancel)
+        self._mmc = get_core_singleton()
+
+        self.pause_Button.released.connect(lambda: self._mmc.mda.toggle_pause())
+        self.cancel_Button.released.connect(lambda: self._mmc.mda.cancel())
 
         # connect buttons
         self.add_pos_Button.clicked.connect(self.add_position)
@@ -140,9 +128,19 @@ class MultiDWidget(QtW.QWidget, _MultiDUI):
         self.stage_tableWidget.cellDoubleClicked.connect(self.move_to_position)
 
         # events
-        mmcore.events.sequenceStarted.connect(self._on_mda_started)
-        mmcore.events.sequenceFinished.connect(self._on_mda_finished)
-        mmcore.events.sequencePauseToggled.connect(self._on_mda_paused)
+        self._mmc.mda.events.sequenceStarted.connect(self._on_mda_started)
+        self._mmc.mda.events.sequenceFinished.connect(self._on_mda_finished)
+        self._mmc.mda.events.sequencePauseToggled.connect(self._on_mda_paused)
+        self._mmc.events.mdaEngineRegistered.connect(self._update_mda_engine)
+
+    def _update_mda_engine(self, newEngine: PMDAEngine, oldEngine: PMDAEngine):
+        oldEngine.events.sequenceStarted.disconnect(self._on_mda_started)
+        oldEngine.events.sequenceFinished.disconnect(self._on_mda_finished)
+        oldEngine.events.sequencePauseToggled.disconnect(self._on_mda_paused)
+
+        newEngine.events.sequenceStarted.connect(self._on_mda_started)
+        newEngine.events.sequenceFinished.connect(self._on_mda_finished)
+        newEngine.events.sequencePauseToggled.connect(self._on_mda_paused)
 
     def _set_enabled(self, enabled: bool):
         self.save_groupBox.setEnabled(enabled)
@@ -492,7 +490,7 @@ class MultiDWidget(QtW.QWidget, _MultiDUI):
 
         experiment = self.get_state()
 
-        self.SEQUENCE_META[experiment] = SequenceMeta(
+        SEQUENCE_META[experiment] = SequenceMeta(
             mode="mda",
             split_channels=self.checkBox_split_channels.isChecked(),
             should_save=self.save_groupBox.isChecked(),

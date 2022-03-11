@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import napari
 import numpy as np
+from napari.experimental import link_layers
 from pymmcore_plus import DeviceType
 from pymmcore_plus._util import find_micromanager
 from qtpy import QtWidgets as QtW
@@ -12,8 +14,9 @@ from qtpy.QtCore import QTimer
 from qtpy.QtGui import QColor, QIcon
 from superqt.utils import create_worker, ensure_main_thread
 
-from . import _core
+from . import _core, _mda
 from ._camera_roi import CameraROI
+from ._core_widgets import PropertyBrowser
 from ._gui_objects._mm_widget import MicroManagerWidget
 from ._saving import save_sequence
 from ._util import (
@@ -22,15 +25,13 @@ from ._util import (
     event_indices,
     extend_array_for_index,
 )
-from .explore_sample import ExploreSample
-from .multid_widget import MultiDWidget, SequenceMeta
-from .prop_browser import PropBrowser
 
 if TYPE_CHECKING:
     import napari.layers
     import napari.viewer
     import useq
-    from pymmcore_plus.core._signals.qcallback import QCoreCallback
+    from pymmcore_plus.core.events import QCoreSignaler
+    from pymmcore_plus.mda import PMDAEngine
 
 ICONS = Path(__file__).parent / "icons"
 CAM_ICON = QIcon(str(ICONS / "vcam.svg"))
@@ -54,13 +55,7 @@ class MainWindow(MicroManagerWidget):
                 "MICROMANAGER_PATH."
             )
 
-        # tab widgets
-        self.mda = MultiDWidget(self._mmc)
-        self.explorer = ExploreSample(self.viewer, self._mmc)
-
         # add mda and explorer tabs to mm_tab widget
-        self.tab_wdg.tabWidget.addTab(self.mda, "Multi-D Acquisition")
-        self.tab_wdg.tabWidget.addTab(self.explorer, "Sample Explorer")
         sizepolicy = QtW.QSizePolicy(
             QtW.QSizePolicy.Expanding, QtW.QSizePolicy.Expanding
         )
@@ -72,17 +67,20 @@ class MainWindow(MicroManagerWidget):
         self._set_enabled(False)
 
         # connect mmcore signals
-        sig: QCoreCallback = self._mmc.events
+        sig: QCoreSignaler = self._mmc.events
 
         # note: don't use lambdas with closures on `self`, since the connection
         # to core may outlive the lifetime of this particular widget.
-        sig.sequenceStarted.connect(self._on_mda_started)
-        sig.sequenceFinished.connect(self._on_mda_finished)
         sig.systemConfigurationLoaded.connect(self._on_system_cfg_loaded)
         sig.XYStagePositionChanged.connect(self._on_xy_stage_position_changed)
         sig.stagePositionChanged.connect(self._on_stage_position_changed)
         sig.exposureChanged.connect(self._on_exp_change)
-        sig.frameReady.connect(self._on_mda_frame)
+
+        # mda events
+        self._mmc.mda.events.frameReady.connect(self._on_mda_frame)
+        self._mmc.mda.events.sequenceStarted.connect(self._on_mda_started)
+        self._mmc.mda.events.sequenceFinished.connect(self._on_mda_finished)
+        self._mmc.events.mdaEngineRegistered.connect(self._update_mda_engine)
 
         # connect buttons
         self.stage_wdg.left_Button.clicked.connect(self.stage_x_left)
@@ -93,15 +91,12 @@ class MainWindow(MicroManagerWidget):
         self.stage_wdg.down_Button.clicked.connect(self.stage_z_down)
         self.tab_wdg.snap_Button.clicked.connect(self.snap)
         self.tab_wdg.live_Button.clicked.connect(self.toggle_live)
-        self.prop_wdg.properties_Button.clicked.connect(self._show_prop_browser)
 
         # connect comboBox
         self.stage_wdg.focus_device_comboBox.currentTextChanged.connect(
             self._set_focus_device
         )
-        self.obj_wdg.objective_comboBox.currentIndexChanged.connect(
-            self.change_objective
-        )
+
         self.tab_wdg.snap_channel_comboBox.currentTextChanged.connect(
             self._channel_changed
         )
@@ -124,6 +119,25 @@ class MainWindow(MicroManagerWidget):
         self.viewer.layers.events.connect(self.update_max_min)
         self.viewer.layers.selection.events.active.connect(self.update_max_min)
         self.viewer.dims.events.current_step.connect(self.update_max_min)
+        self.viewer.mouse_drag_callbacks.append(self._get_event_explorer)
+
+        self._add_menu()
+
+    def _add_menu(self):
+        w = getattr(self.viewer, "__wrapped__", self.viewer).window  # don't do this.
+        self._menu = QtW.QMenu("&Micro-Manager", w._qt_window)
+
+        action = self._menu.addAction("Device Property Browser...")
+        action.triggered.connect(self._show_prop_browser)
+
+        bar = w._qt_window.menuBar()
+        bar.insertMenu(list(bar.actions())[-1], self._menu)
+
+    def _show_prop_browser(self):
+        if not hasattr(self, "_prop_browser"):
+            self._prop_browser = PropertyBrowser(self._mmc, self)
+        self._prop_browser.show()
+        self._prop_browser.raise_()
 
     def _on_system_cfg_loaded(self):
         if len(self._mmc.getLoadedDevices()) > 1:
@@ -160,10 +174,8 @@ class MainWindow(MicroManagerWidget):
 
     def _camera_group_wdg(self, enabled):
         self.cam_wdg.setEnabled(enabled)
-        self.prop_wdg.properties_Button.setEnabled(enabled)
 
     def _refresh_options(self):
-        self._refresh_objective_options()
         self._refresh_channel_list()
         self._refresh_positions()
         self._refresh_xyz_devices()
@@ -274,67 +286,155 @@ class MainWindow(MicroManagerWidget):
                 self.shutter_wdg._set_shutter_wdg_to_closed()
                 self.shutter_wdg.shutter_checkbox.setEnabled(True)
 
+    def _update_mda_engine(self, newEngine: PMDAEngine, oldEngine: PMDAEngine):
+        oldEngine.events.frameReady.connect(self._on_mda_frame)
+        oldEngine.events.sequenceStarted.disconnect(self._on_mda_started)
+        oldEngine.events.sequenceFinished.disconnect(self._on_mda_finished)
+
+        newEngine.events.frameReady.connect(self._on_mda_frame)
+        newEngine.events.sequenceStarted.connect(self._on_mda_started)
+        newEngine.events.sequenceFinished.connect(self._on_mda_finished)
+
     def _on_mda_started(self, sequence: useq.MDASequence):
         """ "create temp folder and block gui when mda starts."""
         self._set_enabled(False)
 
+        self._mda_meta = _mda.SEQUENCE_META.get(sequence, _mda.SequenceMeta())
+        if self._mda_meta.mode == "":
+            # originated from user script - assume it's an mda
+            self._mda_meta.mode = "mda"
+
     @ensure_main_thread
     def _on_mda_frame(self, image: np.ndarray, event: useq.MDAEvent):
-        meta = self.mda.SEQUENCE_META.get(event.sequence) or SequenceMeta()
 
-        if meta.mode != "mda":
-            return
+        meta = self._mda_meta
+        if meta.mode == "mda":
 
-        # pick layer name
-        file_name = meta.file_name if meta.should_save else "Exp"
-        channelstr = (
-            f"[{event.channel.config}_idx{event.index['c']}]_"
-            if meta.split_channels
-            else ""
-        )
-        layer_name = f"{file_name}_{channelstr}{event.sequence.uid}"
+            # pick layer name
+            file_name = meta.file_name if meta.should_save else "Exp"
+            channelstr = (
+                f"[{event.channel.config}_idx{event.index['c']}]_"
+                if meta.split_channels
+                else ""
+            )
+            layer_name = f"{file_name}_{channelstr}{event.sequence.uid}"
 
-        try:  # see if we already have a layer with this sequence
-            layer = self.viewer.layers[layer_name]
+            try:  # see if we already have a layer with this sequence
+                layer = self.viewer.layers[layer_name]
 
-            # get indices of new image
-            im_idx = tuple(
-                event.index[k]
-                for k in event_indices(event)
-                if not (meta.split_channels and k == "c")
+                # get indices of new image
+                im_idx = tuple(
+                    event.index[k]
+                    for k in event_indices(event)
+                    if not (meta.split_channels and k == "c")
+                )
+
+                # make sure array shape contains im_idx, or pad with zeros
+                new_array = extend_array_for_index(layer.data, im_idx)
+                # add the incoming index at the appropriate index
+                new_array[im_idx] = image
+                # set layer data
+                layer.data = new_array
+                for a, v in enumerate(im_idx):
+                    self.viewer.dims.set_point(a, v)
+
+            except KeyError:  # add the new layer to the viewer
+                seq = event.sequence
+                _image = image[(np.newaxis,) * len(seq.shape)]
+                layer = self.viewer.add_image(
+                    _image, name=layer_name, blending="additive"
+                )
+
+                # dimensions labels
+                labels = [i for i in seq.axis_order if i in event.index] + ["y", "x"]
+                self.viewer.dims.axis_labels = labels
+
+                # add metadata to layer
+                layer.metadata["useq_sequence"] = seq
+                layer.metadata["uid"] = seq.uid
+                # storing event.index in addition to channel.config because it's
+                # possible to have two of the same channel in one sequence.
+                layer.metadata[
+                    "ch_id"
+                ] = f'{event.channel.config}_idx{event.index["c"]}'
+        elif meta.mode == "explorer":
+
+            seq = event.sequence
+
+            meta = _mda.SEQUENCE_META.get(seq) or _mda.SequenceMeta()
+            if meta.mode != "explorer":
+                return
+
+            x = event.x_pos / self.explorer.pixel_size
+            y = event.y_pos / self.explorer.pixel_size * (-1)
+
+            pos_idx = event.index["p"]
+            file_name = meta.file_name if meta.should_save else "Exp"
+            ch_name = event.channel.config
+            ch_id = event.index["c"]
+            layer_name = f"Pos{pos_idx:03d}_{file_name}_{ch_name}_idx{ch_id}"
+
+            meta = dict(
+                useq_sequence=seq,
+                uid=seq.uid,
+                scan_coord=(y, x),
+                scan_position=f"Pos{pos_idx:03d}",
+                ch_name=ch_name,
+                ch_id=ch_id,
+            )
+            self.viewer.add_image(
+                image,
+                name=layer_name,
+                blending="additive",
+                translate=(y, x),
+                metadata=meta,
             )
 
-            # make sure array shape contains im_idx, or pad with zeros
-            new_array = extend_array_for_index(layer.data, im_idx)
-            # add the incoming index at the appropriate index
-            new_array[im_idx] = image
-            # set layer data
-            layer.data = new_array
-            for a, v in enumerate(im_idx):
-                self.viewer.dims.set_point(a, v)
-
-        except KeyError:  # add the new layer to the viewer
-            seq = event.sequence
-            _image = image[(np.newaxis,) * len(seq.shape)]
-            layer = self.viewer.add_image(_image, name=layer_name, blending="additive")
-
-            # dimensions labels
-            labels = [i for i in seq.axis_order if i in event.index] + ["y", "x"]
-            self.viewer.dims.axis_labels = labels
-
-            # add metadata to layer
-            layer.metadata["useq_sequence"] = seq
-            layer.metadata["uid"] = seq.uid
-            # storing event.index in addition to channel.config because it's
-            # possible to have two of the same channel in one sequence.
-            layer.metadata["ch_id"] = f'{event.channel.config}_idx{event.index["c"]}'
+            zoom_out_factor = (
+                self.explorer.scan_size_r
+                if self.explorer.scan_size_r >= self.explorer.scan_size_c
+                else self.explorer.scan_size_c
+            )
+            self.viewer.camera.zoom = 1 / zoom_out_factor
+            self.viewer.reset_view()
 
     def _on_mda_finished(self, sequence: useq.MDASequence):
         """Save layer and add increment to save name."""
-        meta = self.mda.SEQUENCE_META.pop(sequence, SequenceMeta())
+        meta = _mda.SEQUENCE_META.get(sequence) or _mda.SequenceMeta()
+        seq_uid = sequence.uid
+        if meta.mode == "explorer":
+
+            layergroups = defaultdict(set)
+            for lay in self.viewer.layers:
+                if lay.metadata.get("uid") == seq_uid:
+                    key = f"{lay.metadata['ch_name']}_idx{lay.metadata['ch_id']}"
+                    layergroups[key].add(lay)
+            for group in layergroups.values():
+                link_layers(group)
+        meta = _mda.SEQUENCE_META.pop(sequence, self._mda_meta)
         save_sequence(sequence, self.viewer.layers, meta)
         # reactivate gui when mda finishes.
         self._set_enabled(True)
+
+    def _get_event_explorer(self, viewer, event):
+        if not self.explorer.isVisible():
+            return
+        if self._mmc.getPixelSizeUm() > 0:
+            width = self._mmc.getROI(self._mmc.getCameraDevice())[2]
+            height = self._mmc.getROI(self._mmc.getCameraDevice())[3]
+
+            x = viewer.cursor.position[-1] * self._mmc.getPixelSizeUm()
+            y = viewer.cursor.position[-2] * self._mmc.getPixelSizeUm() * (-1)
+
+            # to match position coordinates with center of the image
+            x = f"{x - ((width / 2) * self._mmc.getPixelSizeUm()):.1f}"
+            y = f"{y - ((height / 2) * self._mmc.getPixelSizeUm() * (-1)):.1f}"
+
+        else:
+            x, y = "None", "None"
+
+        self.explorer.x_lineEdit.setText(x)
+        self.explorer.y_lineEdit.setText(y)
 
     # exposure time
     def _update_exp(self, exposure: float):
@@ -349,11 +449,6 @@ class MainWindow(MicroManagerWidget):
             self.tab_wdg.exp_spinBox.setValue(exposure)
         if self.streaming_timer:
             self.streaming_timer.setInterval(int(exposure))
-
-    # property browser
-    def _show_prop_browser(self):
-        pb = PropBrowser(self._mmc, self)
-        pb.exec()
 
     # channels
     def _refresh_channel_list(self):
@@ -393,103 +488,6 @@ class MainWindow(MicroManagerWidget):
 
     def _channel_changed(self, newChannel: str):
         self._mmc.setConfig(self._mmc.getChannelGroup(), newChannel)
-
-    # objectives
-    def _refresh_objective_options(self):
-
-        obj_dev_list = self._mmc.guessObjectiveDevices()
-        # e.g. ['TiNosePiece']
-
-        if not obj_dev_list:
-            return
-
-        if len(obj_dev_list) == 1:
-            self._set_objectives(obj_dev_list[0])
-        else:
-            # if obj_dev_list has more than 1 possible objective device,
-            # you can select the correct one through a combobox
-            obj = SelectDeviceFromCombobox(
-                obj_dev_list,
-                "Select Objective Device:",
-                self,
-            )
-            obj.val_changed.connect(self._set_objectives)
-            obj.show()
-
-    def _set_objectives(self, obj_device: str):
-
-        obj_dev, obj_cfg, presets = self._get_objective_device(obj_device)
-
-        if obj_dev and obj_cfg and presets:
-            current_obj = self._mmc.getCurrentConfig(obj_cfg)
-        else:
-            current_obj = self._mmc.getState(obj_dev)
-            presets = self._mmc.getStateLabels(obj_dev)
-        self._add_objective_to_gui(current_obj, presets)
-
-    def _get_objective_device(self, obj_device: str):
-        # check if there is a configuration group for the objectives
-        for cfg_groups in self._mmc.getAvailableConfigGroups():
-            # e.g. ('Camera', 'Channel', 'Objectives')
-
-            presets = self._mmc.getAvailableConfigs(cfg_groups)
-
-            if not presets:
-                continue
-
-            # first group option e.g. TINosePiece: State=1
-            cfg_data = self._mmc.getConfigData(cfg_groups, presets[0])
-
-            device = cfg_data.getSetting(0).getDeviceLabel()
-            # e.g. TINosePiece
-
-            if device == obj_device:
-                _core.STATE.objective_device = device
-                _core.STATE.objectives_cfg = cfg_groups
-                return _core.STATE.objective_device, _core.STATE.objectives_cfg, presets
-
-        _core.STATE.objective_device = obj_device
-        return _core.STATE.objective_device, None, None
-
-    def _add_objective_to_gui(self, current_obj, presets):
-        with blockSignals(self.obj_wdg.objective_comboBox):
-            self.obj_wdg.objective_comboBox.clear()
-            self.obj_wdg.objective_comboBox.addItems(presets)
-            if isinstance(current_obj, int):
-                self.obj_wdg.objective_comboBox.setCurrentIndex(current_obj)
-            else:
-                self.obj_wdg.objective_comboBox.setCurrentText(current_obj)
-            self.cam_wdg._update_pixel_size()
-
-    def change_objective(self):
-        if self.obj_wdg.objective_comboBox.count() <= 0:
-            return
-
-        if not _core.STATE.objective_device:
-            return
-
-        zdev = self._mmc.getFocusDevice()
-
-        currentZ = self._mmc.getZPosition()
-        self._mmc.setPosition(zdev, 0)
-        self._mmc.waitForDevice(zdev)
-
-        try:
-            self._mmc.setConfig(
-                _core.STATE.objectives_cfg,
-                self.obj_wdg.objective_comboBox.currentText(),
-            )
-        except ValueError:
-            self._mmc.setProperty(
-                _core.STATE.objective_device,
-                "Label",
-                self.obj_wdg.objective_comboBox.currentText(),
-            )
-
-        self._mmc.waitForDevice(_core.STATE.objective_device)
-        self._mmc.setPosition(zdev, currentZ)
-        self._mmc.waitForDevice(zdev)
-        self.cam_wdg._update_pixel_size()
 
     # stages
     def _refresh_positions(self):

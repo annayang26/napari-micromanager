@@ -4,12 +4,13 @@ from qtpy import QtWidgets as QtW
 from qtpy.QtCore import Qt
 from superqt import QCollapsible
 
-from .._illumination import IlluminationDialog
 from ._camera_widget import MMCameraWidget
 from ._config_widget import MMConfigurationWidget
+from ._mda_widget import MultiDWidget
 from ._objective_widget import MMObjectivesWidget
-from ._property_browser_widget import MMPropertyBrowserWidget
+from ._sample_explorer_widget import ExploreSample
 from ._shutters_widget import MMShuttersWidget
+from ._slider_dialog import SliderDialog
 from ._tab_widget import MMTabWidget
 from ._xyz_stages import MMStagesWidget
 
@@ -26,8 +27,9 @@ class MicroManagerWidget(QtW.QWidget):
         self.illum_btn = QtW.QPushButton("Light Sources")
         self.illum_btn.clicked.connect(self._show_illum_dialog)
         self.tab_wdg = MMTabWidget()
-        self.prop_wdg = MMPropertyBrowserWidget()
         self.shutter_wdg = MMShuttersWidget()
+        self.mda = MultiDWidget()
+        self.explorer = ExploreSample()
 
         self.create_gui()
 
@@ -79,6 +81,9 @@ class MicroManagerWidget(QtW.QWidget):
         self.stages_group.setLayout(self.stages_group_layout)
         self.main_layout.addWidget(self.stages_group)
 
+        self.tab_wdg.tabWidget.addTab(self.mda, "Multi-D Acquisition")
+        self.tab_wdg.tabWidget.addTab(self.explorer, "Sample Explorer")
+
         # add tab widget
         self.main_layout.addWidget(self.tab_wdg)
 
@@ -100,7 +105,6 @@ class MicroManagerWidget(QtW.QWidget):
         obj_prop_wdg_layout.setContentsMargins(5, 5, 5, 5)
         obj_prop_wdg_layout.setSpacing(7)
         obj_prop_wdg_layout.addWidget(self.obj_wdg)
-        obj_prop_wdg_layout.addWidget(self.prop_wdg)
         obj_prop_wdg.setLayout(obj_prop_wdg_layout)
         return obj_prop_wdg
 
@@ -116,5 +120,5 @@ class MicroManagerWidget(QtW.QWidget):
 
     def _show_illum_dialog(self):
         if not hasattr(self, "_illumination"):
-            self._illumination = IlluminationDialog(self)
+            self._illumination = SliderDialog("(Intensity|Power|test)s?", self)
         self._illumination.show()
