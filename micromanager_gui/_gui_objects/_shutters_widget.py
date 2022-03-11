@@ -17,15 +17,17 @@ class MMShuttersWidget(QtW.QWidget):
     ):
         super().__init__()
         self._mmc = mmcore or get_core_singleton()
+
         self.setup_gui()
 
         self.shutter_list = []
 
-        sig = self._mmc.events
-        sig.systemConfigurationLoaded.connect(self._on_system_cfg_loaded)
-        sig.configSet.connect(self._on_channel_changed)
-        sig.propertyChanged.connect(self._on_property_changed)
-        sig.systemConfigurationLoaded.connect(self._refresh_shutter_device)
+        self._mmc.events.systemConfigurationLoaded.connect(self._on_system_cfg_loaded)
+        self._mmc.events.configSet.connect(self._on_channel_changed)
+        self._mmc.events.propertyChanged.connect(self._on_property_changed)
+        self._mmc.events.systemConfigurationLoaded.connect(self._refresh_shutter_device)
+
+        self.destroyed.connect(self.disconnect)
 
         self.shutter_btn.clicked.connect(self._on_shutter_btn_clicked)
 
@@ -146,6 +148,16 @@ class MMShuttersWidget(QtW.QWidget):
             self.shutter_comboBox.setCurrentText("Multi Shutter")
         else:
             self.shutter_comboBox.setCurrentText(shutter_list[0])
+
+    def disconnect(self):
+        self._mmc.events.systemConfigurationLoaded.disconnect(
+            self._on_system_cfg_loaded
+        )
+        self._mmc.events.configSet.disconnect(self._on_channel_changed)
+        self._mmc.events.propertyChanged.disconnect(self._on_property_changed)
+        self._mmc.events.systemConfigurationLoaded.disconnect(
+            self._refresh_shutter_device
+        )
 
 
 if __name__ == "__main__":
