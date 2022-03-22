@@ -209,6 +209,12 @@ class MMShuttersWidget(QtW.QWidget):
 
     def _on_shutter_checkbox_toggled(self, state: bool):
         self._mmc.setAutoShutter(state)
+
+        # close if any shutter that is open
+        current_sth_state = self._mmc.getShutterOpen()
+        if current_sth_state and self._mmc.getShutterDevice():
+            self._close_shutter(self._mmc.getShutterDevice())
+
         if state:
             self.shutter_btn.setEnabled(False)
         else:
