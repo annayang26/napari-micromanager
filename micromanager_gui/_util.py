@@ -172,5 +172,5 @@ class ComboMessageBox(QDialog):
         return self._combo.currentText()
 
 
-def _set_wdg_color(color: str, wdg: QWidget):
+def set_wdg_color(color: str, wdg: QWidget):
     wdg.setStyleSheet(f"color: {color};")

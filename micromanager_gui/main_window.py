@@ -179,7 +179,6 @@ class MainWindow(MicroManagerWidget):
         self._refresh_channel_list()
         self._refresh_positions()
         self._refresh_xyz_devices()
-        self.shutter_wdg._refresh_shutter_device()
 
     def update_viewer(self, data=None):
         if data is None:

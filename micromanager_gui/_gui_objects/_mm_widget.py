@@ -27,7 +27,9 @@ class MicroManagerWidget(QtW.QWidget):
         self.illum_btn = QtW.QPushButton("Light Sources")
         self.illum_btn.clicked.connect(self._show_illum_dialog)
         self.tab_wdg = MMTabWidget()
-        self.shutter_wdg = MMShuttersWidget()
+        self.shutter_wdg = MMShuttersWidget(
+            icon_color_on_off=("green", "magenta"), text_color_combo="white"
+        )
         self.mda = MultiDWidget()
         self.explorer = ExploreSample()
 
