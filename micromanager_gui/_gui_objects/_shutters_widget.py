@@ -10,8 +10,10 @@ from qtpy.QtGui import QColor
 from superqt.fonticon import icon
 from superqt.utils import signals_blocked
 
-from .._core import get_core_singleton
-from .._util import set_wdg_color
+# from .._core import get_core_singleton
+# from .._util import set_wdg_color
+from micromanager_gui._core import get_core_singleton
+from micromanager_gui._util import set_wdg_color
 
 COLOR_TYPE = Union[
     QColor,
@@ -53,6 +55,10 @@ class MMShuttersWidget(QtW.QWidget):
         super().__init__()
         self._mmc = mmcore or get_core_singleton()
 
+        self._mmc.loadSystemConfiguration(
+            "/Users/FG/Desktop/test_config_multishutter.cfg"
+        )
+
         self.button_text_open = button_text_open_closed[0]
         self.button_text_closed = button_text_open_closed[1]
         self.icon_size = icon_size
@@ -68,9 +74,14 @@ class MMShuttersWidget(QtW.QWidget):
         self._mmc.events.systemConfigurationLoaded.connect(self._refresh_shutter_device)
         self.destroyed.connect(self.disconnect)
 
+        self._mmc.events.shutterState.connect(self.shutterState)
+
         self.setup_gui()
 
         self._refresh_shutter_device()
+
+    def shutterState(self, b: bool):
+        print("shutter state:", b)
 
     def setup_gui(self):
         self.main_layout = QtW.QHBoxLayout()
