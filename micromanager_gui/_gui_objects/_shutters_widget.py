@@ -74,14 +74,9 @@ class MMShuttersWidget(QtW.QWidget):
         self._mmc.events.systemConfigurationLoaded.connect(self._refresh_shutter_device)
         self.destroyed.connect(self.disconnect)
 
-        self._mmc.events.shutterState.connect(self.shutterState)
-
         self.setup_gui()
 
         self._refresh_shutter_device()
-
-    def shutterState(self, b: bool):
-        print("shutter state:", b)
 
     def setup_gui(self):
         self.main_layout = QtW.QHBoxLayout()
