@@ -10,10 +10,8 @@ from qtpy.QtGui import QColor
 from superqt.fonticon import icon
 from superqt.utils import signals_blocked
 
-from micromanager_gui._core import get_core_singleton
-
-# from .._core import get_core_singleton
-from micromanager_gui._util import set_wdg_color
+from .._core import get_core_singleton
+from .._util import set_wdg_color
 
 COLOR_TYPE = Union[
     QColor,
@@ -26,28 +24,40 @@ COLOR_TYPE = Union[
 
 
 class MMShuttersWidget(QtW.QWidget):
-    """A Widget to control shutters."""
+    """A Widget to control shutters and micromanager autoshutter.
+
+    Parameters
+    ----------
+    button_text_on_off: Optional[tuple[str, str]]
+       Text of the QPushButton when the shutter is open or closed
+    icon_size : Optional[str]
+        Size of the QPushButton icon.
+    icon_color_open_closed : Optional[COLOR_TYPE]
+        Color of the QPushButton icon when the shutter is open or closed.
+    text_color_combo:
+        Text color of the shutter QComboBox
+    """
 
     def __init__(
         self,
-        mmcore: Optional[CMMCorePlus] = None,
-        button_text_on_off: Optional[tuple[str, str]] = (None, None),
-        icon_size: Optional[int] = 30,
-        icon_color_on_off: Optional[tuple[COLOR_TYPE, COLOR_TYPE]] = ("black", "black"),
+        button_text_open_closed: Optional[tuple[str, str]] = (None, None),
+        icon_size: Optional[int] = 25,
+        icon_color_open_closed: Optional[tuple[COLOR_TYPE, COLOR_TYPE]] = (
+            "black",
+            "black",
+        ),
         text_color_combo: Optional[COLOR_TYPE] = "black",
+        *,
+        mmcore: Optional[CMMCorePlus] = None,
     ):
         super().__init__()
         self._mmc = mmcore or get_core_singleton()
 
-        self._mmc.loadSystemConfiguration(
-            "/Users/FG/Desktop/test_config_multishutter.cfg"
-        )
-
-        self.button_text_on = button_text_on_off[0]
-        self.button_text_off = button_text_on_off[1]
+        self.button_text_open = button_text_open_closed[0]
+        self.button_text_closed = button_text_open_closed[1]
         self.icon_size = icon_size
-        self.icon_color_on = icon_color_on_off[0]
-        self.icon_color_off = icon_color_on_off[1]
+        self.icon_color_open = icon_color_open_closed[0]
+        self.icon_color_closed = icon_color_open_closed[1]
         self.text_color_combo = text_color_combo
 
         self.shutter_list = []
@@ -63,19 +73,22 @@ class MMShuttersWidget(QtW.QWidget):
         self._refresh_shutter_device()
 
     def setup_gui(self):
-
         self.main_layout = QtW.QHBoxLayout()
         self.main_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         self.main_layout.setSpacing(5)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.shutter_btn = QtW.QPushButton(text=self.button_text_off)
-        self.shutter_btn.setIcon(icon(MDI6.hexagon_slice_6, color=self.icon_color_off))
+        self.shutter_btn = QtW.QPushButton(text=self.button_text_closed)
+        self.shutter_btn.setIcon(
+            icon(MDI6.hexagon_slice_6, color=self.icon_color_closed)
+        )
         self.shutter_btn.setIconSize(QSize(self.icon_size, self.icon_size))
         self.shutter_btn.clicked.connect(self._on_shutter_btn_clicked)
         self.main_layout.addWidget(self.shutter_btn)
 
         self.shutter_comboBox = QtW.QComboBox()
+        sizepolicy = QtW.QSizePolicy(QtW.QSizePolicy.Minimum, QtW.QSizePolicy.Minimum)
+        self.shutter_comboBox.setSizePolicy(sizepolicy)
         self.shutter_comboBox.currentTextChanged.connect(self._on_combo_changed)
         self.shutter_comboBox.textActivated.connect(self._on_combo_changed)
         self.main_layout.addWidget(self.shutter_comboBox)
@@ -137,15 +150,19 @@ class MMShuttersWidget(QtW.QWidget):
 
     def _on_channel_changed(self, channel_group: str, channel_preset: str):
         if channel_group == self._mmc.getChannelGroup():
-            self._get_shutter_from_channel(channel_group, channel_preset)
+            self._set_shutter_from_channel(channel_group, channel_preset)
 
     def _set_shutter_wdg_to_opened(self):
-        self.shutter_btn.setText(self.button_text_on)
-        self.shutter_btn.setIcon(icon(MDI6.hexagon_outline, color=self.icon_color_on))
+        if self.button_text_open:
+            self.shutter_btn.setText(self.button_text_open)
+        self.shutter_btn.setIcon(icon(MDI6.hexagon_outline, color=self.icon_color_open))
 
     def _set_shutter_wdg_to_closed(self):
-        self.shutter_btn.setText(self.button_text_off)
-        self.shutter_btn.setIcon(icon(MDI6.hexagon_slice_6, color=self.icon_color_off))
+        if self.button_text_closed:
+            self.shutter_btn.setText(self.button_text_closed)
+        self.shutter_btn.setIcon(
+            icon(MDI6.hexagon_slice_6, color=self.icon_color_closed)
+        )
 
     def _refresh_shutter_device(self):
         self._reset_shutters()
@@ -162,6 +179,7 @@ class MMShuttersWidget(QtW.QWidget):
                 set_wdg_color("magenta", self.shutter_comboBox)
             self._mmc.setShutterOpen(False)
             self.shutter_btn.setEnabled(True)
+            self.shutter_checkbox.setEnabled(True)
             self.shutter_checkbox.setChecked(True)
         else:
             self.shutter_btn.setEnabled(False)
@@ -169,9 +187,11 @@ class MMShuttersWidget(QtW.QWidget):
             self.shutter_checkbox.setEnabled(False)
 
     def _reset_shutters(self):
+        self._mmc.setShutterOpen(False)
         self.shutter_comboBox.clear()
         self.shutter_list.clear()
         self.shutter_checkbox.setChecked(False)
+        self._set_shutter_wdg_to_closed()
 
     def _close_shutter(self, shutter):
         self._set_shutter_wdg_to_closed()
@@ -184,7 +204,7 @@ class MMShuttersWidget(QtW.QWidget):
     def _on_shutter_checkbox_toggled(self, state: bool):
         self._mmc.setAutoShutter(state)
 
-    def _get_shutter_from_channel(self, group, channel):
+    def _set_shutter_from_channel(self, group, channel):
         shutter_list = [
             (k[0], k[1], k[2])
             for k in self._mmc.getConfigData(group, channel)

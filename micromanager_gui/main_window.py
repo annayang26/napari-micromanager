@@ -198,7 +198,7 @@ class MainWindow(MicroManagerWidget):
         if self.streaming_timer is None:
             self.viewer.reset_view()
 
-        if self._mmc.getShutterOpen():
+        if self._mmc.getShutterDevice() and self._mmc.getShutterOpen():
             self.shutter_wdg._set_shutter_wdg_to_opened()
         else:
             self.shutter_wdg._set_shutter_wdg_to_closed()
@@ -235,8 +235,10 @@ class MainWindow(MicroManagerWidget):
         else:
             return
 
-        if self._mmc.getAutoShutter():
+        if self._mmc.getAutoShutter() and self._mmc.getShutterDevice():
             self.shutter_wdg._set_shutter_wdg_to_opened()
+        else:
+            self.shutter_wdg._set_shutter_wdg_to_closed()
 
         # snap in a thread so we don't freeze UI when using process local mmc
         create_worker(
