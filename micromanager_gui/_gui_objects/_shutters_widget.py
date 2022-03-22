@@ -209,6 +209,10 @@ class MMShuttersWidget(QtW.QWidget):
 
     def _on_shutter_checkbox_toggled(self, state: bool):
         self._mmc.setAutoShutter(state)
+        if state:
+            self.shutter_btn.setEnabled(False)
+        else:
+            self.shutter_btn.setEnabled(True)
 
     def _set_shutter_from_channel(self, group, channel):
         shutter_list = [
