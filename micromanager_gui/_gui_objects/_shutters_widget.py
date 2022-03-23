@@ -137,8 +137,6 @@ class MMShuttersWidget(QtW.QWidget):
 
     def _on_combo_changed(self, shutter: str):
 
-        print("__________")
-
         # close any shutter that is open
         current_sth_state = self._mmc.getShutterOpen()
         if current_sth_state and self._mmc.getShutterDevice():
@@ -150,8 +148,6 @@ class MMShuttersWidget(QtW.QWidget):
 
     def _on_property_changed(self, dev_name: str, prop_name: str, value: str):
 
-        print(dev_name, prop_name, value)
-
         # change combo text if core shutter is changed
         if dev_name == "Core" and prop_name == "Shutter":
             current_text = self.shutter_comboBox.currentText()
@@ -162,6 +158,7 @@ class MMShuttersWidget(QtW.QWidget):
         # change icon if shutter state is changed
         if dev_name in self.shutter_list and prop_name == "State":
             if dev_name != self._mmc.getShutterDevice():
+                self._close_shutter(self._mmc.getShutterDevice())
                 self.shutter_comboBox.setCurrentText(dev_name)
 
             (
@@ -254,10 +251,16 @@ class MMShuttersWidget(QtW.QWidget):
             set_wdg_color("magenta", self.shutter_comboBox)
             return
 
+        current_text = self.shutter_comboBox.currentText()
+
         if len(shutter_list) > 1:
             self.shutter_comboBox.setCurrentText("Multi Shutter")
+            if current_text == "Multi Shutter":
+                self._on_combo_changed("Multi Shutter")
         else:
             self.shutter_comboBox.setCurrentText(shutter_list[0])
+            if current_text == shutter_list[0]:
+                self._on_combo_changed(shutter_list[0])
 
         set_wdg_color(self.text_color_combo, self.shutter_comboBox)
 
