@@ -137,6 +137,8 @@ class MMShuttersWidget(QtW.QWidget):
 
     def _on_combo_changed(self, shutter: str):
 
+        print("__________")
+
         # close any shutter that is open
         current_sth_state = self._mmc.getShutterOpen()
         if current_sth_state and self._mmc.getShutterDevice():
@@ -148,12 +150,20 @@ class MMShuttersWidget(QtW.QWidget):
 
     def _on_property_changed(self, dev_name: str, prop_name: str, value: str):
 
+        print(dev_name, prop_name, value)
+
         # change combo text if core shutter is changed
-        if dev_name == "Core" and prop_name == self._mmc.getShutterDevice():
-            self.shutter_comboBox.setCurrentText(self._mmc.getShutterDevice())
+        if dev_name == "Core" and prop_name == "Shutter":
+            current_text = self.shutter_comboBox.currentText()
+            self.shutter_comboBox.setCurrentText(value)
+            if current_text == value:
+                self._on_combo_changed(value)
 
         # change icon if shutter state is changed
-        if dev_name == self._mmc.getShutterDevice() and prop_name == "State":
+        if dev_name in self.shutter_list and prop_name == "State":
+            if dev_name != self._mmc.getShutterDevice():
+                self.shutter_comboBox.setCurrentText(dev_name)
+
             (
                 self._set_shutter_wdg_to_opened()
                 if value == "1"
