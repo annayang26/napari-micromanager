@@ -198,11 +198,6 @@ class MainWindow(MicroManagerWidget):
         if self.streaming_timer is None:
             self.viewer.reset_view()
 
-        # if self._mmc.getShutterDevice() and self._mmc.getShutterOpen():
-        #     self.shutter_wdg._set_shutter_wdg_to_opened()
-        # else:
-        #     self.shutter_wdg._set_shutter_wdg_to_closed()
-
     def update_max_min(self, event=None):
 
         if self.tab_wdg.tabWidget.currentIndex() != 0:
@@ -235,11 +230,6 @@ class MainWindow(MicroManagerWidget):
         else:
             return
 
-        # if self._mmc.getAutoShutter() and self._mmc.getShutterDevice():
-        #     self.shutter_wdg._set_shutter_wdg_to_opened()
-        # else:
-        #     self.shutter_wdg._set_shutter_wdg_to_closed()
-
         # snap in a thread so we don't freeze UI when using process local mmc
         create_worker(
             self._mmc.snapImage,
@@ -265,8 +255,7 @@ class MainWindow(MicroManagerWidget):
     def toggle_live(self, event=None):
         if self.streaming_timer is None:
 
-            ch_group = self._mmc.getChannelGroup()
-            if ch_group:
+            if ch_group := self._mmc.getChannelGroup():
                 self._mmc.setConfig(
                     ch_group, self.tab_wdg.snap_channel_comboBox.currentText()
                 )
@@ -276,16 +265,9 @@ class MainWindow(MicroManagerWidget):
             self.start_live()
             self.tab_wdg.live_Button.setIcon(CAM_STOP_ICON)
 
-            if self._mmc.getAutoShutter() or self._mmc.getShutterOpen():
-                self.shutter_wdg._set_shutter_wdg_to_opened()
-                self.shutter_wdg.shutter_checkbox.setEnabled(False)
         else:
             self.stop_live()
             self.tab_wdg.live_Button.setIcon(CAM_ICON)
-
-            if not self._mmc.getAutoShutter() or not self._mmc.getShutterOpen():
-                self.shutter_wdg._set_shutter_wdg_to_closed()
-                self.shutter_wdg.shutter_checkbox.setEnabled(True)
 
     def _update_mda_engine(self, newEngine: PMDAEngine, oldEngine: PMDAEngine):
         oldEngine.events.frameReady.connect(self._on_mda_frame)

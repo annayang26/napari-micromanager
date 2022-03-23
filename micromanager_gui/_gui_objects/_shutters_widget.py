@@ -12,8 +12,8 @@ from superqt.utils import signals_blocked
 
 # from .._core import get_core_singleton
 # from .._util import set_wdg_color
-from micromanager_gui._core import get_core_singleton
-from micromanager_gui._util import set_wdg_color
+from micromanager_gui._core import get_core_singleton  # to test, to be replaced
+from micromanager_gui._util import set_wdg_color  # to test, to be replaced
 
 COLOR_TYPE = Union[
     QColor,
@@ -57,7 +57,7 @@ class MMShuttersWidget(QtW.QWidget):
 
         self._mmc.loadSystemConfiguration(
             "/Users/FG/Desktop/test_config_multishutter.cfg"
-        )
+        )  # to test, to be removed
 
         self.button_text_open = button_text_open_closed[0]
         self.button_text_closed = button_text_open_closed[1]
@@ -85,6 +85,8 @@ class MMShuttersWidget(QtW.QWidget):
         self.main_layout.setContentsMargins(0, 0, 0, 0)
 
         self.shutter_btn = QtW.QPushButton(text=self.button_text_closed)
+        sizepolicy_btn = QtW.QSizePolicy(QtW.QSizePolicy.Fixed, QtW.QSizePolicy.Fixed)
+        self.shutter_btn.setSizePolicy(sizepolicy_btn)
         self.shutter_btn.setIcon(
             icon(MDI6.hexagon_slice_6, color=self.icon_color_closed)
         )
@@ -93,8 +95,10 @@ class MMShuttersWidget(QtW.QWidget):
         self.main_layout.addWidget(self.shutter_btn)
 
         self.shutter_comboBox = QtW.QComboBox()
-        sizepolicy = QtW.QSizePolicy(QtW.QSizePolicy.Minimum, QtW.QSizePolicy.Minimum)
-        self.shutter_comboBox.setSizePolicy(sizepolicy)
+        sizepolicy_combo = QtW.QSizePolicy(
+            QtW.QSizePolicy.Fixed, QtW.QSizePolicy.Minimum
+        )
+        self.shutter_comboBox.setSizePolicy(sizepolicy_combo)
         self.shutter_comboBox.currentTextChanged.connect(self._on_combo_changed)
         self.shutter_comboBox.textActivated.connect(self._on_combo_changed)
         self.main_layout.addWidget(self.shutter_comboBox)
@@ -123,7 +127,7 @@ class MMShuttersWidget(QtW.QWidget):
 
     def _on_combo_changed(self, shutter: str):
 
-        # close if any shutter that is open
+        # close any shutter that is open
         current_sth_state = self._mmc.getShutterOpen()
         if current_sth_state and self._mmc.getShutterDevice():
             self._close_shutter(self._mmc.getShutterDevice())
@@ -210,7 +214,7 @@ class MMShuttersWidget(QtW.QWidget):
     def _on_shutter_checkbox_toggled(self, state: bool):
         self._mmc.setAutoShutter(state)
 
-        # close if any shutter that is open
+        # close any shutter that is open
         current_sth_state = self._mmc.getShutterOpen()
         if current_sth_state and self._mmc.getShutterDevice():
             self._close_shutter(self._mmc.getShutterDevice())
