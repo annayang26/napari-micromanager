@@ -10,8 +10,6 @@ from qtpy.QtGui import QColor
 from superqt.fonticon import icon
 from superqt.utils import signals_blocked
 
-# from .._core import get_core_singleton
-# from .._util import set_wdg_color
 from micromanager_gui._core import get_core_singleton  # to test, to be replaced
 from micromanager_gui._util import set_wdg_color  # to test, to be replaced
 
