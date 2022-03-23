@@ -26,11 +26,11 @@ COLOR_TYPE = Union[
 
 
 class MMShuttersWidget(QtW.QWidget):
-    """A Widget to control shutters and micromanager autoshutter.
+    """A Widget to control micromanager shutters and autoshutter.
 
     Parameters
     ----------
-    button_text_on_off: Optional[tuple[str, str]]
+    button_text_open_closed: Optional[tuple[str, str]]
        Text of the QPushButton when the shutter is open or closed
     icon_size : Optional[str]
         Size of the QPushButton icon.
