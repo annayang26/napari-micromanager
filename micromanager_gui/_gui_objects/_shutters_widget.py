@@ -26,7 +26,7 @@ COLOR_TYPE = Union[
 
 
 class MMShuttersWidget(QtW.QWidget):
-    """A Widget to control micromanager shutters and autoshutter.
+    """A Widget to control Micro-Manager shutters and autoshutter.
 
     Parameters
     ----------
@@ -38,6 +38,8 @@ class MMShuttersWidget(QtW.QWidget):
         Color of the QPushButton icon when the shutter is open or closed.
     text_color_combo:
         Text color of the shutter QComboBox
+    parent : Optional[QWidget]
+        Optional parent widget.
     """
 
     def __init__(
@@ -49,6 +51,7 @@ class MMShuttersWidget(QtW.QWidget):
             "black",
         ),
         text_color_combo: Optional[COLOR_TYPE] = "black",
+        parent: Optional[QtW.QWidget] = None,
         *,
         mmcore: Optional[CMMCorePlus] = None,
     ):
