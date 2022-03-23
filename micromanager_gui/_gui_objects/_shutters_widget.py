@@ -37,9 +37,12 @@ class MMShuttersWidget(QtW.QWidget):
     icon_color_open_closed : Optional[COLOR_TYPE]
         Color of the QPushButton icon when the shutter is open or closed.
     text_color_combo:
-        Text color of the shutter QComboBox
+        Text color of the shutter QComboBox.
     parent : Optional[QWidget]
         Optional parent widget.
+
+    COLOR_TYPE = Union[QColor, int, str, Qt.GlobalColor, Tuple[int, int, int, int],
+    Tuple[int, int, int]]
     """
 
     def __init__(
