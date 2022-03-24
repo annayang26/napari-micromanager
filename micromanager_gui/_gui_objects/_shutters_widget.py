@@ -102,7 +102,7 @@ class MMShuttersWidget(QtW.QWidget):
 
         self.shutter_comboBox = QtW.QComboBox()
         sizepolicy_combo = QtW.QSizePolicy(
-            QtW.QSizePolicy.Fixed, QtW.QSizePolicy.Minimum
+            QtW.QSizePolicy.Minimum, QtW.QSizePolicy.Minimum
         )
         self.shutter_comboBox.setSizePolicy(sizepolicy_combo)
         self.shutter_comboBox.currentTextChanged.connect(self._on_combo_changed)
@@ -110,6 +110,10 @@ class MMShuttersWidget(QtW.QWidget):
         self.main_layout.addWidget(self.shutter_comboBox)
 
         self.shutter_checkbox = QtW.QCheckBox(text="Auto")
+        sizepolicy_checkbox = QtW.QSizePolicy(
+            QtW.QSizePolicy.Fixed, QtW.QSizePolicy.Fixed
+        )
+        self.shutter_checkbox.setSizePolicy(sizepolicy_checkbox)
         self.shutter_checkbox.toggled.connect(self._on_shutter_checkbox_toggled)
         self.main_layout.addWidget(self.shutter_checkbox)
 
