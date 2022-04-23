@@ -61,7 +61,7 @@ class StageWidget(QWidget):
     Parameters
     ----------
     device: str:
-        Stage device. For Autofocus devices, is the label of type 'StageDevice'.
+        Stage device label. For Autofocus devices, is the label of type 'StageDevice'.
         e.g. for Nikon Ti PFS, 'TIPFSOffset'.
     levels: Optional[int]:
         Number of "arrow" buttons per widget per direction, by default, 2.
