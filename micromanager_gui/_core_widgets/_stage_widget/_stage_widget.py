@@ -122,6 +122,7 @@ class StageWidget(QWidget):
                 autofocus = AutofocusDevice.create(
                     self._mmc.getAutoFocusDevice(), self._mmc
                 )
+                print(autofocus)
                 if autofocus.offset_device == self._device:
                     self._device = autofocus
                     self._is_autofocus = True
@@ -183,7 +184,7 @@ class StageWidget(QWidget):
 
         self.setLayout(QVBoxLayout())
         self.layout().setSpacing(0)
-        self.layout().setContentsMargins(0, 0, 0, 0)
+        self.layout().setContentsMargins(5, 5, 5, 5)
         self.layout().addWidget(self._btns, AlignCenter)
         self.layout().addWidget(bottom_row_1)
         self.layout().addWidget(bottom_row_2)
