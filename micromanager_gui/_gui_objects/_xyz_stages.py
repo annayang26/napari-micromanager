@@ -1,5 +1,6 @@
 from typing import Optional
 
+from pymmcore import StageDevice
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QGroupBox, QHBoxLayout, QWidget
 
@@ -25,6 +26,7 @@ class MMStagesWidget(QWidget):
         )
 
     def _on_cfg_loaded(self):
+        print(self._mmc.getLoadedDevicesOfType(StageDevice))
         self._clear()
         if dev := self._mmc.getXYStageDevice():
             bx = QGroupBox("XY Control")
@@ -33,11 +35,6 @@ class MMStagesWidget(QWidget):
             self.layout().addWidget(bx)
         if dev := self._mmc.getFocusDevice():
             bx = QGroupBox("Z Control")
-            bx.setLayout(QHBoxLayout())
-            bx.layout().addWidget(StageWidget(device=dev))
-            self.layout().addWidget(bx)
-        if dev := self._mmc.getAutoFocusDevice():
-            bx = QGroupBox("Autofocus Offset")
             bx.setLayout(QHBoxLayout())
             bx.layout().addWidget(StageWidget(device=dev))
             self.layout().addWidget(bx)

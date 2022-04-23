@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from pymmcore_plus import CMMCorePlus, DeviceType
+
 if TYPE_CHECKING:
-    from pymmcore_plus import CMMCorePlus, RemoteMMCore
+    from pymmcore_plus import RemoteMMCore
 
 
 class AutofocusDevice:
@@ -12,16 +14,16 @@ class AutofocusDevice:
         self._mmc = mmcore
 
     @classmethod
-    def create(cls, key, mmcore) -> AutofocusDevice:
+    def create(cls, key, mmcore: CMMCorePlus | RemoteMMCore) -> AutofocusDevice:
 
-        # if not key:
-        #     raise
-
-        if key == "Autofocus":
-            return Test(mmcore)
-
-        elif key == "TIPFSStatus":
+        if key == "TIPFSStatus":
             return NikonPFS(mmcore)
+
+        dtype = mmcore.getDeviceType(key)
+        if dtype is DeviceType.AutoFocus:
+            raise NameError(f"{key} is not yet implemented.")
+        else:
+            raise NameError(f"{key} is not of type 'AutoFocus'.")
 
     def isEngaged(self) -> bool:
         return self._mmc.isContinuousFocusEnabled()
@@ -38,18 +40,6 @@ class AutofocusDevice:
 
     def get_position(self, offset_device) -> float:
         return float(self._mmc.getProperty(offset_device, "Position"))
-
-
-class Test(AutofocusDevice):
-    """
-    Micro-Manager demo 'Autofocus' device.
-
-    To be used in combination with a demo 'Stage'
-    that has to be renamed 'AF_Stage'.
-    """
-
-    offset_device: str = "AF_Stage"
-    autofocus_device: str = "Autofocus"
 
 
 class NikonPFS(AutofocusDevice):

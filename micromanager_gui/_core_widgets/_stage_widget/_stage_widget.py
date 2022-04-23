@@ -1,3 +1,4 @@
+import contextlib
 from itertools import chain, product, repeat
 from typing import Optional
 
@@ -23,7 +24,7 @@ from ..._core_widgets._stage_widget._autofocusDevicies import AutofocusDevice
 
 AlignCenter = Qt.AlignmentFlag.AlignCenter
 PREFIX = MDI6.__name__.lower()
-STAGE_DEVICES = {DeviceType.Stage, DeviceType.XYStage, DeviceType.AutoFocus}
+STAGE_DEVICES = {DeviceType.Stage, DeviceType.XYStage}
 STYLE = """
 QPushButton {
     border: none;
@@ -60,7 +61,8 @@ class StageWidget(QWidget):
     Parameters
     ----------
     device: str:
-        Stage device.
+        Stage device. For Autofocus devices, is the label of type 'FocusDevice'.
+        e.g. for Nikon PFS, 'TIPFSOffset'.
     levels: Optional[int]:
         Number of "arrow" buttons per widget per direction, by default, 2.
     parent : Optional[QWidget]
@@ -103,6 +105,7 @@ class StageWidget(QWidget):
 
         self._device = device
         self._dtype = self._mmc.getDeviceType(self._device)
+
         assert self._dtype in STAGE_DEVICES, f"{self._dtype} not in {STAGE_DEVICES}"
 
         self._is_autofocus = False
@@ -115,17 +118,13 @@ class StageWidget(QWidget):
     def _check_if_autofocus(self):
         if self._dtype is DeviceType.Stage and self._mmc.getAutoFocusDevice():
 
-            autofocus = AutofocusDevice.create(
-                self._mmc.getAutoFocusDevice(), self._mmc
-            )
-
-            if autofocus.offset_device == self._device:
-                self._device = autofocus
-                self._is_autofocus = True
-
-        elif self._dtype is DeviceType.AutoFocus:
-            self._device = AutofocusDevice.create(self._device, self._mmc)
-            self._is_autofocus = True
+            with contextlib.suppress(Exception):
+                autofocus = AutofocusDevice.create(
+                    self._mmc.getAutoFocusDevice(), self._mmc
+                )
+                if autofocus.offset_device == self._device:
+                    self._device = autofocus
+                    self._is_autofocus = True
 
     def _create_widget(self):
         self._step = QDoubleSpinBox()
@@ -180,7 +179,6 @@ class StageWidget(QWidget):
         bottom_row_2_layout.setAlignment(AlignCenter)
         bottom_row_2.setLayout(bottom_row_2_layout)
         bottom_row_2.layout().addWidget(self.snap_checkbox)
-        # if self._dtype is DeviceType.XYStage or self._dtype is DeviceType.Stage:
         bottom_row_2.layout().addWidget(self._poll_cb)
 
         self.setLayout(QVBoxLayout())
