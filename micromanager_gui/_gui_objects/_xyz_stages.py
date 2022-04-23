@@ -1,6 +1,5 @@
 from typing import Optional
 
-from pymmcore import StageDevice
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QGroupBox, QHBoxLayout, QWidget
 
@@ -26,7 +25,6 @@ class MMStagesWidget(QWidget):
         )
 
     def _on_cfg_loaded(self):
-        print(self._mmc.getLoadedDevicesOfType(StageDevice))
         self._clear()
         if dev := self._mmc.getXYStageDevice():
             bx = QGroupBox("XY Control")
