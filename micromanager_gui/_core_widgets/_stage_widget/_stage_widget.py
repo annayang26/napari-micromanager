@@ -12,11 +12,13 @@ from qtpy.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QRadioButton,
     QSpinBox,
     QVBoxLayout,
     QWidget,
 )
 from superqt.fonticon import setTextIcon
+from superqt.utils import signals_blocked
 
 from micromanager_gui import _core
 
@@ -115,6 +117,8 @@ class StageWidget(QWidget):
 
         self._connect_events()
 
+        self._set_as_default()
+
     def _check_if_autofocus(self):
         if self._dtype is DeviceType.Stage and self._mmc.getAutoFocusDevice():
 
@@ -169,6 +173,15 @@ class StageWidget(QWidget):
 
         self.snap_checkbox = QCheckBox(text="Snap on Click")
 
+        self.radiobutton = QRadioButton(text="Set as Default")
+        self.radiobutton.toggled.connect(self._on_radiobutton_toggled)
+
+        top_row = QWidget()
+        top_row_layout = QHBoxLayout()
+        top_row_layout.setAlignment(AlignCenter)
+        top_row.setLayout(top_row_layout)
+        top_row.layout().addWidget(self.radiobutton)
+
         bottom_row_1 = QWidget()
         bottom_row_1.setLayout(QHBoxLayout())
         bottom_row_1.layout().addWidget(self._readout)
@@ -185,6 +198,7 @@ class StageWidget(QWidget):
         self.setLayout(QVBoxLayout())
         self.layout().setSpacing(0)
         self.layout().setContentsMargins(5, 5, 5, 5)
+        self.layout().addWidget(top_row)
         self.layout().addWidget(self._btns, AlignCenter)
         self.layout().addWidget(bottom_row_1)
         self.layout().addWidget(bottom_row_2)
@@ -192,15 +206,61 @@ class StageWidget(QWidget):
     def _connect_events(self):
         if self._dtype is DeviceType.XYStage:
             event = self._mmc.events.XYStagePositionChanged
-        elif self._is_autofocus:
-            event = self._mmc.events.stagePositionChanged
-            event_1 = self._mmc.events.propertyChanged
         else:
             event = self._mmc.events.stagePositionChanged
 
-        if self._is_autofocus:
-            event_1.connect(self._on_offset_changed)
         event.connect(self._update_position_label)
+        self._mmc.events.propertyChanged.connect(self._on_prop_changed)
+        self._mmc.events.systemConfigurationLoaded.connect(self._set_as_default)
+
+        if self._is_autofocus:
+            self._mmc.events.propertyChanged.connect(self._on_offset_changed)
+
+    def _set_as_default(self):
+        current_xy = self._mmc.getXYStageDevice()
+        current_z = self._mmc.getFocusDevice()
+        current_autofocus = self._mmc.getAutoFocusDevice()
+        if self._dtype is DeviceType.XYStage and current_xy == self._device:
+            self.radiobutton.setChecked(True)
+        elif self._is_autofocus and current_autofocus == self._device.offset_device:
+            self.radiobutton.setChecked(True)
+        elif current_z == self._device:
+            self.radiobutton.setChecked(True)
+
+    def _on_radiobutton_toggled(self, state: bool):
+        if self._dtype is DeviceType.XYStage:
+            if state:
+                self._mmc.setProperty("Core", "XYStage", self._device)
+            else:
+                self._mmc.setProperty("Core", "XYStage", "")
+
+        elif self._is_autofocus:
+            if state:
+                self._mmc.setProperty(
+                    "Core", "Autofocus", self._device.autofocus_device
+                )
+            else:
+                self._mmc.setProperty("Core", "Autofocus", "")
+
+        elif self._dtype is DeviceType.Stage:
+            if state:
+                self._mmc.setProperty("Core", "Focus", self._device)
+            else:
+                self._mmc.setProperty("Core", "Focus", "")
+
+    def _on_prop_changed(self, dev, prop, val):
+        if dev != "Core":
+            return
+        if self._dtype is DeviceType.XYStage and prop == "XYStage":
+            with signals_blocked(self.radiobutton):
+                self.radiobutton.setChecked(val == self._device)
+        elif self._is_autofocus and prop == "AutoFocus":
+            with signals_blocked(self.radiobutton):
+                # This has to be verified, autofocus_device or offset_device?
+                self.radiobutton.setChecked(val == self._device.autofocus_device)
+        elif self._dtype is DeviceType.Stage and prop == "Focus":
+            with signals_blocked(self.radiobutton):
+                self.radiobutton.setChecked(val == self._device)
 
     def _toggle_poll_timer(self, on: bool):
         self._poll_timer.start() if on else self._poll_timer.stop()
