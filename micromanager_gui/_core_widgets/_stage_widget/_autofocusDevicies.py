@@ -17,7 +17,10 @@ class AutofocusDevice:
     def create(cls, key, mmcore: CMMCorePlus | RemoteMMCore) -> AutofocusDevice:
 
         if key == "TIPFSStatus":
-            return NikonPFS(mmcore)
+            return NikonTiPFS(mmcore)
+
+        if key == "ZeissDefiniteFocus":
+            return ZeissDefiniteFocus(mmcore)
 
         dtype = mmcore.getDeviceType(key)
         if dtype is DeviceType.AutoFocus:
@@ -42,12 +45,36 @@ class AutofocusDevice:
         return float(self._mmc.getProperty(offset_device, "Position"))
 
 
-class NikonPFS(AutofocusDevice):
+class NikonTiPFS(AutofocusDevice):
     """
-    Nikon Perfect Focus System (PFS) autofocus device.
+    Nikon Ti Perfect Focus System (PFS) autofocus device.
 
     To be used when `mmcore.getAutoFocusDevice()` returns `"TIPFStatus"`.
     """
 
     offset_device: str = "TIPFSOffset"
     autofocus_device: str = "TIPFStatus"
+
+
+# TODO:
+# # class NikonTi2PFS(AutofocusDevice):
+#     """
+#     Nikon Ti2 Perfect Focus System (PFS) autofocus device.
+
+#     To be used when `mmcore.getAutoFocusDevice()` returns `"TIPFStatus"`.
+#     """
+
+#     offset_device: str = "TIPFSOffset"
+#     autofocus_device: str = "TIPFStatus"
+
+
+class ZeissDefiniteFocus(AutofocusDevice):
+    # NOT TESTED
+    """
+    Zeiss DefiniteFocus System autofocus device.
+
+    To be used when `mmcore.getAutoFocusDevice()` returns `"ZeissDefiniteFocus"`.
+    """
+
+    offset_device: str = "ZeissDefiniteFocusOffset"
+    autofocus_device: str = "ZeissDefiniteFocus"
