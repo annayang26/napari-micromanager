@@ -4,7 +4,7 @@ from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QGroupBox, QHBoxLayout, QWidget
 
 from .. import _core
-from .._core_widgets._stage_widget import StageWidget
+from .._core_widgets._stage_widget._stage_widget import StageWidget
 
 
 class MMStagesWidget(QWidget):
@@ -33,6 +33,11 @@ class MMStagesWidget(QWidget):
             self.layout().addWidget(bx)
         if dev := self._mmc.getFocusDevice():
             bx = QGroupBox("Z Control")
+            bx.setLayout(QHBoxLayout())
+            bx.layout().addWidget(StageWidget(device=dev))
+            self.layout().addWidget(bx)
+        if dev := self._mmc.getAutoFocusDevice():
+            bx = QGroupBox("Autofocus Offset")
             bx.setLayout(QHBoxLayout())
             bx.layout().addWidget(StageWidget(device=dev))
             self.layout().addWidget(bx)

@@ -19,9 +19,11 @@ from superqt.fonticon import setTextIcon
 
 from micromanager_gui import _core
 
+from ..._core_widgets._stage_widget._autofocusDevicies import AutofocusDevice
+
 AlignCenter = Qt.AlignmentFlag.AlignCenter
 PREFIX = MDI6.__name__.lower()
-STAGE_DEVICES = {DeviceType.Stage, DeviceType.XYStage}
+STAGE_DEVICES = {DeviceType.Stage, DeviceType.XYStage, DeviceType.AutoFocus}
 STYLE = """
 QPushButton {
     border: none;
@@ -97,14 +99,33 @@ class StageWidget(QWidget):
         self.setStyleSheet(STYLE)
 
         self._mmc = mmcore or _core.get_core_singleton()
+        self._levels = levels
+
         self._device = device
         self._dtype = self._mmc.getDeviceType(self._device)
         assert self._dtype in STAGE_DEVICES, f"{self._dtype} not in {STAGE_DEVICES}"
-        self._levels = levels
+
+        self._is_autofocus = False
+        self._check_if_autofocus()
 
         self._create_widget()
 
         self._connect_events()
+
+    def _check_if_autofocus(self):
+        if self._dtype is DeviceType.Stage and self._mmc.getAutoFocusDevice():
+
+            autofocus = AutofocusDevice.create(
+                self._mmc.getAutoFocusDevice(), self._mmc
+            )
+
+            if autofocus.offset_device == self._device:
+                self._device = autofocus
+                self._is_autofocus = True
+
+        elif self._dtype is DeviceType.AutoFocus:
+            self._device = AutofocusDevice.create(self._device, self._mmc)
+            self._is_autofocus = True
 
     def _create_widget(self):
         self._step = QDoubleSpinBox()
@@ -159,8 +180,8 @@ class StageWidget(QWidget):
         bottom_row_2_layout.setAlignment(AlignCenter)
         bottom_row_2.setLayout(bottom_row_2_layout)
         bottom_row_2.layout().addWidget(self.snap_checkbox)
-        if self._dtype is DeviceType.XYStage:
-            bottom_row_2.layout().addWidget(self._poll_cb)
+        # if self._dtype is DeviceType.XYStage or self._dtype is DeviceType.Stage:
+        bottom_row_2.layout().addWidget(self._poll_cb)
 
         self.setLayout(QVBoxLayout())
         self.layout().setSpacing(0)
@@ -172,8 +193,14 @@ class StageWidget(QWidget):
     def _connect_events(self):
         if self._dtype is DeviceType.XYStage:
             event = self._mmc.events.XYStagePositionChanged
+        elif self._is_autofocus:
+            event = self._mmc.events.stagePositionChanged
+            event_1 = self._mmc.events.propertyChanged
         else:
             event = self._mmc.events.stagePositionChanged
+
+        if self._is_autofocus:
+            event_1.connect(self._on_offset_changed)
         event.connect(self._update_position_label)
 
     def _toggle_poll_timer(self, on: bool):
@@ -183,13 +210,42 @@ class StageWidget(QWidget):
         if self._dtype is DeviceType.XYStage:
             pos = self._mmc.getXYPosition(self._device)
             p = ", ".join(str(round(x, 2)) for x in pos)
+        elif self._is_autofocus:
+            p = round(self._device.get_position(self._device.offset_device), 2)
         else:
             p = round(self._mmc.getPosition(self._device), 2)
-        self._readout.setText(f"{self._device}:  {p}")
+
+        if self._is_autofocus:
+            self._readout.setText(f"{self._device.offset_device}:  {p}")
+        else:
+            self._readout.setText(f"{self._device}:  {p}")
+
+    def _on_offset_changed(self, dev_name: str, prop_name: str, value: str):
+        if self._is_autofocus and dev_name in [
+            self._device.offset_device,
+            self._device.autofocus_device,
+        ]:
+            self._on_offset_status_changed()
+
+    def _enable_wdg(self, enabled):
+        self._step.setEnabled(enabled)
+        self._btns.setEnabled(enabled)
+
+    def _on_offset_status_changed(self):
+        if not self._device or self._device and not self._device.isEngaged():
+            self._enable_wdg(False)
+
+        elif self._device.isLocked() or self._device.isFocusing(
+            self._device.autofocus_device
+        ):
+            self._enable_wdg(True)
 
     def _update_ttips(self):
         coords = chain(zip(repeat(3), range(7)), zip(range(7), repeat(3)))
-        Y = {DeviceType.XYStage: "Y"}.get(self._dtype, "Z")
+
+        Y = {DeviceType.XYStage: "Y", DeviceType.AutoFocus: "Offset"}.get(
+            self._dtype, "Z"
+        )
 
         btn_layout: QGridLayout = self._btns.layout()
         for r, c in coords:
@@ -239,10 +295,19 @@ class StageWidget(QWidget):
     def _move_stage(self, x, y):
         if self._dtype is DeviceType.XYStage:
             self._mmc.setRelativeXYPosition(self._device, x, y)
+        elif self._is_autofocus:
+            self._move_offset(y)
         else:
             self._mmc.setRelativePosition(self._device, y)
         if self.snap_checkbox.isChecked():
             self._mmc.snap()
+
+    def _move_offset(self, y):
+        if self._mmc.isContinuousFocusLocked():
+            offset_dev = self._device.offset_device
+            current_offset = self._device.get_position(offset_dev)
+            new_offset = current_offset + float(y)
+            self._device.set_offset(offset_dev, new_offset)
 
     def _scale(self, mag: int):
         """
