@@ -224,13 +224,13 @@ class StageWidget(QWidget):
             self._device.offset_device,
             self._device.autofocus_device,
         ]:
-            self._on_offset_status_changed()
+            self._on_offset_state_changed()
 
     def _enable_wdg(self, enabled):
         self._step.setEnabled(enabled)
         self._btns.setEnabled(enabled)
 
-    def _on_offset_status_changed(self):
+    def _on_offset_state_changed(self):
         if not self._device or self._device and not self._device.isEngaged():
             self._enable_wdg(False)
 
