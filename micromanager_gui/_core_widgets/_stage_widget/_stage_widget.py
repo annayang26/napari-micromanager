@@ -231,6 +231,12 @@ class StageWidget(QWidget):
         if self._dtype is DeviceType.XYStage:
             if state:
                 self._mmc.setProperty("Core", "XYStage", self._device)
+            elif (
+                not state
+                and len(self._mmc.getLoadedDevicesOfType(DeviceType.XYStage)) == 1
+            ):
+                with signals_blocked(self.radiobutton):
+                    self.radiobutton.setChecked(True)
             else:
                 self._mmc.setProperty("Core", "XYStage", "")
 
@@ -239,12 +245,24 @@ class StageWidget(QWidget):
                 self._mmc.setProperty(
                     "Core", "Autofocus", self._device.autofocus_device
                 )
+            elif (
+                not state
+                and len(self._mmc.getLoadedDevicesOfType(DeviceType.AutoFocus)) == 1
+            ):
+                with signals_blocked(self.radiobutton):
+                    self.radiobutton.setChecked(True)
             else:
                 self._mmc.setProperty("Core", "Autofocus", "")
 
         elif self._dtype is DeviceType.Stage:
             if state:
                 self._mmc.setProperty("Core", "Focus", self._device)
+            elif (
+                not state
+                and len(self._mmc.getLoadedDevicesOfType(DeviceType.Stage)) == 1
+            ):
+                with signals_blocked(self.radiobutton):
+                    self.radiobutton.setChecked(True)
             else:
                 self._mmc.setProperty("Core", "Focus", "")
 
@@ -289,6 +307,9 @@ class StageWidget(QWidget):
     def _enable_wdg(self, enabled):
         self._step.setEnabled(enabled)
         self._btns.setEnabled(enabled)
+        self.snap_checkbox.setEnabled(enabled)
+        self.radiobutton.setEnabled(enabled)
+        self._poll_cb.setEnabled(enabled)
 
     def _on_offset_state_changed(self):
         if not self._device or self._device and not self._device.isEngaged():
