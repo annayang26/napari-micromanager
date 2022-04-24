@@ -128,7 +128,6 @@ class StageWidget(QWidget):
                 autofocus = AutofocusDevice.create(
                     self._mmc.getAutoFocusDevice(), self._mmc
                 )
-                print(autofocus)
                 if autofocus.offset_device == self._device:
                     self._device = autofocus
                     self._is_autofocus = True
@@ -326,17 +325,24 @@ class StageWidget(QWidget):
         self._poll_timer.start() if on else self._poll_timer.stop()
 
     def _update_position_label(self):
-        if self._dtype is DeviceType.XYStage:
+        if (
+            self._dtype is DeviceType.XYStage
+            and self._device in self._mmc.getLoadedDevicesOfType(DeviceType.XYStage)
+        ):
             pos = self._mmc.getXYPosition(self._device)
             p = ", ".join(str(round(x, 2)) for x in pos)
-        elif self._is_autofocus:
-            p = round(self._device.get_position(self._device.offset_device), 2)
-        else:
-            p = round(self._mmc.getPosition(self._device), 2)
+            self._readout.setText(f"{self._device}:  {p}")
 
-        if self._is_autofocus:
+        elif (
+            self._is_autofocus
+            and self._device.offset_device
+            in self._mmc.getLoadedDevicesOfType(DeviceType.Stage)
+        ):
+            p = round(self._device.get_position(self._device.offset_device), 2)
             self._readout.setText(f"{self._device.offset_device}:  {p}")
-        else:
+
+        elif self._device in self._mmc.getLoadedDevicesOfType(DeviceType.Stage):
+            p = round(self._mmc.getPosition(self._device), 2)
             self._readout.setText(f"{self._device}:  {p}")
 
     def _on_offset_changed(self, dev_name: str, prop_name: str, value: str):
