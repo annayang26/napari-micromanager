@@ -119,7 +119,7 @@ class StageWidget(QWidget):
 
         self._set_as_default()
 
-        self.destroyed.connect(self.disconnect)
+        self.destroyed.connect(self._disconnect)
 
     def _check_if_autofocus(self):
         if self._dtype is DeviceType.Stage and self._mmc.getAutoFocusDevice():
@@ -213,10 +213,50 @@ class StageWidget(QWidget):
 
         event.connect(self._update_position_label)
         self._mmc.events.propertyChanged.connect(self._on_prop_changed)
-        self._mmc.events.systemConfigurationLoaded.connect(self._set_as_default)
+        self._mmc.events.systemConfigurationLoaded.connect(self._os_system_cfg)
 
         if self._is_autofocus:
             self._mmc.events.propertyChanged.connect(self._on_offset_changed)
+
+    def _os_system_cfg(self):
+        if self._dtype is DeviceType.XYStage:
+            if self._device not in self._mmc.getLoadedDevicesOfType(DeviceType.XYStage):
+                self._enable_and_update(False)
+            else:
+                self._enable_and_update(True)
+
+        elif self._is_autofocus:
+            if self._device.offset_device not in self._mmc.getLoadedDevicesOfType(
+                DeviceType.Stage
+            ) or self._device.autofocus_device not in self._mmc.getLoadedDevicesOfType(
+                DeviceType.AutoFocus
+            ):
+                self._enable_and_update(False)
+            else:
+                self._enable_and_update(True)
+
+        elif self._dtype is DeviceType.Stage:
+            if self._device not in self._mmc.getLoadedDevicesOfType(DeviceType.Stage):
+                self._enable_and_update(False)
+            else:
+                self._enable_and_update(True)
+
+        self._set_as_default()
+
+    def _enable_and_update(self, enable: bool):
+        if enable:
+            self._enable_wdg(True)
+            self._update_position_label()
+        else:
+            self._readout.setText(f"{self._device} not loaded.")
+            self._enable_wdg(False)
+
+    def _enable_wdg(self, enabled):
+        self._step.setEnabled(enabled)
+        self._btns.setEnabled(enabled)
+        self.snap_checkbox.setEnabled(enabled)
+        self.radiobutton.setEnabled(enabled)
+        self._poll_cb.setEnabled(enabled)
 
     def _set_as_default(self):
         current_xy = self._mmc.getXYStageDevice()
@@ -306,13 +346,6 @@ class StageWidget(QWidget):
         ]:
             self._on_offset_state_changed()
 
-    def _enable_wdg(self, enabled):
-        self._step.setEnabled(enabled)
-        self._btns.setEnabled(enabled)
-        self.snap_checkbox.setEnabled(enabled)
-        self.radiobutton.setEnabled(enabled)
-        self._poll_cb.setEnabled(enabled)
-
     def _on_offset_state_changed(self):
         if not self._device or self._device and not self._device.isEngaged():
             self._enable_wdg(False)
@@ -398,7 +431,9 @@ class StageWidget(QWidget):
         """
         return mag * self._step.value()
 
-    def disconnect(self):
+    def _disconnect(self):
+        self._mmc.events.propertyChanged.disconnect(self._on_prop_changed)
+        self._mmc.events.systemConfigurationLoaded.disconnect(self._os_system_cfg)
         if self._dtype is DeviceType.XYStage:
             event = self._mmc.events.XYStagePositionChanged
         if self._dtype is DeviceType.Stage:
@@ -406,5 +441,3 @@ class StageWidget(QWidget):
         if self._is_autofocus:
             self._mmc.events.propertyChanged.disconnect(self._on_offset_changed)
         event.disconnect(self._update_position_label)
-        self._mmc.events.propertyChanged.disconnect(self._on_prop_changed)
-        self._mmc.events.systemConfigurationLoaded.disconnect(self._set_as_default)
