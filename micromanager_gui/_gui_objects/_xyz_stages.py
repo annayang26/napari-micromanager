@@ -6,7 +6,7 @@ from qtpy.QtGui import QDrag
 from qtpy.QtWidgets import QGroupBox, QHBoxLayout, QWidget
 
 from .. import _core
-from .._core_widgets._stage_widget import StageWidget
+from .._core_widgets._stage_widget._stage_widget import StageWidget
 
 STAGE_DEVICES = {DeviceType.Stage, DeviceType.XYStage}
 
@@ -83,9 +83,16 @@ class MMStagesWidget(QWidget):
             if not w.start_pos:
                 continue
 
-            curr_idx = next(
-                (i for i, z in enumerate(zones) if pos.x() >= z[0] and pos.x() <= z[1])
-            )
+            try:
+                curr_idx = next(
+                    (
+                        i
+                        for i, z in enumerate(zones)
+                        if pos.x() >= z[0] and pos.x() <= z[1]
+                    )
+                )
+            except StopIteration:
+                break
 
             if curr_idx == idx:
                 w.start_pos = None
