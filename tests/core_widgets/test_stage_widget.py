@@ -18,6 +18,13 @@ def test_stage_widget(qtbot: QtBot, global_mmcore: CMMCorePlus):
 
     qtbot.addWidget(stage_xy)
 
+    assert global_mmcore.getXYStageDevice() == "XY"
+    assert stage_xy.radiobutton.isChecked()
+    global_mmcore.setProperty("Core", "XYStage", "")
+    assert not global_mmcore.getXYStageDevice()
+    assert not stage_xy.radiobutton.isChecked()
+    stage_xy.radiobutton.setChecked(True)
+    assert global_mmcore.getXYStageDevice() == "XY"
     assert stage_xy.radiobutton.isChecked()
 
     stage_xy._step.setValue(5.0)
