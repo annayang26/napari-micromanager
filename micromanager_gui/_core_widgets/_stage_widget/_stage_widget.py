@@ -119,6 +119,8 @@ class StageWidget(QWidget):
 
         self._set_as_default()
 
+        self.destroyed.connect(self.disconnect)
+
     def _check_if_autofocus(self):
         if self._dtype is DeviceType.Stage and self._mmc.getAutoFocusDevice():
 
@@ -395,3 +397,14 @@ class StageWidget(QWidget):
         Can be used to step 1x field of view, etc...
         """
         return mag * self._step.value()
+
+    def disconnect(self):
+        if self._dtype is DeviceType.XYStage:
+            event = self._mmc.events.XYStagePositionChanged
+        if self._dtype is DeviceType.Stage:
+            event = self._mmc.events.stagePositionChanged
+        if self._is_autofocus:
+            self._mmc.events.propertyChanged.disconnect(self._on_offset_changed)
+        event.disconnect(self._update_position_label)
+        self._mmc.events.propertyChanged.disconnect(self._on_prop_changed)
+        self._mmc.events.systemConfigurationLoaded.disconnect(self._set_as_default)
