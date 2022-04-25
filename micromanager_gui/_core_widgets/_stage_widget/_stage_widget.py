@@ -397,9 +397,12 @@ class StageWidget(QWidget):
     def _update_ttips(self):
         coords = chain(zip(repeat(3), range(7)), zip(range(7), repeat(3)))
 
-        Y = {DeviceType.XYStage: "Y", DeviceType.AutoFocus: "Offset"}.get(
-            self._dtype, "Z"
-        )
+        if self._dtype is DeviceType.XYStage:
+            Y = 'Y'
+        elif self._is_autofocus:
+            Y = 'Offset'
+        else:
+            Y = 'Z'
 
         btn_layout: QGridLayout = self._btns.layout()
         for r, c in coords:
