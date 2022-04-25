@@ -135,15 +135,6 @@ class MainWindow(MicroManagerWidget):
             self._set_enabled(True)
 
     def _set_enabled(self, enabled):
-        if self._mmc.getCameraDevice():
-            self._camera_group_wdg(enabled)
-            self.tab_wdg.snap_live_tab.setEnabled(enabled)
-            self.tab_wdg.snap_live_tab.setEnabled(enabled)
-        else:
-            self._camera_group_wdg(False)
-            self.tab_wdg.snap_live_tab.setEnabled(False)
-            self.tab_wdg.snap_live_tab.setEnabled(False)
-
         self.illum_btn.setEnabled(enabled)
         self.stages_button.setEnabled(enabled)
 
@@ -152,9 +143,6 @@ class MainWindow(MicroManagerWidget):
             self.explorer._set_enabled(enabled)
         else:
             self.explorer._set_enabled(False)
-
-    def _camera_group_wdg(self, enabled):
-        self.cam_wdg.setEnabled(enabled)
 
     @ensure_main_thread
     def update_viewer(self, data=None):
