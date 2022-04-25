@@ -71,6 +71,9 @@ class MainWindow(MicroManagerWidget):
         sig.stagePositionChanged.connect(self._on_stage_position_changed)
         sig.exposureChanged.connect(self._on_exp_change)
 
+        sig.imageSnapped.connect(self.update_viewer)
+        sig.imageSnapped.connect(self.stop_live)
+
         # mda events
         self._mmc.mda.events.frameReady.connect(self._on_mda_frame)
         self._mmc.mda.events.sequenceStarted.connect(self._on_mda_started)
@@ -84,7 +87,6 @@ class MainWindow(MicroManagerWidget):
         self.stage_wdg.y_down_Button.clicked.connect(self.stage_y_down)
         self.stage_wdg.up_Button.clicked.connect(self.stage_z_up)
         self.stage_wdg.down_Button.clicked.connect(self.stage_z_down)
-        self.tab_wdg.snap_Button.clicked.connect(self.snap)
         self.tab_wdg.live_Button.clicked.connect(self.toggle_live)
 
         # connect comboBox
@@ -175,7 +177,9 @@ class MainWindow(MicroManagerWidget):
         self._refresh_positions()
         self._refresh_xyz_devices()
 
+    @ensure_main_thread
     def update_viewer(self, data=None):
+
         if data is None:
             try:
                 data = self._mmc.getLastImage()
@@ -215,15 +219,9 @@ class MainWindow(MicroManagerWidget):
 
         self.tab_wdg.max_min_val_label.setText(min_max_txt)
 
-    def snap(self):
-        self.stop_live()
-
-        # snap in a thread so we don't freeze UI when using process local mmc
-        create_worker(
-            self._mmc.snapImage,
-            _connect={"finished": lambda: self.update_viewer(self._mmc.getImage())},
-            _start_thread=True,
-        )
+    def _snap(self):
+        # update in a thread so we don't freeze UI
+        create_worker(self._mmc.snap, _start_thread=True)  # pragma: no cover
 
     def start_live(self):
         self._mmc.startContinuousSequenceAcquisition(self.tab_wdg.exp_spinBox.value())
@@ -233,7 +231,8 @@ class MainWindow(MicroManagerWidget):
         self.tab_wdg.live_Button.setText("Stop")
 
     def stop_live(self):
-        self._mmc.stopSequenceAcquisition()
+        if self._mmc.isSequenceRunning():
+            self._mmc.stopSequenceAcquisition()
         if self.streaming_timer is not None:
             self.streaming_timer.stop()
             self.streaming_timer = None
@@ -524,14 +523,14 @@ class MainWindow(MicroManagerWidget):
             -float(self.stage_wdg.xy_step_size_SpinBox.value()), 0.0
         )
         if self.stage_wdg.snap_on_click_checkBox.isChecked():
-            self.snap()
+            self._snap()  # pragma: no cover
 
     def stage_x_right(self):
         self._mmc.setRelativeXYPosition(
             float(self.stage_wdg.xy_step_size_SpinBox.value()), 0.0
         )
         if self.stage_wdg.snap_on_click_checkBox.isChecked():
-            self.snap()
+            self._snap()  # pragma: no cover
 
     def stage_y_up(self):
         self._mmc.setRelativeXYPosition(
@@ -539,7 +538,7 @@ class MainWindow(MicroManagerWidget):
             float(self.stage_wdg.xy_step_size_SpinBox.value()),
         )
         if self.stage_wdg.snap_on_click_checkBox.isChecked():
-            self.snap()
+            self._snap()  # pragma: no cover
 
     def stage_y_down(self):
         self._mmc.setRelativeXYPosition(
@@ -547,18 +546,18 @@ class MainWindow(MicroManagerWidget):
             -float(self.stage_wdg.xy_step_size_SpinBox.value()),
         )
         if self.stage_wdg.snap_on_click_checkBox.isChecked():
-            self.snap()
+            self._snap()  # pragma: no cover
 
     def stage_z_up(self):
         self._mmc.setRelativePosition(
             float(self.stage_wdg.z_step_size_doubleSpinBox.value())
         )
         if self.stage_wdg.snap_on_click_checkBox.isChecked():
-            self.snap()
+            self._snap()  # pragma: no cover
 
     def stage_z_down(self):
         self._mmc.setRelativePosition(
             -float(self.stage_wdg.z_step_size_doubleSpinBox.value())
         )
         if self.stage_wdg.snap_on_click_checkBox.isChecked():
-            self.snap()
+            self._snap()  # pragma: no cover
