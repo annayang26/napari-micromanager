@@ -8,9 +8,9 @@ from ._camera_widget import MMCameraWidget
 from ._config_widget import MMConfigurationWidget
 from ._group_preset_table_widget import MMGroupPresetTableWidget
 from ._mda_widget import MultiDWidget
+from ._mm_shutters_widget import MMShuttersWidget
 from ._objective_widget import MMObjectivesWidget
 from ._sample_explorer_widget import ExploreSample
-from ._shutters_widget import MMShuttersWidget
 from ._slider_dialog import SliderDialog
 from ._tab_widget import MMTabWidget
 from ._xyz_stages import MMStagesWidget
