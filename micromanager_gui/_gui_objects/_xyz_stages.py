@@ -111,7 +111,6 @@ class DragGroupBox(QGroupBox):
         self.setTitle(self._name)
 
     def mouseMoveEvent(self, event):
-        # if event.buttons() == Qt.LeftButton:
         drag = QDrag(self)
         mime = QMimeData()
         drag.setMimeData(mime)
