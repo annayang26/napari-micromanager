@@ -183,6 +183,10 @@ class StageWidget(QWidget):
         self.radiobutton = QRadioButton(text="Set as Default")
         self.radiobutton.toggled.connect(self._on_radiobutton_toggled)
 
+        if self._is_autofocus:
+            self.offset_checkbox = QCheckBox(text="On/Off")
+            self.offset_checkbox.stateChanged.connect(self._offset_on_off)
+
         top_row = QWidget()
         top_row_layout = QHBoxLayout()
         top_row_layout.setAlignment(AlignCenter)
@@ -200,7 +204,10 @@ class StageWidget(QWidget):
         bottom_row_2_layout.setAlignment(AlignCenter)
         bottom_row_2.setLayout(bottom_row_2_layout)
         bottom_row_2.layout().addWidget(self.snap_checkbox)
-        bottom_row_2.layout().addWidget(self._poll_cb)
+        if self._is_autofocus:
+            bottom_row_2.layout().addWidget(self.offset_checkbox)
+        else:
+            bottom_row_2.layout().addWidget(self._poll_cb)
 
         self.setLayout(QVBoxLayout())
         self.layout().setSpacing(0)
@@ -356,6 +363,12 @@ class StageWidget(QWidget):
             else:
                 self._enable_wdg(True)
 
+    def _offset_on_off(self, state: bool):
+        if state:
+            self._mmc.setProperty(self._device.autofocus_device, "State", "On")
+        else:
+            self._mmc.setProperty(self._device.autofocus_device, "State", "Off")
+
     def _on_offset_changed(self, dev_name: str, prop_name: str, value: str):
         if dev_name == self._device.autofocus_device and prop_name in {"State", "Status"}:
             self._on_offset_state_changed()
@@ -364,11 +377,13 @@ class StageWidget(QWidget):
 
         if not self._device.isEngaged():
             self._enable_wdg(False)
+            self.offset_checkbox.setChecked(False)
 
         elif self._device.isLocked() or self._device.isFocusing(
             self._device.autofocus_device
         ):
             self._enable_wdg(True)
+            self.offset_checkbox.setChecked(True)
 
     def _update_ttips(self):
         coords = chain(zip(repeat(3), range(7)), zip(range(7), repeat(3)))
