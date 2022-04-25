@@ -6,6 +6,8 @@ from qtpy import QtWidgets as QtW
 from .._core_widgets._live_button_widget import LiveButton
 from .._core_widgets._snap_button_widget import SnapButton
 
+from ._channel_widget import ChannelWidget
+
 ICONS = Path(__file__).parent.parent / "icons"
 
 
@@ -16,7 +18,7 @@ class MMTabWidget(QtW.QWidget):
     tabWidget: QtW.QTabWidget
     snap_live_tab: QtW.QWidget
     snap_channel_groupBox: QtW.QGroupBox
-    snap_channel_comboBox: QtW.QComboBox
+    snap_channel_comboBox: ChannelWidget
     exp_groupBox: QtW.QGroupBox
     exp_spinBox: QtW.QDoubleSpinBox
     snap_Button: QtW.QPushButton
@@ -54,7 +56,7 @@ class MMTabWidget(QtW.QWidget):
         self.snap_channel_groupBox.setMaximumHeight(70)
         self.snap_channel_groupBox.setTitle("Channel")
         self.snap_channel_groupBox_layout = QtW.QHBoxLayout()
-        self.snap_channel_comboBox = QtW.QComboBox()
+        self.snap_channel_comboBox = ChannelWidget()
         self.snap_channel_groupBox_layout.addWidget(self.snap_channel_comboBox)
         self.snap_channel_groupBox.setLayout(self.snap_channel_groupBox_layout)
         self.snap_live_tab_layout.addWidget(self.snap_channel_groupBox, 0, 0)
