@@ -53,19 +53,7 @@ class NikonTiPFS(AutofocusDevice):
     """
 
     offset_device: str = "TIPFSOffset"
-    autofocus_device: str = "TIPFStatus"
-
-
-# TODO:
-# # class NikonTi2PFS(AutofocusDevice):
-#     """
-#     Nikon Ti2 Perfect Focus System (PFS) autofocus device.
-
-#     To be used when `mmcore.getAutoFocusDevice()` returns `"TIPFStatus"`.
-#     """
-
-#     offset_device: str = "TIPFSOffset"
-#     autofocus_device: str = "TIPFStatus"
+    autofocus_device: str = "TIPFSStatus"
 
 
 class ZeissDefiniteFocus(AutofocusDevice):

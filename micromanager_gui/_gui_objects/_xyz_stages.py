@@ -104,10 +104,11 @@ class MMStagesWidget(QWidget):
 
 
 class DragGroupBox(QGroupBox):
-    def __init__(self, name: str, start_pos=None) -> None:
+    def __init__(self, title: str, start_pos=None) -> None:
         super().__init__()
-        self._name = name
+        self._name = title
         self.start_pos = start_pos
+        self.setTitle(self._name)
 
     def mouseMoveEvent(self, event):
         # if event.buttons() == Qt.LeftButton:
