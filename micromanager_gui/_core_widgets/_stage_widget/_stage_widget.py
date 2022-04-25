@@ -18,6 +18,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 from superqt.fonticon import setTextIcon
+from superqt.fonticon import icon
 from superqt.utils import signals_blocked
 
 from micromanager_gui import _core
@@ -185,6 +186,7 @@ class StageWidget(QWidget):
 
         if self._is_autofocus:
             self.offset_checkbox = QCheckBox(text="On/Off")
+            self.offset_checkbox.setIcon(icon(MDI6.checkbox_blank_circle, color=(169, 169, 169)))
             self.offset_checkbox.stateChanged.connect(self._offset_on_off)
 
         top_row = QWidget()
@@ -338,17 +340,14 @@ class StageWidget(QWidget):
             p = ", ".join(str(round(x, 2)) for x in pos)
             self._readout.setText(f"{self._device}:  {p}")
 
-        elif (
-            self._is_autofocus
-            and self._device.offset_device
-            in self._mmc.getLoadedDevicesOfType(DeviceType.Stage)
-        ):
-            p = round(self._device.get_position(self._device.offset_device), 2)
-            self._readout.setText(f"{self._device.offset_device}:  {p}")
-
-        elif self._device in self._mmc.getLoadedDevicesOfType(DeviceType.Stage):
-            p = round(self._mmc.getPosition(self._device), 2)
-            self._readout.setText(f"{self._device}:  {p}")
+        else:
+            dev = self._device.offset_device if self._is_autofocus else self._device
+            if dev in self._mmc.getLoadedDevicesOfType(DeviceType.Stage):
+                if self._is_autofocus:
+                    p = round(self._device.get_position(dev), 2)
+                else:
+                    p = round(self._mmc.getPosition(dev), 2)
+                self._readout.setText(f"{dev}:  {p}")
 
     def _disable_if_autofocus_is_locked(self):
         if self._dtype is DeviceType.Stage and not self._is_autofocus:
@@ -372,18 +371,28 @@ class StageWidget(QWidget):
     def _on_offset_changed(self, dev_name: str, prop_name: str, value: str):
         if dev_name == self._device.autofocus_device and prop_name in {"State", "Status"}:
             self._on_offset_state_changed()
+            self._change_autofocus_checkbox_state()
 
     def _on_offset_state_changed(self):
 
         if not self._device.isEngaged():
             self._enable_wdg(False)
-            self.offset_checkbox.setChecked(False)
 
         elif self._device.isLocked() or self._device.isFocusing(
             self._device.autofocus_device
         ):
             self._enable_wdg(True)
+    
+    def _change_autofocus_checkbox_state(self):
+        if not self._device.isEngaged():
+            self.offset_checkbox.setChecked(False)
+            self.offset_checkbox.setIcon(icon(MDI6.checkbox_blank_circle, color=(169, 169, 169)))
+        elif self._device.isEngaged() and not self._device.isLocked():
             self.offset_checkbox.setChecked(True)
+            self.offset_checkbox.setIcon(icon(MDI6.checkbox_blank_circle, color=(255, 140, 0)))
+        else:
+            self.offset_checkbox.setChecked(True)
+            self.offset_checkbox.setIcon(icon(MDI6.checkbox_blank_circle, color=(0, 255, 0)))
 
     def _update_ttips(self):
         coords = chain(zip(repeat(3), range(7)), zip(range(7), repeat(3)))
