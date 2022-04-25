@@ -366,7 +366,7 @@ class StageWidget(QWidget):
                 self._mmc.isContinuousFocusEnabled()
                 and self._mmc.isContinuousFocusLocked()
             ) or self._mmc.getProperty(
-                self._mmc.getAutoFocusDevice(), "State"
+                self._mmc.getAutoFocusDevice(), "Status"
             ) == "Focusing":
                 self._enable_wdg(False)
             else:
