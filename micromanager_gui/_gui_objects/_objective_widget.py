@@ -83,7 +83,8 @@ class MMObjectivesWidget(QWidget):
         self, device_label
     ) -> Union[StateDeviceWidget, QComboBox]:
         if device_label:
-            combo = _ObjectiveStateWidget(device_label, mmcore=self._mmc)
+            # combo = _ObjectiveStateWidget(device_label, mmcore=self._mmc)
+            combo = StateDeviceWidget(device_label, mmcore=self._mmc)
             combo.setMinimumWidth(285)
         else:
             combo = QComboBox()

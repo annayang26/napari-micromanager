@@ -33,6 +33,10 @@ class AutofocusDevice:
 
     def isLocked(self) -> bool:
         return self._mmc.isContinuousFocusLocked()
+    
+    def inRange(self, autofocus_device) -> bool:
+       status = self._mmc.getProperty(autofocus_device, "State")
+       return status == "Within range of focus search"
 
     def isFocusing(self, autofocus_device) -> bool:
         status = self._mmc.getProperty(autofocus_device, "State")

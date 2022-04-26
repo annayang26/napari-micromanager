@@ -13,6 +13,7 @@ class MMConfigurationWidget(QtW.QGroupBox):
 
         self.cfg_LineEdit = QtW.QLineEdit()
         self.cfg_LineEdit.setPlaceholderText("MMConfig_demo.cfg")
+        self.cfg_LineEdit.setText("C:/Users/Admin/Desktop/s15_Nikon_Ti1.cfg")
 
         self.browse_cfg_Button = QtW.QPushButton("...")
         self.browse_cfg_Button.clicked.connect(self._browse_cfg)

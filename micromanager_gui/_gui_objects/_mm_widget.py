@@ -86,6 +86,8 @@ class MicroManagerWidget(QtW.QWidget):
         stage_ill_btns_group_layout.addWidget(self.stages_button)
         self.main_layout.addWidget(stage_ill_btns_group)
 
+        self._stage_wdg = MMStagesWidget(parent=self)
+
         # add tab widget
         self.main_layout.addWidget(self.tab_wdg)
         self.group_preset_table_wdg = MMGroupPresetTableWidget()
