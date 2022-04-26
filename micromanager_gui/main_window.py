@@ -154,13 +154,16 @@ class MainWindow(MicroManagerWidget):
                 # circular buffer empty
                 return
 
-        x, y = self._translate_preview()
+        # x, y = self._translate_preview()
 
         try:
             preview_layer = self.viewer.layers["preview"]
             preview_layer.data = data
         except KeyError:
-            preview_layer = self.viewer.add_image(data, name="preview", translate=(y, x))
+            # preview_layer = (
+            #     self.viewer.add_image(data, name="preview", translate=(y, x))
+            # )
+            preview_layer = self.viewer.add_image(data, name="preview")
 
         # preview_layer.translate = (y, x)
 
@@ -195,10 +198,18 @@ class MainWindow(MicroManagerWidget):
 
         self.tab_wdg.max_min_val_label.setText(min_max_txt)
 
-    def _translate_preview(self):
-        x = self._mmc.getXPosition() / self._mmc.getPixelSizeUm() if self._mmc.getPixelSizeUm() > 0 else 0
-        y = self._mmc.getYPosition() / self._mmc.getPixelSizeUm() * (-1) if self._mmc.getPixelSizeUm() > 0 else 0
-        return x, y
+    # def _translate_preview(self):
+    #     x = (
+    #         self._mmc.getXPosition() / self._mmc.getPixelSizeUm()
+    #         if self._mmc.getPixelSizeUm() > 0
+    #         else 0
+    #     )
+    #     y = (
+    #         self._mmc.getYPosition() / self._mmc.getPixelSizeUm() * (-1)
+    #         if self._mmc.getPixelSizeUm() > 0
+    #         else 0
+    #     )
+    #     return x, y
 
     def _start_live(self):
         self.streaming_timer = QTimer()
@@ -227,7 +238,7 @@ class MainWindow(MicroManagerWidget):
         if self._mda_meta.mode == "":
             # originated from user script - assume it's an mda
             self._mda_meta.mode = "mda"
-        
+
         if self._mda_meta.mode == "explorer":
             try:
                 self.viewer.layers.remove("preview")
