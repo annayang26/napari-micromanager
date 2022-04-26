@@ -190,6 +190,8 @@ class MainWindow(MicroManagerWidget):
 
         self.update_max_min()
 
+        self._translate_preview(preview_layer)
+
         if self.streaming_timer is None:
             self.viewer.reset_view()
 
@@ -214,6 +216,12 @@ class MainWindow(MicroManagerWidget):
                 min_max_txt += f'<font color="{col}">{min_max_show}</font>'
 
         self.tab_wdg.max_min_val_label.setText(min_max_txt)
+
+    def _translate_preview(self, data):
+        if self._mmc.getPixelSizeUm() > 0:
+            x = self._mmc.getXPosition() / self._mmc.getPixelSizeUm()
+            y = self._mmc.getYPosition() / self._mmc.getPixelSizeUm() * (-1)
+            data.translate = (y, x)
 
     def snap(self):
         self.stop_live()
