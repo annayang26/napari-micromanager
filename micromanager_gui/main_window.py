@@ -11,7 +11,7 @@ from pymmcore_plus._util import find_micromanager
 from qtpy import QtWidgets as QtW
 from qtpy.QtCore import Qt, QTimer
 from qtpy.QtGui import QColor, QIcon
-from superqt.utils import create_worker, ensure_main_thread, signals_blocked
+from superqt.utils import ensure_main_thread, signals_blocked
 
 from . import _core, _mda
 from ._camera_roi import CameraROI
@@ -161,6 +161,8 @@ class MainWindow(MicroManagerWidget):
 
         self.update_max_min()
 
+        self._translate_preview(preview_layer)
+
         if self.streaming_timer is None:
             self.viewer.reset_view()
 
@@ -186,9 +188,11 @@ class MainWindow(MicroManagerWidget):
 
         self.tab_wdg.max_min_val_label.setText(min_max_txt)
 
-    def _snap(self):
-        # update in a thread so we don't freeze UI
-        create_worker(self._mmc.snap, _start_thread=True)  # pragma: no cover
+    def _translate_preview(self, data):
+        if self._mmc.getPixelSizeUm() > 0:
+            x = self._mmc.getXPosition() / self._mmc.getPixelSizeUm()
+            y = self._mmc.getYPosition() / self._mmc.getPixelSizeUm() * (-1)
+            data.translate = (y, x)
 
     def _start_live(self):
         self.streaming_timer = QTimer()
