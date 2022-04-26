@@ -129,6 +129,4 @@ class MicroManagerWidget(QtW.QWidget):
         self._illumination.show()
 
     def _show_stage_control(self):
-        if not hasattr(self, "_stage_wdg"):
-            self._stage_wdg = MMStagesWidget(parent=self)
         self._stage_wdg.show()
