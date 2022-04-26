@@ -3,12 +3,10 @@ from __future__ import annotations
 from fonticon_mdi6 import MDI6
 from qtpy import QtWidgets as QtW
 from qtpy.QtCore import QSize, Qt
-from superqt import QCollapsible
 from superqt.fonticon import icon
 
 from ._camera_widget import MMCameraWidget
 from ._config_widget import MMConfigurationWidget
-from ._group_preset_table_widget import MMGroupPresetTableWidget
 from ._mda_widget import MultiDWidget
 from ._mm_shutters_widget import MMShuttersWidget
 from ._objective_widget import MMObjectivesWidget
@@ -49,72 +47,59 @@ class MicroManagerWidget(QtW.QWidget):
         self.mic_group_layout = QtW.QVBoxLayout()
         self.mic_group_layout.setSpacing(0)
         self.mic_group_layout.setContentsMargins(1, 0, 1, 1)
-        self.mic_coll = QCollapsible(title="Microscope")
-        self.mic_coll.layout().setSpacing(0)
-        self.mic_coll.layout().setContentsMargins(0, 0, 5, 10)
 
         # add objective, property browser, illumination and camera widgets
-        obj_prop = self.add_mm_objectives_and_properties_widgets()
-        ill_shutter = self.add_shutter_widgets()
-        cam = self.add_camera_widget()
-        self.mic_coll.addWidget(obj_prop)
-        self.mic_coll.addWidget(ill_shutter)
-        self.mic_coll.addWidget(cam)
-        self.mic_coll.expand(animate=False)
-        self.mic_group_layout.addWidget(self.mic_coll)
+        obj_prop = self.add_mm_objectives_widget()
+        shutter = self.add_shutter_widgets()
         self.mic_group.setLayout(self.mic_group_layout)
         self.main_layout.addWidget(self.mic_group)
 
         # add illumination and stage control button
-        stage_ill_btns_group = QtW.QGroupBox()
+        stage_ill_btns_group = QtW.QWidget()
         stage_ill_btns_group_layout = QtW.QHBoxLayout()
         stage_ill_btns_group_layout.setSpacing(10)
         stage_ill_btns_group_layout.setContentsMargins(5, 5, 5, 5)
         stage_ill_btns_group.setLayout(stage_ill_btns_group_layout)
 
-        self.illum_btn = QtW.QPushButton("Light Sources")
+        sizepolicy_btn = QtW.QSizePolicy(QtW.QSizePolicy.Fixed, QtW.QSizePolicy.Minimum)
+        self.illum_btn = QtW.QPushButton()
+        self.illum_btn.setSizePolicy(sizepolicy_btn)
         self.illum_btn.setIcon(icon(MDI6.lightbulb_on, color=(0, 255, 0)))
         self.illum_btn.setIconSize(QSize(30, 30))
         self.illum_btn.clicked.connect(self._show_illum_dialog)
 
-        self.stages_button = QtW.QPushButton(text="XYZ Control Pad")
+        self.stages_button = QtW.QPushButton()
+        self.stages_button.setSizePolicy(sizepolicy_btn)
         self.stages_button.setIcon(icon(MDI6.arrow_all, color=(0, 255, 0)))
         self.stages_button.setIconSize(QSize(30, 30))
         self.stages_button.clicked.connect(self._show_stage_control)
 
+        stage_ill_btns_group_layout.addWidget(obj_prop)
         stage_ill_btns_group_layout.addWidget(self.illum_btn)
         stage_ill_btns_group_layout.addWidget(self.stages_button)
-        self.main_layout.addWidget(stage_ill_btns_group)
+        # self.main_layout.addWidget(stage_ill_btns_group)
+
+        self.mic_group_layout.addWidget(stage_ill_btns_group)
+        self.mic_group_layout.addWidget(shutter)
 
         self._stage_wdg = MMStagesWidget(parent=self)
 
         # add tab widget
         self.main_layout.addWidget(self.tab_wdg)
-        self.group_preset_table_wdg = MMGroupPresetTableWidget()
-        self.tab_wdg.tabWidget.addTab(self.group_preset_table_wdg, "Groups and Presets")
         self.tab_wdg.tabWidget.addTab(self.mda, "Multi-D Acquisition")
         self.tab_wdg.tabWidget.addTab(self.explorer, "Sample Explorer")
 
         # set main_layout layout
         self.setLayout(self.main_layout)
 
-    def add_camera_widget(self):
-        self.cam_group = QtW.QWidget()
-        self.cam_group_layout = QtW.QGridLayout()
-        self.cam_group_layout.setSpacing(0)
-        self.cam_group_layout.setContentsMargins(5, 5, 5, 5)
-        self.cam_group_layout.addWidget(self.cam_wdg)
-        self.cam_group.setLayout(self.cam_group_layout)
-        return self.cam_group
-
-    def add_mm_objectives_and_properties_widgets(self):
-        obj_prop_wdg = QtW.QWidget()
-        obj_prop_wdg_layout = QtW.QHBoxLayout()
-        obj_prop_wdg_layout.setContentsMargins(5, 5, 5, 5)
-        obj_prop_wdg_layout.setSpacing(7)
-        obj_prop_wdg_layout.addWidget(self.obj_wdg)
-        obj_prop_wdg.setLayout(obj_prop_wdg_layout)
-        return obj_prop_wdg
+    def add_mm_objectives_widget(self):
+        obj_wdg = QtW.QWidget()
+        obj_wdg_layout = QtW.QHBoxLayout()
+        obj_wdg_layout.setContentsMargins(5, 5, 5, 5)
+        obj_wdg_layout.setSpacing(7)
+        obj_wdg_layout.addWidget(self.obj_wdg)
+        obj_wdg.setLayout(obj_wdg_layout)
+        return obj_wdg
 
     def add_shutter_widgets(self):
         shutter_wdg = QtW.QWidget()
@@ -122,6 +107,9 @@ class MicroManagerWidget(QtW.QWidget):
         shutter_wdg_layout.setContentsMargins(5, 5, 5, 5)
         shutter_wdg_layout.setSpacing(7)
         shutter_wdg_layout.addWidget(self.shutter_wdg)
+        from qtpy.QtCore import Qt
+
+        shutter_wdg_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         shutter_wdg.setLayout(shutter_wdg_layout)
         return shutter_wdg
 

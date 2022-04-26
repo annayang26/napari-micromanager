@@ -5,8 +5,8 @@ from qtpy import QtWidgets as QtW
 
 from .._core_widgets._live_button_widget import LiveButton
 from .._core_widgets._snap_button_widget import SnapButton
-
 from ._channel_widget import ChannelWidget
+from ._group_preset_table_widget import MMGroupPresetTableWidget
 
 ICONS = Path(__file__).parent.parent / "icons"
 
@@ -78,6 +78,12 @@ class MMTabWidget(QtW.QWidget):
         self.exp_groupBox.setLayout(self.exp_groupBox_layout)
         self.snap_live_tab_layout.addWidget(self.exp_groupBox, 0, 1)
 
+        group_wdg = QtW.QGroupBox()
+        gp_layout = QtW.QVBoxLayout()
+        gp_layout.setSpacing(0)
+        gp_layout.setContentsMargins(0, 0, 0, 0)
+        group_wdg.setLayout(gp_layout)
+
         # snap/live in snap_live_tab
         self.btn_wdg = QtW.QWidget()
         self.btn_wdg.setMaximumHeight(65)
@@ -97,7 +103,8 @@ class MMTabWidget(QtW.QWidget):
         self.live_Button.setMaximumSize(QtCore.QSize(200, 50))
         self.btn_wdg_layout.addWidget(self.live_Button)
         self.btn_wdg.setLayout(self.btn_wdg_layout)
-        self.snap_live_tab_layout.addWidget(self.btn_wdg, 1, 0, 1, 2)
+
+        gp_layout.addWidget(self.btn_wdg)
 
         # max min in snap_live_tab
         self.max_min_wdg = QtW.QWidget()
@@ -109,13 +116,18 @@ class MMTabWidget(QtW.QWidget):
         self.max_min_wdg_layout.addWidget(self.max_min_val_label_name)
         self.max_min_wdg_layout.addWidget(self.max_min_val_label)
         self.max_min_wdg.setLayout(self.max_min_wdg_layout)
-        self.snap_live_tab_layout.addWidget(self.max_min_wdg, 2, 0, 1, 2)
+
+        gp_layout.addWidget(self.max_min_wdg)
+        self.snap_live_tab_layout.addWidget(group_wdg, 1, 0, 1, 2)
+
+        self.g_p = self._create_group_preset_widget()
+        self.snap_live_tab_layout.addWidget(self.g_p, 3, 0, 1, 2)
 
         # spacer
-        spacer = QtW.QSpacerItem(
-            20, 40, QtW.QSizePolicy.Minimum, QtW.QSizePolicy.Expanding
-        )
-        self.snap_live_tab_layout.addItem(spacer, 3, 0)
+        # spacer = QtW.QSpacerItem(
+        #     20, 40, QtW.QSizePolicy.Minimum, QtW.QSizePolicy.Expanding
+        # )
+        # self.snap_live_tab_layout.addItem(spacer, 4, 0)
 
         # set snap_live_tab layout
         self.snap_live_tab.setLayout(self.snap_live_tab_layout)
@@ -127,6 +139,16 @@ class MMTabWidget(QtW.QWidget):
 
         # Set main layout
         self.setLayout(self.main_layout)
+
+    def _create_group_preset_widget(self):
+        wdg = QtW.QGroupBox()
+        wdg_layout = QtW.QVBoxLayout()
+        wdg_layout.setSpacing(0)
+        wdg_layout.setContentsMargins(0, 0, 0, 0)
+        self.group_preset_table_wdg = MMGroupPresetTableWidget()
+        wdg_layout.addWidget(self.group_preset_table_wdg)
+        wdg.setLayout(wdg_layout)
+        return wdg
 
 
 if __name__ == "__main__":
