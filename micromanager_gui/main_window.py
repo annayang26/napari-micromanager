@@ -195,6 +195,10 @@ class MainWindow(MicroManagerWidget):
         if self.streaming_timer is None:
             self.viewer.reset_view()
 
+        # TODO: use self.viewer.camera.zoom to fix issue
+        # when explorer + live mode
+        # self.viewer.camera.zoom = 0.5
+
     def update_max_min(self, event=None):
 
         if self.tab_wdg.tabWidget.currentIndex() != 0:
