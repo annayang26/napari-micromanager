@@ -94,6 +94,8 @@ class MicroManagerWidget(QtW.QWidget):
         # set main_layout layout
         self.setLayout(self.main_layout)
 
+        self._stage_wdg = MMStagesWidget(parent=self)
+
     def add_camera_widget(self):
         self.cam_group = QtW.QWidget()
         self.cam_group_layout = QtW.QGridLayout()
