@@ -130,7 +130,7 @@ class StageWidget(QWidget):
         self.destroyed.connect(self._disconnect)
 
         if self._is_autofocus:
-            self._on_offset_changed(self._device.autofocus_device, "State", "")
+            self._on_offset_changed(self._device.autofocus_device, "State")
         elif self._dtype is DeviceType.Stage:
             self._disable_Z_Stage()
 
@@ -259,7 +259,7 @@ class StageWidget(QWidget):
             else:
                 self._enable_and_update(True)
 
-            self._on_offset_changed(self._device.autofocus_device, "State", "")
+            self._on_offset_changed(self._device.autofocus_device, "State")
 
         elif self._dtype is DeviceType.Stage:
             if self._device not in self._mmc.getLoadedDevicesOfType(DeviceType.Stage):
