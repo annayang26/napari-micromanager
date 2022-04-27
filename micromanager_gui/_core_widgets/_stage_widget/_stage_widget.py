@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import contextlib
 from itertools import chain, product, repeat
 from typing import Optional
@@ -112,6 +114,9 @@ class StageWidget(QWidget):
         self._dtype = self._mmc.getDeviceType(self._device)
 
         assert self._dtype in STAGE_DEVICES, f"{self._dtype} not in {STAGE_DEVICES}"
+
+        self.streaming_timer: QTimer | None = None
+        self._on_off = False
 
         self._is_autofocus = False
         self._check_if_autofocus()
@@ -404,6 +409,7 @@ class StageWidget(QWidget):
 
         if not self._device.isEngaged():
             self._enable_wdg(False)
+            self._stop_offset_timer()
             self.offset_checkbox.setIcon(
                 icon(MDI6.checkbox_blank_circle, color=(169, 169, 169))
             )  # gray
@@ -413,14 +419,38 @@ class StageWidget(QWidget):
                 self._device.isLocked() and self._device.isFocusing(af)
             ):
                 self._enable_wdg(True)
+                self._stop_offset_timer()
                 self.offset_checkbox.setIcon(
                     icon(MDI6.checkbox_blank_circle, color=(0, 255, 0))
                 )  # green
 
             else:
-                self.offset_checkbox.setIcon(
-                    icon(MDI6.checkbox_blank_circle, color=(255, 0, 255))
-                )  # magenta
+                self._start_offset_timer()
+                # self.offset_checkbox.setIcon(
+                #     icon(MDI6.checkbox_blank_circle, color=(255, 0, 255))
+                # )  # magenta
+
+    def _start_offset_timer(self):
+        self.streaming_timer = QTimer()
+        self.streaming_timer.timeout.connect(self._blink)
+        self.streaming_timer.start(500)
+
+    def _stop_offset_timer(self):
+        if self.streaming_timer is not None:
+            self.streaming_timer.stop()
+            self.streaming_timer = None
+            self._on_off
+
+    def _blink(self):
+        if self._on_off:
+            self.offset_checkbox.setIcon(
+                icon(MDI6.checkbox_blank_circle, color=(0, 255, 0))
+            )
+        else:
+            self.offset_checkbox.setIcon(
+                icon(MDI6.checkbox_blank_circle, color=(169, 169, 169))
+            )
+        self._on_off = not self._on_off
 
     def _update_ttips(self):
         coords = chain(zip(repeat(3), range(7)), zip(range(7), repeat(3)))
