@@ -1,6 +1,6 @@
 import contextlib
 from itertools import chain, product, repeat
-from typing import Optional, Tuple
+from typing import Optional
 
 from fonticon_mdi6 import MDI6
 from pymmcore_plus import CMMCorePlus, DeviceType
@@ -224,26 +224,18 @@ class StageWidget(QWidget):
         self.layout().addWidget(bottom_row_2)
 
     def _connect_events(self):
+        self._mmc.events.propertyChanged.connect(self._on_prop_changed)
+        self._mmc.events.systemConfigurationLoaded.connect(self._os_system_cfg)
         if self._dtype is DeviceType.XYStage:
             event = self._mmc.events.XYStagePositionChanged
         else:
             event = self._mmc.events.stagePositionChanged
-
         event.connect(self._update_position_label)
-        self._mmc.events.propertyChanged.connect(self._on_prop_changed)
-        self._mmc.events.systemConfigurationLoaded.connect(self._os_system_cfg)
 
-        if (
-            self._dtype is DeviceType.Stage
-            and not self._is_autofocus
-            and self._mmc.getAutoFocusDevice()
-        ):
-            self._mmc.events.propertyChanged.connect(
-                self._disable_if_autofocus_is_locked
-            )
-
-        if self._is_autofocus:
-            self._mmc.events.propertyChanged.connect(self._on_offset_changed)
+    def _on_prop_changed(self, dev_name: str, prop_name: str, value: str):
+        self._on_prop_core_changed(dev_name, prop_name, value)
+        self._disable_if_autofocus_is_locked(dev_name)
+        self._on_offset_changed(dev_name, prop_name)
 
     def _os_system_cfg(self):
         if self._dtype is DeviceType.XYStage:
@@ -261,7 +253,7 @@ class StageWidget(QWidget):
                 self._enable_and_update(False)
             else:
                 self._enable_and_update(True)
-            
+
             self._on_offset_changed(self._device.autofocus_device, "State", "")
 
         elif self._dtype is DeviceType.Stage:
@@ -290,6 +282,49 @@ class StageWidget(QWidget):
         if not self._is_autofocus:
             self.radiobutton.setEnabled(enabled)
 
+    def _on_prop_core_changed(self, dev_name: str, prop_name: str, value: str):
+        if dev_name != "Core":
+            return
+
+        if self._dtype is DeviceType.XYStage and prop_name == "XYStage":
+            with signals_blocked(self.radiobutton):
+                self.radiobutton.setChecked(value == self._device)
+
+        elif self._is_autofocus:
+            return
+
+        elif self._dtype is DeviceType.Stage and prop_name == "Focus":
+            with signals_blocked(self.radiobutton):
+                self.radiobutton.setChecked(value == self._device)
+
+    def _disable_if_autofocus_is_locked(self, dev_name: str):
+        if self._is_autofocus or dev_name != self._mmc.getAutoFocusDevice():
+            return
+
+        if self._dtype is DeviceType.Stage:
+
+            if (
+                self._mmc.isContinuousFocusEnabled()
+                and self._mmc.isContinuousFocusLocked()
+            ) or self._mmc.getProperty(
+                self._mmc.getAutoFocusDevice(), "Status"
+            ) == "Focusing":
+                self._enable_wdg(False)
+            else:
+                self._enable_wdg(True)
+
+    def _on_offset_changed(self, dev_name: str, prop_name: str):
+        if dev_name == self._device.autofocus_device and prop_name in {
+            "State",
+            "Status",
+        }:
+            with signals_blocked(self.offset_checkbox):
+                self.offset_checkbox.setChecked(
+                    self._mmc.getProperty(self._device.autofocus_device, "State")
+                    == "On"
+                )
+            self._on_offset_state_changed()
+
     def _set_as_default(self):
         current_xy = self._mmc.getXYStageDevice()
         current_z = self._mmc.getFocusDevice()
@@ -301,14 +336,12 @@ class StageWidget(QWidget):
 
         elif current_z == self._device:
             self.radiobutton.setChecked(True)
-    
+
     def _disable_Z_Stage(self):
         autofocusf_dev = self._mmc.getAutoFocusDevice()
         if not autofocusf_dev:
             return
-        if (
-            self._mmc.isContinuousFocusEnabled() and self._mmc.isContinuousFocusLocked()
-        ): # or self._mmc.getProperty(autofocusf_dev, "Status") == "Focusing":
+        if self._mmc.isContinuousFocusEnabled() and self._mmc.isContinuousFocusLocked():
             self._enable_wdg(False)
 
     def _on_radiobutton_toggled(self, state: bool):
@@ -338,21 +371,6 @@ class StageWidget(QWidget):
                 else:
                     self._mmc.setProperty("Core", "Focus", "")
 
-    def _on_prop_changed(self, dev_name: str, prop_name: str, value: str):
-        if dev_name != "Core":
-            return
-
-        if self._dtype is DeviceType.XYStage and prop_name == "XYStage":
-            with signals_blocked(self.radiobutton):
-                self.radiobutton.setChecked(value == self._device)
-
-        elif self._is_autofocus:
-            return
-
-        elif self._dtype is DeviceType.Stage and prop_name == "Focus":
-            with signals_blocked(self.radiobutton):
-                self.radiobutton.setChecked(value == self._device)
-
     def _toggle_poll_timer(self, on: bool):
         self._poll_timer.start() if on else self._poll_timer.stop()
 
@@ -374,37 +392,9 @@ class StageWidget(QWidget):
                     p = round(self._mmc.getPosition(dev), 2)
                 self._readout.setText(f"{dev}:  {p}")
 
-    def _disable_if_autofocus_is_locked(
-        self, dev_name: str, prop_name: str, value: str
-    ):
-        if self._is_autofocus:
-            return
-
-        autofocusf_dev = self._mmc.getAutoFocusDevice()
-
-        if self._dtype is DeviceType.Stage and dev_name == autofocusf_dev:
-
-            if (
-                self._mmc.isContinuousFocusEnabled() and self._mmc.isContinuousFocusLocked()
-            ) or self._mmc.getProperty(autofocusf_dev, "Status") == "Focusing":
-                    self._enable_wdg(False)
-            else:
-                self._enable_wdg(True)
-
     def _offset_on_off(self, state: bool):
         on_off = "On" if state else "Off"
         self._mmc.setProperty(self._device.autofocus_device, "State", on_off)
-
-    def _on_offset_changed(self, dev_name: str, prop_name: str, value: str):
-        if dev_name == self._device.autofocus_device and prop_name in {
-            "State",
-            "Status",
-        }:  
-            with signals_blocked(self.offset_checkbox):
-                self.offset_checkbox.setChecked(
-                    self._mmc.getProperty(self._device.autofocus_device, "State") == "On"
-                )
-            self._on_offset_state_changed()
 
     def _on_offset_state_changed(self):
 
@@ -412,15 +402,23 @@ class StageWidget(QWidget):
 
         if not self._device.isEngaged():
             self._enable_wdg(False)
-            self.offset_checkbox.setIcon(icon(MDI6.checkbox_blank_circle, color=(169, 169, 169)))  # gray
+            self.offset_checkbox.setIcon(
+                icon(MDI6.checkbox_blank_circle, color=(169, 169, 169))
+            )  # gray
 
         elif self._device.isEngaged():
-            if self._device.isLocked() or (self._device.isLocked() and self._device.isFocusing(af)):
+            if self._device.isLocked() or (
+                self._device.isLocked() and self._device.isFocusing(af)
+            ):
                 self._enable_wdg(True)
-                self.offset_checkbox.setIcon(icon(MDI6.checkbox_blank_circle, color=(0, 255, 0)))  # green
+                self.offset_checkbox.setIcon(
+                    icon(MDI6.checkbox_blank_circle, color=(0, 255, 0))
+                )  # green
 
             else:
-                self.offset_checkbox.setIcon(icon(MDI6.checkbox_blank_circle, color=(255,0,255)))  # magenta
+                self.offset_checkbox.setIcon(
+                    icon(MDI6.checkbox_blank_circle, color=(255, 0, 255))
+                )  # magenta
 
     def _update_ttips(self):
         coords = chain(zip(repeat(3), range(7)), zip(range(7), repeat(3)))
@@ -508,6 +506,4 @@ class StageWidget(QWidget):
             event = self._mmc.events.XYStagePositionChanged
         if self._dtype is DeviceType.Stage:
             event = self._mmc.events.stagePositionChanged
-        if self._is_autofocus:
-            self._mmc.events.propertyChanged.disconnect(self._on_offset_changed)
         event.disconnect(self._update_position_label)
