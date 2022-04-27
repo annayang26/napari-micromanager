@@ -283,15 +283,12 @@ class StageWidget(QWidget):
             self.radiobutton.setEnabled(enabled)
 
     def _on_prop_core_changed(self, dev_name: str, prop_name: str, value: str):
-        if dev_name != "Core":
+        if dev_name != "Core" or self._is_autofocus:
             return
 
         if self._dtype is DeviceType.XYStage and prop_name == "XYStage":
             with signals_blocked(self.radiobutton):
                 self.radiobutton.setChecked(value == self._device)
-
-        elif self._is_autofocus:
-            return
 
         elif self._dtype is DeviceType.Stage and prop_name == "Focus":
             with signals_blocked(self.radiobutton):
@@ -314,10 +311,15 @@ class StageWidget(QWidget):
                 self._enable_wdg(True)
 
     def _on_offset_changed(self, dev_name: str, prop_name: str):
-        if dev_name == self._device.autofocus_device and prop_name in {
-            "State",
-            "Status",
-        }:
+        if (
+            self._is_autofocus
+            and dev_name == self._device.autofocus_device
+            and prop_name
+            in {
+                "State",
+                "Status",
+            }
+        ):
             with signals_blocked(self.offset_checkbox):
                 self.offset_checkbox.setChecked(
                     self._mmc.getProperty(self._device.autofocus_device, "State")
