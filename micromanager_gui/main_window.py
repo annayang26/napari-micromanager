@@ -66,7 +66,9 @@ class MainWindow(MicroManagerWidget):
         # note: don't use lambdas with closures on `self`, since the connection
         # to core may outlive the lifetime of this particular widget.
         sig.systemConfigurationLoaded.connect(self._on_system_cfg_loaded)
-        sig.exposureChanged.connect(self._on_exp_change)
+        sig.XYStagePositionChanged.connect(self._on_xy_stage_position_changed)
+        sig.stagePositionChanged.connect(self._on_stage_position_changed)
+        sig.exposureChanged.connect(self._update_live_exp)
 
         sig.imageSnapped.connect(self.update_viewer)
         sig.imageSnapped.connect(self._stop_live)
@@ -377,9 +379,7 @@ class MainWindow(MicroManagerWidget):
         self.explorer.x_lineEdit.setText(x)
         self.explorer.y_lineEdit.setText(y)
 
-    # exposure time
-    def _update_exp(self, exposure: float):
-        self._mmc.setExposure(exposure)
+    def _update_live_exp(self, camera: str, exposure: float):
         if self.streaming_timer:
             self.streaming_timer.setInterval(int(exposure))
             self._mmc.stopSequenceAcquisition()
