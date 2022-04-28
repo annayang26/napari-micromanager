@@ -361,15 +361,7 @@ class StageWidget(QWidget):
             self._enable_wdg(False)
 
     def _on_offset_checkbox_toggled(self, state: int):
-        self.offset_checkbox.setChecked(not state)
-
-    #this is a temporary solution. it should be:
-    #
-    #     self._device.setState(self._device.autofocus_device, state > 0)
-    #
-    # however the issue is that this command self._mmc.setProperty(autofocus_device, "State", "Off")
-    # does not emit the PropertyChanged signal (autofocus_device, "State", "Off") but only 
-    # (autofocus_device Status Out of focus search range) if is not in range
+        self._device.setState(self._device.autofocus_device, state > 0)
 
     def _on_radiobutton_toggled(self, state: bool):
         if self._dtype is DeviceType.XYStage:
