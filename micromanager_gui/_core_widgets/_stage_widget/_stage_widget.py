@@ -195,7 +195,6 @@ class StageWidget(QWidget):
 
         if self._is_autofocus:
             self.offset_checkbox = QCheckBox(text="On/Off")
-            # self.offset_checkbox.setCheckable(False)
             self.offset_checkbox.setIcon(
                 icon(MDI6.checkbox_blank_circle, color=(169, 169, 169))
             )
