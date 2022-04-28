@@ -246,6 +246,13 @@ class StageWidget(QWidget):
         self._set_offset_checkbox_state(dev_name, prop_name, value)
         self._on_offset_changed(dev_name, prop_name)
 
+        if (
+            self._is_autofocus
+            and dev_name == self._device.autofocus_device
+            and prop_name in {"State", "Status"}
+        ):
+            print(dev_name, prop_name, value)
+
     def _os_system_cfg(self):
         if self._dtype is DeviceType.XYStage:
             if self._device not in self._mmc.getLoadedDevicesOfType(DeviceType.XYStage):
