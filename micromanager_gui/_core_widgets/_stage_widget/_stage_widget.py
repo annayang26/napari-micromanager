@@ -125,7 +125,12 @@ class StageWidget(QWidget):
         self.destroyed.connect(self._disconnect)
 
         if self._is_autofocus:
-            self._on_offset_changed(self._device.autofocus_device, "State", "")
+            self._set_offset_checkbox_state(
+                self._device.autofocus_device,
+                "State",
+                self._mmc.getProperty(self._device.autofocus_device, "State")
+            )
+            self._on_offset_changed(self._device.autofocus_device, "State")
         elif self._dtype is DeviceType.Stage:
             self._disable_Z_Stage()
 
@@ -187,10 +192,11 @@ class StageWidget(QWidget):
 
         if self._is_autofocus:
             self.offset_checkbox = QCheckBox(text="On/Off")
+            # self.offset_checkbox.setCheckable(False)
             self.offset_checkbox.setIcon(
                 icon(MDI6.checkbox_blank_circle, color=(169, 169, 169))
             )
-            self.offset_checkbox.stateChanged.connect(self._offset_on_off)
+            self.offset_checkbox.stateChanged.connect(self._on_offset_checkbox_toggled)
 
         top_row = QWidget()
         top_row_layout = QHBoxLayout()
@@ -233,9 +239,22 @@ class StageWidget(QWidget):
         event.connect(self._update_position_label)
 
     def _on_prop_changed(self, dev_name: str, prop_name: str, value: str):
-        self._on_prop_core_changed(dev_name, prop_name, value)
-        self._disable_if_autofocus_is_locked(dev_name)
-        self._on_offset_changed(dev_name, prop_name)
+
+        if (
+            self._is_autofocus
+            and dev_name == self._device.autofocus_device
+            and prop_name
+            in {
+                "State",
+                "Status",
+            }
+        ):  
+            print(dev_name, prop_name, value)
+
+            self._on_prop_core_changed(dev_name, prop_name, value)
+            self._disable_if_autofocus_is_locked(dev_name)
+            self._set_offset_checkbox_state(dev_name, prop_name, value)
+            self._on_offset_changed(dev_name, prop_name)
 
     def _os_system_cfg(self):
         if self._dtype is DeviceType.XYStage:
@@ -254,7 +273,7 @@ class StageWidget(QWidget):
             else:
                 self._enable_and_update(True)
 
-            self._on_offset_changed(self._device.autofocus_device, "State", "")
+            self._on_offset_changed(self._device.autofocus_device, "State")
 
         elif self._dtype is DeviceType.Stage:
             if self._device not in self._mmc.getLoadedDevicesOfType(DeviceType.Stage):
@@ -319,13 +338,17 @@ class StageWidget(QWidget):
                 "State",
                 "Status",
             }
-        ):
-            with signals_blocked(self.offset_checkbox):
-                self.offset_checkbox.setChecked(
-                    self._mmc.getProperty(self._device.autofocus_device, "State")
-                    == "On"
-                )
+        ):  
             self._on_offset_state_changed()
+    
+    def _set_offset_checkbox_state(self, dev_name: str, prop_name: str, value: str):
+        if (
+            self._is_autofocus
+            and dev_name == self._device.autofocus_device
+            and prop_name == "State"
+        ):  
+            with signals_blocked(self.offset_checkbox):
+                self.offset_checkbox.setChecked(value == "On")
 
     def _set_as_default(self):
         current_xy = self._mmc.getXYStageDevice()
@@ -345,6 +368,17 @@ class StageWidget(QWidget):
             return
         if self._mmc.isContinuousFocusEnabled() and self._mmc.isContinuousFocusLocked():
             self._enable_wdg(False)
+
+    def _on_offset_checkbox_toggled(self, state: int):
+        self.offset_checkbox.setChecked(not state)
+
+    #this is a temporary solution. it should be:
+    #
+    #     self._device.setState(self._device.autofocus_device, state > 0)
+    #
+    # however the issue is that this command self._mmc.setProperty(autofocus_device, "State", "Off")
+    # does not emit the PropertyChanged signal (autofocus_device, "State", "Off") but only 
+    # (autofocus_device Status Out of focus search range) if is not in range
 
     def _on_radiobutton_toggled(self, state: bool):
         if self._dtype is DeviceType.XYStage:
@@ -394,21 +428,18 @@ class StageWidget(QWidget):
                     p = round(self._mmc.getPosition(dev), 2)
                 self._readout.setText(f"{dev}:  {p}")
 
-    def _offset_on_off(self, state: bool):
-        on_off = "On" if state else "Off"
-        self._mmc.setProperty(self._device.autofocus_device, "State", on_off)
-
     def _on_offset_state_changed(self):
 
         af = self._device.autofocus_device
 
-        if not self._device.isEngaged():
+        if not self._device.isEnabled():
             self._enable_wdg(False)
             self.offset_checkbox.setIcon(
                 icon(MDI6.checkbox_blank_circle, color=(169, 169, 169))
             )  # gray
 
-        elif self._device.isEngaged():
+        elif self._device.isEnabled():
+
             if self._device.isLocked() or (
                 self._device.isLocked() and self._device.isFocusing(af)
             ):
