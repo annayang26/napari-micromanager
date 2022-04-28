@@ -245,14 +245,14 @@ class StageWidget(QWidget):
         self._disable_if_autofocus_is_locked(dev_name)
         self._set_offset_checkbox_state(dev_name, prop_name, value)
         self._on_offset_changed(dev_name, prop_name)
-
+        
         if (
             self._is_autofocus
             and dev_name == self._device.autofocus_device
             and prop_name in {"State", "Status"}
         ):
             print(dev_name, prop_name, value)
-
+            
     def _on_system_cfg(self):
         if self._dtype is DeviceType.XYStage:
             if self._device not in self._mmc.getLoadedDevicesOfType(DeviceType.XYStage):
@@ -336,6 +336,7 @@ class StageWidget(QWidget):
                 "Status",
             }
         ):
+            print('_on_offset_changed!')
             self._on_offset_state_changed()
 
     def _set_offset_checkbox_state(self, dev_name: str, prop_name: str, value: str):
@@ -421,6 +422,10 @@ class StageWidget(QWidget):
 
         af = self._device.autofocus_device
 
+        print('         ', self._mmc.getProperty(af, "State"))
+        print('         ', self._mmc.getProperty(af, "Status"))
+        print('         ', self.offset_checkbox.isChecked())
+
         if not self._device.isEnabled():
             self._enable_wdg(False)
             self._stop_offset_timer()
@@ -439,7 +444,7 @@ class StageWidget(QWidget):
                 )  # green
 
             else:
-                self._start_offset_timer()
+                self._start_offset_timer()  # green/gray blink
 
     def _start_offset_timer(self):
         self._timer = QTimer()
