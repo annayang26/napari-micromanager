@@ -11,7 +11,7 @@ from pymmcore_plus._util import find_micromanager
 from qtpy import QtWidgets as QtW
 from qtpy.QtCore import Qt, QTimer
 from qtpy.QtGui import QColor, QIcon
-from superqt.utils import ensure_main_thread, signals_blocked
+from superqt.utils import ensure_main_thread
 
 from . import _core, _mda
 from ._camera_roi import CameraROI
@@ -86,10 +86,6 @@ class MainWindow(MicroManagerWidget):
             self.cam_wdg.cam_roi_combo,
             self.cam_wdg.crop_btn,
         )
-
-        # connect spinboxes
-        self.tab_wdg.exp_spinBox.valueChanged.connect(self._update_exp)
-        self.tab_wdg.exp_spinBox.setKeyboardTracking(False)
 
         self.viewer.layers.events.connect(self.update_max_min)
         self.viewer.layers.selection.events.active.connect(self.update_max_min)
@@ -239,11 +235,9 @@ class MainWindow(MicroManagerWidget):
             # originated from user script - assume it's an mda
             self._mda_meta.mode = "mda"
 
-        if self._mda_meta.mode == "explorer":
-            try:
-                self.viewer.layers.remove("preview")
-            except ValueError:
-                pass
+        # if self._mda_meta.mode == "explorer":
+        #     with contextlib.suppress(ValueError):
+        #         self.viewer.layers.remove("preview")
 
     @ensure_main_thread
     def _on_mda_frame(self, image: np.ndarray, event: useq.MDAEvent):
@@ -382,9 +376,3 @@ class MainWindow(MicroManagerWidget):
             self.streaming_timer.setInterval(int(exposure))
             self._mmc.stopSequenceAcquisition()
             self._mmc.startContinuousSequenceAcquisition(exposure)
-
-    def _on_exp_change(self, camera: str, exposure: float):
-        with signals_blocked(self.tab_wdg.exp_spinBox):
-            self.tab_wdg.exp_spinBox.setValue(exposure)
-        if self.streaming_timer:
-            self.streaming_timer.setInterval(int(exposure))
