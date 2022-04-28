@@ -113,6 +113,9 @@ class StageWidget(QWidget):
 
         assert self._dtype in STAGE_DEVICES, f"{self._dtype} not in {STAGE_DEVICES}"
 
+        self._timer = None
+        self._on_off = False
+
         self._is_autofocus = False
         self._check_if_autofocus()
 
@@ -431,27 +434,48 @@ class StageWidget(QWidget):
     def _on_offset_state_changed(self):
 
         af = self._device.autofocus_device
-
+        
         if not self._device.isEnabled():
             self._enable_wdg(False)
+            self._stop_offset_timer()
             self.offset_checkbox.setIcon(
                 icon(MDI6.checkbox_blank_circle, color=(169, 169, 169))
             )  # gray
 
         elif self._device.isEnabled():
-
             if self._device.isLocked() or (
                 self._device.isLocked() and self._device.isFocusing(af)
             ):
                 self._enable_wdg(True)
+                self._stop_offset_timer()
                 self.offset_checkbox.setIcon(
                     icon(MDI6.checkbox_blank_circle, color=(0, 255, 0))
                 )  # green
 
             else:
-                self.offset_checkbox.setIcon(
-                    icon(MDI6.checkbox_blank_circle, color=(255, 0, 255))
-                )  # magenta
+                self._start_offset_timer()
+
+    def _start_offset_timer(self):
+        self._timer = QTimer()
+        self._timer.timeout.connect(self._blink)
+        self._timer.start(500)
+
+    def _stop_offset_timer(self):
+        if self._timer is not None:
+            self._timer.stop()
+            self._timer = None
+            self._on_off
+
+    def _blink(self):
+        if self._on_off:
+            self.offset_checkbox.setIcon(
+                icon(MDI6.checkbox_blank_circle, color=(0, 255, 0))
+            )
+        else:
+            self.offset_checkbox.setIcon(
+                icon(MDI6.checkbox_blank_circle, color=(69, 69, 69))
+            )
+        self._on_off = not self._on_off
 
     def _update_ttips(self):
         coords = chain(zip(repeat(3), range(7)), zip(range(7), repeat(3)))
