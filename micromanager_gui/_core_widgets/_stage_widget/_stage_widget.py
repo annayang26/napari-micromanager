@@ -233,7 +233,7 @@ class StageWidget(QWidget):
 
     def _connect_events(self):
         self._mmc.events.propertyChanged.connect(self._on_prop_changed)
-        self._mmc.events.systemConfigurationLoaded.connect(self._os_system_cfg)
+        self._mmc.events.systemConfigurationLoaded.connect(self._on_system_cfg)
         if self._dtype is DeviceType.XYStage:
             event = self._mmc.events.XYStagePositionChanged
         else:
@@ -246,7 +246,7 @@ class StageWidget(QWidget):
         self._set_offset_checkbox_state(dev_name, prop_name, value)
         self._on_offset_changed(dev_name, prop_name)
 
-    def _os_system_cfg(self):
+    def _on_system_cfg(self):
         if self._dtype is DeviceType.XYStage:
             if self._device not in self._mmc.getLoadedDevicesOfType(DeviceType.XYStage):
                 self._enable_and_update(False)
@@ -537,7 +537,7 @@ class StageWidget(QWidget):
 
     def _disconnect(self):
         self._mmc.events.propertyChanged.disconnect(self._on_prop_changed)
-        self._mmc.events.systemConfigurationLoaded.disconnect(self._os_system_cfg)
+        self._mmc.events.systemConfigurationLoaded.disconnect(self._on_system_cfg)
         if self._dtype is DeviceType.XYStage:
             event = self._mmc.events.XYStagePositionChanged
         if self._dtype is DeviceType.Stage:
