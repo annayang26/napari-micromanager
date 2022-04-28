@@ -28,11 +28,23 @@ class AutofocusDevice:
         else:
             raise NameError(f"{key} is not of type 'AutoFocus'.")
 
-    def isEngaged(self) -> bool:
+    def getState(self, autofocus_device) -> bool:
+        state = self._mmc.getProperty(autofocus_device, "State")
+        return state == "On" 
+
+    def setState(self, autofocus_device, state: bool):
+        on_off = "On" if state else "Off"
+        return self._mmc.setProperty(autofocus_device, "State", on_off)
+
+    def isEnabled(self) -> bool:
         return self._mmc.isContinuousFocusEnabled()
 
     def isLocked(self) -> bool:
         return self._mmc.isContinuousFocusLocked()
+    
+    def inRange(self, autofocus_device) -> bool:
+       status = self._mmc.getProperty(autofocus_device, "State")
+       return status == "Within range of focus search"
 
     def isFocusing(self, autofocus_device) -> bool:
         status = self._mmc.getProperty(autofocus_device, "State")
