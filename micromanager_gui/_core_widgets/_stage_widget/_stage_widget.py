@@ -443,7 +443,7 @@ class StageWidget(QWidget):
         if self._timer is not None:
             self._timer.stop()
             self._timer = None
-            self._on_off
+            self._on_off = True
 
     def _blink(self):
         if self._on_off:
