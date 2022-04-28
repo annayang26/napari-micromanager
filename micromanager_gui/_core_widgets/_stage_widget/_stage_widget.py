@@ -113,7 +113,7 @@ class StageWidget(QWidget):
 
         assert self._dtype in STAGE_DEVICES, f"{self._dtype} not in {STAGE_DEVICES}"
 
-        self._timer = None
+        self._timer = True
         self._on_off = False
 
         self._is_autofocus = False
