@@ -135,7 +135,6 @@ class MainWindow(MicroManagerWidget):
             self.tab_wdg.snap_live_tab.setEnabled(False)
 
         self.illum_btn.setEnabled(enabled)
-        self.stages_button.setEnabled(enabled)
 
         self.mda._set_enabled(enabled)
         if self._mmc.getXYStageDevice():
@@ -148,8 +147,6 @@ class MainWindow(MicroManagerWidget):
 
     def _refresh_options(self):
         self._refresh_channel_list()
-        # self._refresh_positions()
-        # self._refresh_xyz_devices()
 
     def update_viewer(self, data=None):
         if data is None:
