@@ -38,6 +38,10 @@ class ChannelWidget(QWidget):
         self.channel_wdg = self._create_channel_widget(self._channel_group)
 
         self.setLayout(QVBoxLayout())
+        # wdg_sizepolicy = QSizePolicy(
+        #     QSizePolicy.Fixed, QSizePolicy.Minimum
+        # )
+        # self.setSizePolicy(wdg_sizepolicy)
         self.layout().setContentsMargins(0, 0, 0, 0)
         self.layout().setSpacing(0)
         self.layout().addWidget(self.channel_wdg)
@@ -60,11 +64,18 @@ class ChannelWidget(QWidget):
     def _create_channel_widget(
         self, channel_group: str
     ) -> Union[PresetsWidget, QComboBox]:
+
+        # wdg_sizepolicy = QSizePolicy(
+        #     QSizePolicy.Minimum, QSizePolicy.Fixed
+        # )
+
         if channel_group:
             channel_wdg = PresetsWidget(channel_group)
+            # channel_wdg._combo.setSizePolicy(wdg_sizepolicy)
         else:
             channel_wdg = QComboBox()
             channel_wdg.setEnabled(False)
+            # channel_wdg.setSizePolicy(wdg_sizepolicy)
         return channel_wdg
 
     def _on_sys_cfg_loaded(self):

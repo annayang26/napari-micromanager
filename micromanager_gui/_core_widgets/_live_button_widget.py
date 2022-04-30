@@ -6,7 +6,7 @@ from fonticon_mdi6 import MDI6
 from pymmcore_plus import CMMCorePlus
 from qtpy.QtCore import QSize, Qt
 from qtpy.QtGui import QColor
-from qtpy.QtWidgets import QApplication, QPushButton
+from qtpy.QtWidgets import QApplication, QPushButton, QSizePolicy
 from superqt.fonticon import icon
 
 from .._core import get_core_singleton
@@ -51,6 +51,8 @@ class LiveButton(QPushButton):
     ) -> None:
 
         super().__init__()
+
+        self.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed))
 
         self._mmc = mmcore or get_core_singleton()
         self._camera = camera or self._mmc.getCameraDevice()

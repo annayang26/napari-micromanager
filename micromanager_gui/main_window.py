@@ -83,8 +83,8 @@ class MainWindow(MicroManagerWidget):
         self.cam_roi = CameraROI(
             self.viewer,
             self._mmc,
-            self.cam_wdg.cam_roi_combo,
-            self.cam_wdg.crop_btn,
+            self.tab_wdg.cam_wdg.cam_roi_combo,
+            self.tab_wdg.cam_wdg.crop_btn,
         )
 
         self.viewer.layers.events.connect(self.update_max_min)
@@ -131,14 +131,13 @@ class MainWindow(MicroManagerWidget):
             self._set_enabled(True)
 
     def _set_enabled(self, enabled):
-        self.illum_btn.setEnabled(enabled)
-        self.stages_button.setEnabled(enabled)
+        # self.illum_btn.setEnabled(enabled)
 
-        self.mda._set_enabled(enabled)
+        self.tab_wdg.mda._set_enabled(enabled)
         if self._mmc.getXYStageDevice():
-            self.explorer._set_enabled(enabled)
+            self.tab_wdg.explorer._set_enabled(enabled)
         else:
-            self.explorer._set_enabled(False)
+            self.tab_wdg.explorer._set_enabled(False)
 
     @ensure_main_thread
     def update_viewer(self, data=None):
@@ -174,7 +173,7 @@ class MainWindow(MicroManagerWidget):
 
     def update_max_min(self, event=None):
 
-        if self.tab_wdg.tabWidget.currentIndex() != 0:
+        if self.tab_wdg.currentIndex() != 0:
             return
 
         min_max_txt = ""
@@ -228,7 +227,7 @@ class MainWindow(MicroManagerWidget):
 
     def _on_mda_started(self, sequence: useq.MDASequence):
         """ "create temp folder and block gui when mda starts."""
-        self._set_enabled(False)
+        # self._set_enabled(False)
 
         self._mda_meta = _mda.SEQUENCE_META.get(sequence, _mda.SequenceMeta())
         if self._mda_meta.mode == "":
@@ -300,8 +299,8 @@ class MainWindow(MicroManagerWidget):
             if meta.mode != "explorer":
                 return
 
-            x = event.x_pos / self.explorer.pixel_size
-            y = event.y_pos / self.explorer.pixel_size * (-1)
+            x = event.x_pos / self.tab_wdg.explorer.pixel_size
+            y = event.y_pos / self.tab_wdg.explorer.pixel_size * (-1)
 
             pos_idx = event.index["p"]
             file_name = meta.file_name if meta.should_save else "Exp"
@@ -326,9 +325,10 @@ class MainWindow(MicroManagerWidget):
             )
 
             zoom_out_factor = (
-                self.explorer.scan_size_r
-                if self.explorer.scan_size_r >= self.explorer.scan_size_c
-                else self.explorer.scan_size_c
+                self.tab_wdg.explorer.scan_size_r
+                if self.tab_wdg.explorer.scan_size_r
+                >= self.tab_wdg.explorer.scan_size_c
+                else self.tab_wdg.explorer.scan_size_c
             )
             self.viewer.camera.zoom = 1 / zoom_out_factor
             self.viewer.reset_view()
@@ -352,7 +352,7 @@ class MainWindow(MicroManagerWidget):
         self._set_enabled(True)
 
     def _get_event_explorer(self, viewer, event):
-        if not self.explorer.isVisible():
+        if not self.tab_wdg.explorer.isVisible():
             return
         if self._mmc.getPixelSizeUm() > 0:
             width = self._mmc.getROI(self._mmc.getCameraDevice())[2]
@@ -368,8 +368,8 @@ class MainWindow(MicroManagerWidget):
         else:
             x, y = "None", "None"
 
-        self.explorer.x_lineEdit.setText(x)
-        self.explorer.y_lineEdit.setText(y)
+        self.tab_wdg.explorer.x_lineEdit.setText(x)
+        self.tab_wdg.explorer.y_lineEdit.setText(y)
 
     def _update_live_exp(self, camera: str, exposure: float):
         if self.streaming_timer:

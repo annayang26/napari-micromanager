@@ -4,7 +4,7 @@ from fonticon_mdi6 import MDI6
 from pymmcore_plus import CMMCorePlus
 from qtpy.QtCore import QSize, Qt
 from qtpy.QtGui import QColor
-from qtpy.QtWidgets import QPushButton
+from qtpy.QtWidgets import QPushButton, QSizePolicy
 from superqt.fonticon import icon
 from superqt.utils import create_worker
 
@@ -49,6 +49,8 @@ class SnapButton(QPushButton):
     ) -> None:
 
         super().__init__()
+
+        self.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed))
 
         self._mmc = mmcore or get_core_singleton()
         self._camera = camera or self._mmc.getCameraDevice()

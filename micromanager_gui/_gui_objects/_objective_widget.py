@@ -34,7 +34,7 @@ class MMObjectivesWidget(QWidget):
         self._combo = self._create_objective_combo(objective_device)
 
         lbl = QLabel("Objectives:")
-        lbl.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
+        lbl.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
         self.setLayout(QHBoxLayout())
         self.layout().setContentsMargins(0, 0, 0, 0)
