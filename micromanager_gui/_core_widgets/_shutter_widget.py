@@ -159,18 +159,14 @@ class ShuttersWidget(QtW.QWidget):
         self._close_shutter(self.shutter_device)
 
     def _on_prop_changed(self, dev_name: str, prop_name: str, value: Any):
-
         if dev_name != self.shutter_device or prop_name != "State":
             return
-
         state = value in [True, "1"]
-
         (
             self._set_shutter_wdg_to_opened()
             if state
             else self._set_shutter_wdg_to_closed()
         )
-
         if self._is_multiShutter:
             self._change_if_multishutter()
 
@@ -192,15 +188,6 @@ class ShuttersWidget(QtW.QWidget):
             else self._set_shutter_wdg_to_closed()
         )
 
-    def _on_autoshutter_changed(self, state: bool):
-        if self.autoshutter:
-            with signals_blocked(self.autoshutter_checkbox):
-                self.autoshutter_checkbox.setChecked(state)
-        self.shutter_button.setEnabled(not state)
-
-        if state and self._mmc.isSequenceRunning():
-            self._mmc.stopSequenceAcquisition()
-
     def _on_shutter_btn_clicked(self):
         if self._mmc.getShutterOpen(self.shutter_device):
             self._close_shutter(self.shutter_device)
@@ -209,6 +196,15 @@ class ShuttersWidget(QtW.QWidget):
 
         if self._is_multiShutter:
             self._change_if_multishutter()
+
+    def _on_autoshutter_changed(self, state: bool):
+        if self.autoshutter:
+            with signals_blocked(self.autoshutter_checkbox):
+                self.autoshutter_checkbox.setChecked(state)
+        self.shutter_button.setEnabled(not state)
+
+        if state and self._mmc.isSequenceRunning():
+            self._mmc.stopSequenceAcquisition()
 
     def _close_shutter(self, shutter):
         self._set_shutter_wdg_to_closed()
@@ -238,7 +234,7 @@ class ShuttersWidget(QtW.QWidget):
             self._refresh_shutter_widget
         )
         self._mmc.events.autoShutterSet.disconnect(self._on_autoshutter_changed)
-        self._mmc.events.shutterSet.disconnect(self._on_shutter_changed)
+        self._mmc.events.shutterSet.disconnect(self._on_shutter_set)
         self._mmc.events.propertyChanged.disconnect(self._on_prop_changed)
         self._mmc.events.startContinuousSequenceAcquisition.disconnect(
             self._on_seq_started
