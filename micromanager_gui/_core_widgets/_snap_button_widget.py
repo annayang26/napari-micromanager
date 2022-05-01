@@ -78,7 +78,7 @@ class SnapButton(QPushButton):
     def _snap(self):
         if self._mmc.isSequenceRunning(self._camera):
             self._mmc.stopSequenceAcquisition(self._camera)
-
+        self._mmc.events.shutterSet.emit(self._mmc.getShutterDevice(), True)
         create_worker(self._mmc.snap, _start_thread=True)
 
     def _on_system_cfg_loaded(self):
