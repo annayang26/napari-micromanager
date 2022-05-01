@@ -88,7 +88,7 @@ class ShuttersWidget(QtW.QWidget):
 
         self._mmc.events.systemConfigurationLoaded.connect(self._refresh_shutter_widget)
         self._mmc.events.autoShutterSet.connect(self._on_autoshutter_changed)
-        self._mmc.events.shutterSet.connect(self._on_shutter_changed)
+        self._mmc.events.shutterSet.connect(self._on_shutter_set)
         self._mmc.events.propertyChanged.connect(self._on_prop_changed)
         self._mmc.events.startContinuousSequenceAcquisition.connect(
             self._on_seq_started
@@ -171,16 +171,26 @@ class ShuttersWidget(QtW.QWidget):
             else self._set_shutter_wdg_to_closed()
         )
 
-    def _on_shutter_changed(self, shutter: str, state: bool):
-        if shutter == self.shutter_device:
-            if state:
-                self._set_shutter_wdg_to_opened()
-            else:
-                self._set_shutter_wdg_to_closed()
+        if self._is_multiShutter:
+            self._change_if_multishutter()
 
-            if self._is_multiShutter:
-                for s in self._mmc.getLoadedDevicesOfType(DeviceType.Shutter):
-                    print(self._mmc.getShutterOpen(s))
+    def _change_if_multishutter(self):
+        # change the state (and the respective button if exists)
+        # of the shutter listed in Micro-Manager 'Multi Shutter'
+        for shutter in self._mmc.getLoadedDevicesOfType(DeviceType.Shutter):
+            if self._mmc.getShutterOpen(shutter):
+                self._mmc.events.shutterSet.emit(shutter, True)
+            else:
+                self._mmc.events.shutterSet.emit(shutter, False)
+
+    def _on_shutter_set(self, shutter: str, state: bool):
+        if shutter != self.shutter_device:
+            return
+        (
+            self._set_shutter_wdg_to_opened()
+            if state
+            else self._set_shutter_wdg_to_closed()
+        )
 
     def _on_autoshutter_changed(self, state: bool):
         if self.autoshutter:
@@ -197,14 +207,8 @@ class ShuttersWidget(QtW.QWidget):
         else:
             self._open_shutter(self.shutter_device)
 
-        # change the state (and the respective button if exists)
-        # of the shutter listed in Micro-Manager 'Multi Shutter'
         if self._is_multiShutter:
-            for shutter in self._mmc.getLoadedDevicesOfType(DeviceType.Shutter):
-                if self._mmc.getShutterOpen(shutter):
-                    self._mmc.events.propertyChanged.emit(shutter, "State", True)
-                else:
-                    self._mmc.events.propertyChanged.emit(shutter, "State", False)
+            self._change_if_multishutter()
 
     def _close_shutter(self, shutter):
         self._set_shutter_wdg_to_closed()
