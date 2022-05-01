@@ -67,7 +67,6 @@ class MainWindow(MicroManagerWidget):
         # to core may outlive the lifetime of this particular widget.
         sig.systemConfigurationLoaded.connect(self._on_system_cfg_loaded)
         sig.exposureChanged.connect(self._update_live_exp)
-        sig.configSet.connect(self._on_channel_set)
 
         sig.imageSnapped.connect(self.update_viewer)
         sig.imageSnapped.connect(self._stop_live)
