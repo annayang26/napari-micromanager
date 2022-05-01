@@ -34,6 +34,10 @@ class MMGroupPresetTableWidget(QtW.QWidget):
         self.setContentsMargins(0, 0, 0, 0)
         self.layout().addWidget(self.table_wdg)
 
+        self.setSizePolicy(
+            QtW.QSizePolicy(QtW.QSizePolicy.Minimum, QtW.QSizePolicy.Minimum)
+        )
+
     def _on_system_cfg_loaded(self):
         self._populate_table()
 

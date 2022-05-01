@@ -21,6 +21,7 @@ class MMTabWidget(QtW.QTabWidget):
         super().__init__()
 
         self._mmc = get_core_singleton()
+        self._mmc.events.systemConfigurationLoaded.connect(self._resize)
 
         self.setMovable(True)
         self.tab_layout = QtW.QVBoxLayout()
@@ -63,6 +64,8 @@ class MMTabWidget(QtW.QTabWidget):
         self_tab = self._create_tab()
         self._scroll.setWidget(self_tab)
         self.tab_layout.addWidget(self._scroll)
+
+        self._resize()
 
     def _create_tab(self):
 
@@ -180,3 +183,6 @@ class MMTabWidget(QtW.QTabWidget):
 
     def _escape(self):
         self._mmc.setPosition(0.0)
+
+    def _resize(self):
+        self.setMinimumWidth(self.sizeHint().width())
