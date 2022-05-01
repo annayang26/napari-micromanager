@@ -153,18 +153,40 @@ class ShuttersWidget(QtW.QWidget):
 
     def _on_seq_started(self):
         self._set_shutter_wdg_to_opened()
+        print("STARTED:", self.shutter_device)
         self._mmc.setProperty(self.shutter_device, "State", True)
 
     def _on_seq_stopped(self):
         self._set_shutter_wdg_to_closed()
+        print("STOPPED:", self.shutter_device)
         self._mmc.setProperty(self.shutter_device, "State", False)
 
     def _on_prop_changed(self, dev_name: str, prop_name: str, value: Any):
-        if dev_name == self.shutter_device and prop_name == "State":
-            if value in [True, "1"]:
-                self._set_shutter_wdg_to_opened()
-            else:
-                self._set_shutter_wdg_to_closed()
+        if dev_name != self.shutter_device or prop_name != "State":
+            return
+
+        print("     PROP CHANGED", dev_name, prop_name, value)
+
+        state = value in [True, "1"]
+
+        (
+            self._set_shutter_wdg_to_opened()
+            if state
+            else self._set_shutter_wdg_to_closed()
+        )
+
+        # if value in [True, "1"]:
+        #     self._set_shutter_wdg_to_opened()
+        # else:
+        #     self._set_shutter_wdg_to_closed()
+
+        # if self._is_multiShutter:
+        #     for prop_n in range(5):
+        #         prop = f"Physical Shutter {prop_n + 1}"
+        #         shutter = self._mmc.getProperty(self.shutter_device, prop)
+        #         if shutter == "Undefined":
+        #             continue
+        #         self._mmc.events.propertyChanged.emit(shutter, "State", state)
 
     def _on_shutter_changed(self, shutter: str, state: bool):
         if shutter == self.shutter_device:
