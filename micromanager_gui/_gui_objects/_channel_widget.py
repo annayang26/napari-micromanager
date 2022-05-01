@@ -84,16 +84,6 @@ class ChannelWidget(QWidget):
         if channel_group is not None:
             self._mmc.setChannelGroup(channel_group)
 
-    def _on_channel_group_changed(self, new_channel_group: str):
-        """When Channel group is changed, recreate combo."""
-        self.channel_wdg.setParent(None)
-        self.channel_wdg.deleteLater()
-        self._update_widget(new_channel_group)
-
-    def _update_widget(self, channel_group):
-        self.channel_wdg = self._create_channel_widget(channel_group)
-        self.layout().addWidget(self.channel_wdg)
-
     def _on_channel_set(self, group: str, preset: str):
         ch = self._mmc.getChannelGroup()
         if group != ch:
@@ -104,6 +94,16 @@ class ChannelWidget(QWidget):
             if _type is DeviceType.Shutter:
                 self._mmc.setProperty("Core", "Shutter", _dev)
                 break
+
+    def _on_channel_group_changed(self, new_channel_group: str):
+        """When Channel group is changed, recreate combo."""
+        self.channel_wdg.setParent(None)
+        self.channel_wdg.deleteLater()
+        self._update_widget(new_channel_group)
+
+    def _update_widget(self, channel_group):
+        self.channel_wdg = self._create_channel_widget(channel_group)
+        self.layout().addWidget(self.channel_wdg)
 
     def _disconnect_from_core(self):
         self._mmc.events.systemConfigurationLoaded.disconnect(self._on_sys_cfg_loaded)
