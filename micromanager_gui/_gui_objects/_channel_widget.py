@@ -1,6 +1,6 @@
 from typing import Optional, Union
 
-from pymmcore_plus import CMMCorePlus
+from pymmcore_plus import CMMCorePlus, DeviceType
 from qtpy.QtWidgets import QComboBox, QVBoxLayout, QWidget
 
 from micromanager_gui import _core
@@ -48,6 +48,7 @@ class ChannelWidget(QWidget):
 
         self._mmc.events.systemConfigurationLoaded.connect(self._on_sys_cfg_loaded)
         self._mmc.events.channelGroupChanged.connect(self._on_channel_group_changed)
+        self._mmc.events.configSet.connect(self._on_channel_set)
         self.destroyed.connect(self._disconnect_from_core)
         self._on_sys_cfg_loaded()
 
@@ -93,6 +94,18 @@ class ChannelWidget(QWidget):
         self.channel_wdg = self._create_channel_widget(channel_group)
         self.layout().addWidget(self.channel_wdg)
 
+    def _on_channel_set(self, group: str, preset: str):
+        ch = self._mmc.getChannelGroup()
+        if group != ch:
+            return
+        for d in self._mmc.getConfigData(ch, preset):
+            _dev = d[0]
+            _type = self._mmc.getDeviceType(_dev)
+            if _type is DeviceType.Shutter:
+                self._mmc.setProperty("Core", "Shutter", _dev)
+                break
+
     def _disconnect_from_core(self):
         self._mmc.events.systemConfigurationLoaded.disconnect(self._on_sys_cfg_loaded)
         self._mmc.events.channelGroupChanged.disconnect(self._on_channel_group_changed)
+        self._mmc.events.configSet.condisconnectnect(self._on_channel_set)

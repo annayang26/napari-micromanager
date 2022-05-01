@@ -152,42 +152,16 @@ class ShuttersWidget(QtW.QWidget):
             self._is_multiShutter = bool([x for x in props if "Physical Shutter" in x])
 
     def _on_seq_started(self):
-
-        # if is in the channe cfg:
-        # open it!
-
-        ch = self._mmc.getChannelGroup()
-        current_ch = self._mmc.getCurrentConfig(ch)
-        for d in self._mmc.getConfigData(ch, current_ch):
-            _dev = d[0]
-            _type = self._mmc.getDeviceType(_dev)
-            if _type is DeviceType.Shutter and _dev == self.shutter_device:
-                print(self.shutter_device)
-                print(" data", d)
-                print("     ", _dev, _type)
-                self._open_shutter(self.shutter_device)
-
-                if self._is_multiShutter:
-                    for prop_n in range(5):
-                        prop = f"Physical Shutter {prop_n + 1}"
-                        shutter = self._mmc.getProperty(self.shutter_device, prop)
-                        if shutter == "Undefined":
-                            continue
-                        self._mmc.setProperty(shutter, "State", True)
-                print()
-                break
+        if self._mmc.getShutterOpen(self.shutter_device):
+            self._set_shutter_wdg_to_opened()
 
     def _on_seq_stopped(self):
-        if self._mmc.getShutterOpen(self.shutter_device):
-            print("STOPPED:", self.shutter_device)
-            self._close_shutter(self.shutter_device)
+        self._close_shutter(self.shutter_device)
 
     def _on_prop_changed(self, dev_name: str, prop_name: str, value: Any):
 
         if dev_name != self.shutter_device or prop_name != "State":
             return
-
-        print("PROP CHANGED", dev_name, prop_name, value)
 
         state = value in [True, "1"]
 
@@ -201,10 +175,12 @@ class ShuttersWidget(QtW.QWidget):
         if shutter == self.shutter_device:
             if state:
                 self._set_shutter_wdg_to_opened()
-                self._mmc.setProperty(self.shutter_device, "State", True)
+                if not self._mmc.getAutoShutter():
+                    self._mmc.setProperty(self.shutter_device, "State", True)
             else:
                 self._set_shutter_wdg_to_closed()
-                self._mmc.setProperty(self.shutter_device, "State", False)
+                if not self._mmc.getAutoShutter():
+                    self._mmc.setProperty(self.shutter_device, "State", False)
 
     def _on_autoshutter_changed(self, state: bool):
         if self.autoshutter:
@@ -228,15 +204,12 @@ class ShuttersWidget(QtW.QWidget):
                 if shutter == "Undefined":
                     continue
                 self._mmc.events.propertyChanged.emit(shutter, "State", not state)
-                # self._mmc.setProperty(shutter, "State", not state)
 
     def _close_shutter(self, shutter):
-        print("             STOPPED:", shutter)
         self._set_shutter_wdg_to_closed()
         self._mmc.setProperty(shutter, "State", False)
 
     def _open_shutter(self, shutter):
-        print("             STARTED:", shutter)
         self._set_shutter_wdg_to_opened()
         self._mmc.setProperty(shutter, "State", True)
 
@@ -267,3 +240,4 @@ class ShuttersWidget(QtW.QWidget):
         )
         self._mmc.events.startSequenceAcquisition.disconnect(self._on_seq_started)
         self._mmc.events.stopSequenceAcquisition.disconnect(self._on_seq_stopped)
+        self._mmc.events.imageSnapped.disconnect(self._on_seq_stopped)
