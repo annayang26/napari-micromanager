@@ -183,10 +183,14 @@ class ShuttersWidget(QtW.QWidget):
         for shutter in self._mmc.getLoadedDevicesOfType(DeviceType.Shutter):
             if shutter == self.shutter_device:
                 continue
+            print("_change_if_multishutter", shutter, self._mmc.getShutterOpen(shutter))
             if self._mmc.getShutterOpen(shutter):
-                self.shutter_events.shutterStateUpdate.emit(shutter, True)
+                # self.shutter_events.shutterStateUpdate.emit(shutter, True)
+                self._mmc.events.propertyChanged.emit(shutter, "State", True)
+
             else:
-                self.shutter_events.shutterStateUpdate.emit(shutter, False)
+                # self.shutter_events.shutterStateUpdate.emit(shutter, False)
+                self._mmc.events.propertyChanged.emit(shutter, "State", False)
 
     def _on_shutter_state_update(self, shutter: str, state: bool):
         if self._is_multiShutter or shutter != self.shutter_device:
