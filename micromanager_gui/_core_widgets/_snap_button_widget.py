@@ -1,7 +1,7 @@
 from typing import Optional, Tuple, Union
 
 from fonticon_mdi6 import MDI6
-from pymmcore_plus import CMMCorePlus
+from pymmcore_plus import CMMCorePlus, DeviceType
 from qtpy.QtCore import QSize, Qt
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QPushButton, QSizePolicy
@@ -79,9 +79,6 @@ class SnapButton(QPushButton):
         if self._mmc.isSequenceRunning(self._camera):
             self._mmc.stopSequenceAcquisition(self._camera)
         create_worker(self._mmc.snap, _start_thread=True)
-        self._mmc.events.propertyChanged.emit(
-            self._mmc.getShutterDevice(), "State", True
-        )
 
     def _on_system_cfg_loaded(self):
         if not self._camera:
