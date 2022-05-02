@@ -160,6 +160,7 @@ class ShuttersWidget(QtW.QWidget):
     def _on_prop_changed(self, dev_name: str, prop_name: str, value: Any):
         if dev_name != self.shutter_device or prop_name != "State":
             return
+        print(dev_name, prop_name, value)
         state = value in [True, "1"]
         (
             self._set_shutter_wdg_to_opened()
@@ -167,9 +168,9 @@ class ShuttersWidget(QtW.QWidget):
             else self._set_shutter_wdg_to_closed()
         )
         if self._is_multiShutter:
-            self._change_if_multishutter()
+            self._update_if_multishutter()
 
-    def _change_if_multishutter(self):
+    def _update_if_multishutter(self):
         # change the state (and the respective button if exists)
         # of the shutter listed in Micro-Manager 'Multi Shutter'
         for shutter in self._mmc.getLoadedDevicesOfType(DeviceType.Shutter):
@@ -187,7 +188,7 @@ class ShuttersWidget(QtW.QWidget):
             self._open_shutter(self.shutter_device)
 
         if self._is_multiShutter:
-            self._change_if_multishutter()
+            self._update_if_multishutter()
 
     def _on_autoshutter_changed(self, state: bool):
         if self.autoshutter:
