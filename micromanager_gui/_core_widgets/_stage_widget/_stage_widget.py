@@ -113,7 +113,7 @@ class StageWidget(QWidget):
 
         assert self._dtype in STAGE_DEVICES, f"{self._dtype} not in {STAGE_DEVICES}"
 
-        self._timer = True
+        self._timer = None
         self._on_off = False
 
         self._is_autofocus = False
@@ -204,8 +204,9 @@ class StageWidget(QWidget):
         top_row_layout = QHBoxLayout()
         top_row_layout.setAlignment(AlignCenter)
         top_row.setLayout(top_row_layout)
-        if not self._is_autofocus:
-            top_row.layout().addWidget(self.radiobutton)
+        # if not self._is_autofocus:
+        #     top_row.layout().addWidget(self.radiobutton)
+        top_row.layout().addWidget(self.radiobutton)
 
         bottom_row_1 = QWidget()
         bottom_row_1.setLayout(QHBoxLayout())
@@ -287,12 +288,14 @@ class StageWidget(QWidget):
         self._step.setEnabled(enabled)
         self._btns.setEnabled(enabled)
         self.snap_checkbox.setEnabled(enabled)
-        self._poll_cb.setEnabled(enabled)
-        if not self._is_autofocus:
-            self.radiobutton.setEnabled(enabled)
+        # self._poll_cb.setEnabled(enabled)
+        # if not self._is_autofocus:
+        #     self.radiobutton.setEnabled(enabled)
 
     def _on_prop_core_changed(self, dev_name: str, prop_name: str, value: str):
-        if dev_name != "Core" or self._is_autofocus:
+        # if dev_name != "Core" or self._is_autofocus:
+        #     return
+        if dev_name != "Core":
             return
 
         if self._dtype is DeviceType.XYStage and prop_name == "XYStage":
@@ -301,7 +304,9 @@ class StageWidget(QWidget):
 
         elif self._dtype is DeviceType.Stage and prop_name == "Focus":
             with signals_blocked(self.radiobutton):
-                self.radiobutton.setChecked(value == self._device)
+                dev = self._device.offset_device if self._is_autofocus else self._device
+                print('dev', dev)
+                self.radiobutton.setChecked(value == dev)
 
     def _disable_if_autofocus_is_locked(self, dev_name: str):
         if self._is_autofocus or dev_name != self._mmc.getAutoFocusDevice():
@@ -318,6 +323,8 @@ class StageWidget(QWidget):
                 self._enable_wdg(False)
             else:
                 self._enable_wdg(True)
+                print(self._device)
+                self._mmc.setProperty("Core", "Focus", self._device)
 
     def _on_offset_changed(self, dev_name: str, prop_name: str):
         if (
@@ -342,12 +349,17 @@ class StageWidget(QWidget):
 
     def _set_as_default(self):
         current_xy = self._mmc.getXYStageDevice()
-        current_z = self._mmc.getFocusDevice()
+
+        if self._is_autofocus and self._device.isEnabled() and self._device.isLocked():
+            current_z = self._device.offset_device
+        else:
+            current_z = self._mmc.getFocusDevice()
+
         if self._dtype is DeviceType.XYStage and current_xy == self._device:
             self.radiobutton.setChecked(True)
 
-        elif self._is_autofocus:
-            return
+        # elif self._is_autofocus:
+        #     return
 
         elif current_z == self._device:
             self.radiobutton.setChecked(True)
@@ -375,19 +387,24 @@ class StageWidget(QWidget):
             else:
                 self._mmc.setProperty("Core", "XYStage", "")
 
-        elif self._is_autofocus:
-            return
+        # elif self._is_autofocus:
+        #     return
 
         elif self._dtype is DeviceType.Stage:
             if state:
-                self._mmc.setProperty("Core", "Focus", self._device)
+                dev = self._device.offset_device if self._is_autofocus else self._device
+                self._mmc.setProperty("Core", "Focus", dev)
+            # else:
+                # devs = len(self._mmc.getLoadedDevicesOfType(DeviceType.Stage))
+                # if (self._mmc.getAutoFocusDevice() and devs == 2) or devs == 1:
+            elif (   
+                not state
+                and len(self._mmc.getLoadedDevicesOfType(DeviceType.Stage)) == 1
+            ):
+                with signals_blocked(self.radiobutton):
+                    self.radiobutton.setChecked(True)
             else:
-                devs = len(self._mmc.getLoadedDevicesOfType(DeviceType.Stage))
-                if (self._mmc.getAutoFocusDevice() and devs == 2) or devs == 1:
-                    with signals_blocked(self.radiobutton):
-                        self.radiobutton.setChecked(True)
-                else:
-                    self._mmc.setProperty("Core", "Focus", "")
+                self._mmc.setProperty("Core", "Focus", "")
 
     def _toggle_poll_timer(self, on: bool):
         self._poll_timer.start() if on else self._poll_timer.stop()
@@ -415,6 +432,13 @@ class StageWidget(QWidget):
         af = self._device.autofocus_device
 
         if not self._device.isEnabled():
+
+            for d in self._mmc.getLoadedDevicesOfType(DeviceType.Stage):
+                if d == self._device.offset_device:
+                    continue
+                self._mmc.setProperty("Core", "Focus", d)
+                break
+
             self._enable_wdg(False)
             self._stop_offset_timer()
             self.offset_checkbox.setIcon(
@@ -422,6 +446,9 @@ class StageWidget(QWidget):
             )  # gray
 
         elif self._device.isEnabled():
+
+            self._mmc.setProperty("Core", "Focus", self._device.offset_device)
+
             if self._device.isLocked() or (
                 self._device.isLocked() and self._device.isFocusing(af)
             ):

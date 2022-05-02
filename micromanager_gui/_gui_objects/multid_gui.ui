@@ -45,8 +45,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>465</width>
-        <height>842</height>
+        <width>455</width>
+        <height>835</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_6">
@@ -147,7 +147,8 @@
             </property>
             <property name="font">
              <font>
-              <pointsize>12</pointsize>
+              <family>Calibri</family>
+              <pointsize>10</pointsize>
               <weight>75</weight>
               <bold>true</bold>
               <underline>false</underline>
@@ -333,7 +334,8 @@
             </property>
             <property name="font">
              <font>
-              <pointsize>12</pointsize>
+              <family>Calibri</family>
+              <pointsize>10</pointsize>
               <weight>75</weight>
               <bold>true</bold>
              </font>
@@ -412,7 +414,7 @@
              <bool>true</bool>
             </property>
             <property name="columnCount">
-             <number>4</number>
+             <number>3</number>
             </property>
             <attribute name="horizontalHeaderDefaultSectionSize">
              <number>102</number>
@@ -433,11 +435,6 @@
             <column>
              <property name="text">
               <string>Z</string>
-             </property>
-            </column>
-            <column>
-             <property name="text">
-              <string>Offset</string>
              </property>
             </column>
            </widget>
