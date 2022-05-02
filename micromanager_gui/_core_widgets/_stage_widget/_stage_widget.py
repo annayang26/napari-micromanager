@@ -204,8 +204,6 @@ class StageWidget(QWidget):
         top_row_layout = QHBoxLayout()
         top_row_layout.setAlignment(AlignCenter)
         top_row.setLayout(top_row_layout)
-        # if not self._is_autofocus:
-        #     top_row.layout().addWidget(self.radiobutton)
         top_row.layout().addWidget(self.radiobutton)
 
         bottom_row_1 = QWidget()
@@ -288,13 +286,8 @@ class StageWidget(QWidget):
         self._step.setEnabled(enabled)
         self._btns.setEnabled(enabled)
         self.snap_checkbox.setEnabled(enabled)
-        # self._poll_cb.setEnabled(enabled)
-        # if not self._is_autofocus:
-        #     self.radiobutton.setEnabled(enabled)
 
     def _on_prop_core_changed(self, dev_name: str, prop_name: str, value: str):
-        # if dev_name != "Core" or self._is_autofocus:
-        #     return
         if dev_name != "Core":
             return
 
@@ -356,9 +349,6 @@ class StageWidget(QWidget):
         if self._dtype is DeviceType.XYStage and current_xy == self._device:
             self.radiobutton.setChecked(True)
 
-        # elif self._is_autofocus:
-        #     return
-
         elif current_z == self._device:
             self.radiobutton.setChecked(True)
 
@@ -385,16 +375,11 @@ class StageWidget(QWidget):
             else:
                 self._mmc.setProperty("Core", "XYStage", "")
 
-        # elif self._is_autofocus:
-        #     return
-
         elif self._dtype is DeviceType.Stage:
             if state:
                 dev = self._device.offset_device if self._is_autofocus else self._device
                 self._mmc.setProperty("Core", "Focus", dev)
-            # else:
-            # devs = len(self._mmc.getLoadedDevicesOfType(DeviceType.Stage))
-            # if (self._mmc.getAutoFocusDevice() and devs == 2) or devs == 1:
+
             elif (
                 not state
                 and len(self._mmc.getLoadedDevicesOfType(DeviceType.Stage)) == 1
