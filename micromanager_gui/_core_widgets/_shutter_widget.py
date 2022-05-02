@@ -160,7 +160,6 @@ class ShuttersWidget(QtW.QWidget):
     def _on_prop_changed(self, dev_name: str, prop_name: str, value: Any):
         if dev_name != self.shutter_device or prop_name != "State":
             return
-        print(dev_name, prop_name, value)
         state = value in [True, "1"]
         (
             self._set_shutter_wdg_to_opened()
