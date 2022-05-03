@@ -116,6 +116,8 @@ class StageWidget(QWidget):
         self._timer = None
         self._on_off = True
 
+        self.default_z = None
+
         self._is_autofocus = False
         self._check_if_autofocus()
 
@@ -340,11 +342,12 @@ class StageWidget(QWidget):
 
     def _set_as_default(self):
         current_xy = self._mmc.getXYStageDevice()
+        self.default_z = self._mmc.getFocusDevice()
 
         if self._is_autofocus and self._device.isEnabled() and self._device.isLocked():
             current_z = self._device.offset_device
         else:
-            current_z = self._mmc.getFocusDevice()
+            current_z = self.default_z
 
         if self._dtype is DeviceType.XYStage and current_xy == self._device:
             self.radiobutton.setChecked(True)
@@ -415,13 +418,12 @@ class StageWidget(QWidget):
         af = self._device.autofocus_device
 
         if not self._device.isEnabled():
-
-            for d in self._mmc.getLoadedDevicesOfType(DeviceType.Stage):
-                if d == self._device.offset_device:
-                    continue
-                self._mmc.setProperty("Core", "Focus", d)
-                break
-
+            self._mmc.setProperty("Core", "Focus", self.default_z)
+            # for d in self._mmc.getLoadedDevicesOfType(DeviceType.Stage):
+            #     if d == self._device.offset_device:
+            #         continue
+            #     self._mmc.setProperty("Core", "Focus", d)
+            #     break
             self._enable_wdg(False)
             self._stop_offset_timer()
             self.offset_checkbox.setIcon(
