@@ -77,6 +77,7 @@ class ChannelWidget(QWidget):
             channel_wdg = QComboBox()
             channel_wdg.setEnabled(False)
             # channel_wdg.setSizePolicy(wdg_sizepolicy)
+
         return channel_wdg
 
     def _on_sys_cfg_loaded(self):

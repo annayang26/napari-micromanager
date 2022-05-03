@@ -40,6 +40,9 @@ class PresetsWidget(QWidget):
         self._combo.addItems(self._presets)
         self._combo.setCurrentText(self._mmc.getCurrentConfig(self._group))
         self._set_if_props_match_preset()
+        self._combo.setToolTip(
+            str(self._mmc.getConfigData(self._group, self._combo.currentText()))
+        )
 
         self.setLayout(QHBoxLayout())
         self.layout().setContentsMargins(0, 0, 0, 0)
@@ -75,6 +78,7 @@ class PresetsWidget(QWidget):
     def _on_combo_changed(self, text: str) -> None:
         self._mmc.setConfig(self._group, text)
         self._combo.setStyleSheet("")
+        self._combo.setToolTip(str(self._mmc.getConfigData(self._group, text)))
 
     def _set_if_props_match_preset(self):
         """
