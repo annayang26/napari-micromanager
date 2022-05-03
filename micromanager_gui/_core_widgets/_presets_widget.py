@@ -133,6 +133,9 @@ class PresetsWidget(QWidget):
                 self._combo.setEnabled(True)
                 self._combo.setCurrentText(self._mmc.getCurrentConfig(self._group))
                 self._set_if_props_match_preset()
+                self._combo.setToolTip(
+                    str(self._mmc.getConfigData(self._group, self._combo.currentText()))
+                )
 
     def value(self) -> str:
         return self._combo.currentText()
