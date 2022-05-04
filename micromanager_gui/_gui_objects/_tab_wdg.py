@@ -12,7 +12,7 @@ from .._gui_objects._mda_widget import MultiDWidget
 from .._gui_objects._mm_illumination_wdg import MMIlluminationWidget
 from .._gui_objects._mm_shutters_widget import MMShuttersWidget
 from .._gui_objects._objective_widget import MMObjectivesWidget
-from .._gui_objects._sample_explorer_widget import ExploreSample
+from .._gui_objects._sample_explorer_widget._sample_explorer_widget import ExploreSample
 from .._gui_objects._xyz_stages import MMStagesWidget
 
 
