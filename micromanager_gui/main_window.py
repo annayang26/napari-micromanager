@@ -156,16 +156,13 @@ class MainWindow(MicroManagerWidget):
             preview_layer = self.viewer.layers["preview"]
             preview_layer.data = data
         except KeyError:
-            # preview_layer = (
-                # self.viewer.add_image(data, name="preview", translate=(y, x))
-            # )
             preview_layer = self.viewer.add_image(data, name="preview")
 
         self.update_max_min()
 
         if self.streaming_timer is None:
-            self.viewer.reset_view()
             preview_layer.translate = (y, x)
+            self.viewer.reset_view()
 
         # TODO: use self.viewer.camera.zoom to fix issue
         # when explorer + live mode

@@ -16,29 +16,18 @@ class MMStagesWidget(QWidget):
         super().__init__(parent)
         self.setAcceptDrops(True)
         self.main_layout = QHBoxLayout()
-        self.main_layout.setContentsMargins(10, 10, 10, 10)
-        self.main_layout.setSpacing(6)
+        self.main_layout.setContentsMargins(5, 5, 5, 5)
+        self.main_layout.setSpacing(5)
         self.setLayout(self.main_layout)
 
         self._mmc = _core.get_core_singleton()
         self._on_cfg_loaded()
         self._mmc.events.systemConfigurationLoaded.connect(self._on_cfg_loaded)
 
-        self.setWindowFlags(
-            Qt.WindowType.Window
-            | Qt.WindowType.WindowTitleHint
-            | Qt.WindowType.WindowStaysOnTopHint
-            | Qt.WindowType.WindowCloseButtonHint
-        )
-
     def _on_cfg_loaded(self):
         self._clear()
-        stage_dev_list = [
-            dev
-            for dev in self._mmc.getLoadedDevices()
-            if self._mmc.getDeviceType(dev) in STAGE_DEVICES
-        ]
-        stage_dev_list.sort()
+        stage_dev_list = list(self._mmc.getLoadedDevicesOfType(DeviceType.XYStage))
+        stage_dev_list.extend(iter(self._mmc.getLoadedDevicesOfType(DeviceType.Stage)))
         for stage_dev in stage_dev_list:
             if self._mmc.getDeviceType(stage_dev) is DeviceType.XYStage:
                 bx = DragGroupBox("XY Control")
@@ -104,11 +93,10 @@ class MMStagesWidget(QWidget):
 
 
 class DragGroupBox(QGroupBox):
-    def __init__(self, title: str, start_pos=None) -> None:
+    def __init__(self, name: str, start_pos=None) -> None:
         super().__init__()
-        self._name = title
+        self._name = name
         self.start_pos = start_pos
-        self.setTitle(self._name)
 
     def mouseMoveEvent(self, event):
         drag = QDrag(self)
