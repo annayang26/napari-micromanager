@@ -16,18 +16,17 @@ from qtpy.QtWidgets import (
     QTableWidget,
     QVBoxLayout,
     QWidget,
-    QSpacerItem
 )
 from superqt.fonticon import icon
 
 
-class MMExplorerWidget(QWidget):
+class ExplorerGui(QWidget):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
 
         self.setLayout(QVBoxLayout())
         self.layout().setSpacing(0)
-        self.layout().setContentsMargins(0, 0, 0, 0)
+        self.layout().setContentsMargins(10, 10, 10, 10)
 
         # general scroll area
         self._scroll = QScrollArea()
@@ -59,8 +58,8 @@ class MMExplorerWidget(QWidget):
         self.move_to_pos = self._create_move_to_pos()
         wdg_layout.addWidget(self.move_to_pos)
 
-        spacer = QSpacerItem(10, 10,  QSizePolicy.Minimum, QSizePolicy.Expanding)
-        wdg_layout.addItem(spacer)
+        # spacer = QSpacerItem(10, 10, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        # wdg_layout.addItem(spacer)
 
         return wdg
 
@@ -82,6 +81,7 @@ class MMExplorerWidget(QWidget):
         row_label = QLabel(text="Rows:")
         row_label.setSizePolicy(lbl_sizepolicy)
         self.scan_size_spinBox_r = QSpinBox()
+        self.scan_size_spinBox_r.setMinimum(1)
         self.scan_size_spinBox_r.setAlignment(Qt.AlignCenter)
         row_wdg_lay.addWidget(row_label)
         row_wdg_lay.addWidget(self.scan_size_spinBox_r)
@@ -95,6 +95,7 @@ class MMExplorerWidget(QWidget):
         col_label = QLabel(text="Columns:")
         col_label.setSizePolicy(lbl_sizepolicy)
         self.scan_size_spinBox_c = QSpinBox()
+        self.scan_size_spinBox_c.setMinimum(1)
         self.scan_size_spinBox_c.setAlignment(Qt.AlignCenter)
         col_wdg_lay.addWidget(col_label)
         col_wdg_lay.addWidget(self.scan_size_spinBox_c)
@@ -120,7 +121,7 @@ class MMExplorerWidget(QWidget):
     def _create_channel_group(self):
 
         group = QGroupBox(title="Channels")
-        group.setMinimumHeight(250)
+        group.setMinimumHeight(230)
         group_layout = QGridLayout()
         group_layout.setHorizontalSpacing(15)
         group_layout.setVerticalSpacing(0)
@@ -129,7 +130,7 @@ class MMExplorerWidget(QWidget):
 
         # table
         self.channel_explorer_tableWidget = QTableWidget()
-        self.channel_explorer_tableWidget.setMinimumHeight(110)
+        self.channel_explorer_tableWidget.setMinimumHeight(90)
         hdr = self.channel_explorer_tableWidget.horizontalHeader()
         hdr.setSectionResizeMode(hdr.Stretch)
         self.channel_explorer_tableWidget.verticalHeader().setVisible(False)
@@ -137,7 +138,7 @@ class MMExplorerWidget(QWidget):
         self.channel_explorer_tableWidget.setColumnCount(2)
         self.channel_explorer_tableWidget.setRowCount(0)
         self.channel_explorer_tableWidget.setHorizontalHeaderLabels(
-            ["Channel", "Exp. Time (ms)"]
+            ["Channel", "Exposure Time (ms)"]
         )
         group_layout.addWidget(self.channel_explorer_tableWidget, 0, 0, 3, 1)
 
@@ -174,10 +175,10 @@ class MMExplorerWidget(QWidget):
         dir_group = QWidget()
         dir_group_layout = QHBoxLayout()
         dir_group_layout.setSpacing(5)
-        dir_group_layout.setContentsMargins(10, 10, 10, 10)
+        dir_group_layout.setContentsMargins(0, 10, 0, 5)
         dir_group.setLayout(dir_group_layout)
         lbl_sizepolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        min_lbl_size = 70
+        min_lbl_size = 80
         btn_sizepolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         dir_lbl = QLabel(text="Directory:")
         dir_lbl.setMinimumWidth(min_lbl_size)
@@ -193,9 +194,9 @@ class MMExplorerWidget(QWidget):
         fname_group = QWidget()
         fname_group_layout = QHBoxLayout()
         fname_group_layout.setSpacing(5)
-        fname_group_layout.setContentsMargins(10, 10, 10, 10)
+        fname_group_layout.setContentsMargins(0, 5, 0, 10)
         fname_group.setLayout(fname_group_layout)
-        fname_lbl = QLabel(text="File Name: ")
+        fname_lbl = QLabel(text="File Name:")
         fname_lbl.setMinimumWidth(min_lbl_size)
         fname_lbl.setSizePolicy(lbl_sizepolicy)
         self.fname_explorer_lineEdit = QLineEdit()
@@ -258,3 +259,14 @@ class MMExplorerWidget(QWidget):
         group_layout.addWidget(self.y_lineEdit)
 
         return group
+
+
+if __name__ == "__main__":
+    import sys
+
+    from qtpy.QtWidgets import QApplication
+
+    app = QApplication(sys.argv)
+    win = ExplorerGui()
+    win.show()
+    sys.exit(app.exec_())
