@@ -17,8 +17,8 @@ from superqt.utils import ensure_main_thread
 from . import _core, _mda
 from ._camera_roi import CameraROI
 from ._core_widgets import PixelSizeWidget, PropertyBrowser
+from ._gui_objects._camera_stream import CamStream
 from ._gui_objects._mm_widget import MicroManagerWidget
-from ._gui_objects._stream_cam import CamStream
 from ._saving import save_sequence
 from ._util import event_indices, extend_array_for_index
 
@@ -149,7 +149,7 @@ class MainWindow(MicroManagerWidget):
         if not data:
             return
 
-        shape_x, shape_y = data[0][0]
+        shape_x, shape_y = data[0][0].shape
         new_array = np.empty((n_images, shape_x, shape_y))
         for idx, d in enumerate(data):
             img = d[0]

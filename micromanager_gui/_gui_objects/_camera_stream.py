@@ -183,9 +183,6 @@ class CamStream(QWidget):
                 img = self._mmc.getNBeforeLastImageMD(i)
                 data.append(img)
 
-        # for m in reversed(stack):
-        #     print(f"ElapsedTime: {m[1].get('ElapsedTime-ms')}")
-
         self.cam_event.camStreamData.emit(data, n_images)
 
     def _on_stop(self):
