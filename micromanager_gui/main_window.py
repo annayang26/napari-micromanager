@@ -146,7 +146,7 @@ class MainWindow(MicroManagerWidget):
         for idx, d in enumerate(data):
             img = d[0]
             new_array[idx, :, :] = img
-        self.viewer.add_image(new_array)
+        self.viewer.add_image(new_array, name=f"stream_{n_images}_images")
 
         for _, meta in reversed(data):
             print(meta.get("ElapsedTime-ms"))
