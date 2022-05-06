@@ -9,13 +9,14 @@ import numpy as np
 from napari.experimental import link_layers
 from pymmcore_plus._util import find_micromanager
 from qtpy import QtWidgets as QtW
-from qtpy.QtCore import QTimer
+from qtpy.QtCore import Qt, QTimer
 from qtpy.QtGui import QColor, QIcon
 from superqt.utils import create_worker, ensure_main_thread, signals_blocked
 
 from . import _core, _mda
 from ._camera_roi import CameraROI
 from ._core_widgets import PropertyBrowser
+from ._gui_objects._camera_stream import CamStream
 from ._gui_objects._mm_widget import MicroManagerWidget
 from ._saving import save_sequence
 from ._util import SelectDeviceFromCombobox, event_indices, extend_array_for_index
@@ -110,6 +111,9 @@ class MainWindow(MicroManagerWidget):
         action = self._menu.addAction("Device Property Browser...")
         action.triggered.connect(self._show_prop_browser)
 
+        action_2 = self._menu.addAction("Camera Stream...")
+        action_2.triggered.connect(self._show_cam_stream)
+
         bar = w._qt_window.menuBar()
         bar.insertMenu(list(bar.actions())[-1], self._menu)
 
@@ -118,6 +122,34 @@ class MainWindow(MicroManagerWidget):
             self._prop_browser = PropertyBrowser(self._mmc, self)
         self._prop_browser.show()
         self._prop_browser.raise_()
+
+    def _show_cam_stream(self):
+        if len(self._mmc.getLoadedDevices()) <= 1:
+            raise Warning("System Configuration not loaded!")
+        if not hasattr(self, "_cam_stream"):
+            self._cam_stream = CamStream(self)
+            self._cam_stream.cam_event.camStreamData.connect(self._on_cam_stream)
+            self._cam_stream.setWindowFlags(
+                Qt.Window
+                | Qt.WindowTitleHint
+                | Qt.WindowStaysOnTopHint
+                | Qt.WindowCloseButtonHint
+            )
+        self._cam_stream.show()
+
+    def _on_cam_stream(self, data: list, n_images: int):
+        if not data:
+            return
+
+        shape_x, shape_y = data[0][0].shape
+        new_array = np.empty((n_images, shape_x, shape_y))
+        for idx, d in enumerate(data):
+            img = d[0]
+            new_array[idx, :, :] = img
+        self.viewer.add_image(new_array)
+
+        for _, meta in reversed(data):
+            print(meta.get("ElapsedTime-ms"))
 
     def _on_system_cfg_loaded(self):
         if len(self._mmc.getLoadedDevices()) > 1:
