@@ -44,8 +44,6 @@ class CamStream(QWidget):
 
         self._on_sys_cfg()
 
-        self._mmc.loadSystemConfiguration()
-
     def _create_gui(self):
 
         layout = QVBoxLayout()
