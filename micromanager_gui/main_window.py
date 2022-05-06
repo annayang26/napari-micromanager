@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import contextlib
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING
-import contextlib
 
 import napari
 import numpy as np
@@ -18,6 +18,7 @@ from . import _core, _mda
 from ._camera_roi import CameraROI
 from ._core_widgets import PixelSizeWidget, PropertyBrowser
 from ._gui_objects._mm_widget import MicroManagerWidget
+from ._gui_objects._stream_cam import CamStream
 from ._saving import save_sequence
 from ._util import event_indices, extend_array_for_index
 
@@ -105,6 +106,9 @@ class MainWindow(MicroManagerWidget):
         action_1 = self._menu.addAction("Set Pixel Size...")
         action_1.triggered.connect(self._show_pixel_size_table)
 
+        action_2 = self._menu.addAction("Camera Stream...")
+        action_2.triggered.connect(self._show_cam_stream)
+
         bar = w._qt_window.menuBar()
         bar.insertMenu(list(bar.actions())[-1], self._menu)
 
@@ -127,12 +131,39 @@ class MainWindow(MicroManagerWidget):
             )
         self._px_size_wdg.show()
 
+    def _show_cam_stream(self):
+        if len(self._mmc.getLoadedDevices()) <= 1:
+            raise Warning("System Configuration not loaded!")
+        if not hasattr(self, "_cam_stream"):
+            self._cam_stream = CamStream(self)
+            self._cam_stream.cam_event.camStreamData.connect(self._on_cam_stream)
+            self._cam_stream.setWindowFlags(
+                Qt.Window
+                | Qt.WindowTitleHint
+                | Qt.WindowStaysOnTopHint
+                | Qt.WindowCloseButtonHint
+            )
+        self._cam_stream.show()
+
+    def _on_cam_stream(self, data: list, n_images: int):
+        if not data:
+            return
+
+        shape_x, shape_y = data[0][0]
+        new_array = np.empty((n_images, shape_x, shape_y))
+        for idx, d in enumerate(data):
+            img = d[0]
+            new_array[idx, :, :] = img
+        self.viewer.add_image(new_array)
+
+        for _, meta in reversed(data):
+            print(meta.get("ElapsedTime-ms"))
+
     def _on_system_cfg_loaded(self):
         if len(self._mmc.getLoadedDevices()) > 1:
             self._set_enabled(True)
 
     def _set_enabled(self, enabled):
-        # self.illum_btn.setEnabled(enabled)
 
         self.tab_wdg.mda._set_enabled(enabled)
         if self._mmc.getXYStageDevice():
