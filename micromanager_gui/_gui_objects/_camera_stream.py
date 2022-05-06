@@ -183,7 +183,7 @@ class CamStream(QWidget):
                 img = self._mmc.getNBeforeLastImageMD(i)
                 data.append(img)
 
-        self._mmc.events.stopSequenceAcquisition.emit()
+        self._mmc.events.stopSequenceAcquisition.emit(self.cam_combo.currentText())
         self.cam_event.camStreamData.emit(data, n_images)
 
     def _on_stop(self):
