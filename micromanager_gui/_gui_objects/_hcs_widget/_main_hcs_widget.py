@@ -246,7 +246,7 @@ class HCSWidget(HCSGui):
         # reorder wells for "snake" acquisition
         correct_order = []
         to_add = []
-        previous_row = 0
+        previous_row = well_list_to_order[0][0]
         corrent_row = 0
         for idx, wl in enumerate(well_list_to_order):
             row, well, x, y = wl
