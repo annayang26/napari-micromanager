@@ -65,6 +65,7 @@ class ChannelPositionWidget(QWidget):
         z_layout.setContentsMargins(10, 10, 10, 10)
         z_wdg.setLayout(z_layout)
         self.z_combo = QComboBox()
+        self.z_combo.currentTextChanged.connect(self._set_focus_device)
         self.update_stage_combo()
         z_layout.addWidget(self.z_combo)
 
@@ -366,6 +367,11 @@ class ChannelPositionWidget(QWidget):
         self.clear_channel()
         self.clear_positions()
         self.update_stage_combo()
+
+    def _set_focus_device(self, text: str):
+        if text == "None":
+            return
+        self._mmc.setFocusDevice(text)
 
     def update_stage_combo(self):
         self.z_combo.clear()
