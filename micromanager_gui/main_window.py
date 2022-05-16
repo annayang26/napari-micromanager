@@ -270,7 +270,7 @@ class MainWindow(MicroManagerWidget):
     def _on_mda_frame(self, image: np.ndarray, event: useq.MDAEvent):
 
         meta = self._mda_meta
-        if meta.mode == "mda":
+        if meta.mode in ["mda", "hca"]:
 
             # pick layer name
             file_name = meta.file_name if meta.should_save else "Exp"
