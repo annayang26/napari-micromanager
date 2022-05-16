@@ -49,11 +49,10 @@ class MMTabWidget(QtW.QTabWidget):
         self._create_gui()
 
         self.addTab(self.mda, "Multi-D Acquisition")
-        self.addTab(self.explorer, "Sample Explorer")
-        self.addTab(self.hcs_wdg, "HCS")
-
         self.setTabVisible(1, False)
+        self.addTab(self.explorer, "Sample Explorer")
         self.setTabVisible(2, False)
+        self.addTab(self.hcs_wdg, "HCS")
         self.setTabVisible(3, False)
 
         plus_tab = SelectTabs(self)
