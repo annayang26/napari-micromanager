@@ -39,8 +39,6 @@ class SelectFOV(QWidget):
 
         self._mmc = mmcore or get_core_singleton()
 
-        self._mmc.loadSystemConfiguration()  # to remove
-
         self._plate_size_x = None
         self._plate_size_y = None
         self._is_circular = None

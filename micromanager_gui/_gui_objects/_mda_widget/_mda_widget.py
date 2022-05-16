@@ -131,7 +131,7 @@ class MMMultiDWidget(MultiDWidgetGui):
         self.n_images_label.setText(f"Number of Images: {round((_range / step) + 1)}")
 
     def _on_mda_started(self, sequence):
-        self._set_enabled(False)
+        # self._set_enabled(False)
         self.pause_Button.show()
         self.cancel_Button.show()
         self.run_Button.hide()

@@ -39,7 +39,7 @@ class MMExploreSample(ExplorerGui):
         self.move_to_Button.clicked.connect(self.move_to)
         self.browse_save_explorer_Button.clicked.connect(self.set_explorer_dir)
 
-        self.stop_scan_Button.clicked.connect(lambda e: self._mmc.mda.cancel())
+        self.stop_scan_Button.released.connect(lambda: self._mmc.mda.cancel())
 
         self.x_lineEdit.setText(str(None))
         self.y_lineEdit.setText(str(None))
@@ -47,24 +47,24 @@ class MMExploreSample(ExplorerGui):
         # connect mmcore signals
         self._mmc.events.systemConfigurationLoaded.connect(self.clear_channel)
 
-        self._mmc.mda.events.sequenceStarted.connect(self._on_mda_started)
+        # self._mmc.mda.events.sequenceStarted.connect(self._on_mda_started)
         self._mmc.mda.events.sequenceFinished.connect(self._on_mda_finished)
         self._mmc.mda.events.sequenceFinished.connect(self._refresh_positions)
 
         self._mmc.events.mdaEngineRegistered.connect(self._update_mda_engine)
 
     def _update_mda_engine(self, newEngine: PMDAEngine, oldEngine: PMDAEngine):
-        oldEngine.events.sequenceStarted.disconnect(self._on_mda_started)
+        # oldEngine.events.sequenceStarted.disconnect(self._on_mda_started)
         oldEngine.events.sequenceFinished.disconnect(self._on_mda_finished)
         oldEngine.events.sequenceFinished.disconnect(self._refresh_positions)
 
-        newEngine.events.sequenceStarted.connect(self._on_mda_started)
+        # newEngine.events.sequenceStarted.connect(self._on_mda_started)
         newEngine.events.sequenceFinished.connect(self._on_mda_finished)
         newEngine.events.sequenceFinished.connect(self._refresh_positions)
 
-    def _on_mda_started(self, sequence: useq.MDASequence):
-        """Block gui when mda starts."""
-        self._set_enabled(False)
+    # def _on_mda_started(self, sequence: useq.MDASequence):
+    #     """Block gui when mda starts."""
+    #     self._set_enabled(False)
 
     def _on_mda_finished(self, sequence: useq.MDASequence):
         # TODO: have this widget be able to save independently of napari
