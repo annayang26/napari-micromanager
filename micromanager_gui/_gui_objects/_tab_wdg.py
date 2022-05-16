@@ -8,6 +8,7 @@ from .._core_widgets._snap_button_widget import SnapButton
 from .._gui_objects._camera_widget import MMCameraWidget
 from .._gui_objects._channel_widget import ChannelWidget
 from .._gui_objects._group_preset_table_widget import MMGroupPresetTableWidget
+from .._gui_objects._hcs_widget._main_hcs_widget import HCSWidget
 from .._gui_objects._mda_widget._mda_widget import MMMultiDWidget
 from .._gui_objects._mm_illumination_wdg import MMIlluminationWidget
 from .._gui_objects._mm_shutters_widget import MMShuttersWidget
@@ -45,11 +46,13 @@ class MMTabWidget(QtW.QTabWidget):
         self.mda = MMMultiDWidget()
         self.explorer = MMExploreSample()
         self.group_preset = MMGroupPresetTableWidget()
+        self.hcs_wdg = HCSWidget(self)
 
         self._create_gui()
 
         self.addTab(self.mda, "Multi-D Acquisition")
         self.addTab(self.explorer, "Sample Explorer")
+        self.addTab(self.hcs_wdg, "HCS")
 
     def _create_gui(self):
 
