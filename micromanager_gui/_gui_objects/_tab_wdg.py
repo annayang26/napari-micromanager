@@ -16,7 +16,6 @@ from .._gui_objects._objective_widget import MMObjectivesWidget
 from .._gui_objects._sample_explorer_widget._sample_explorer_widget import (
     MMExploreSample,
 )
-from .._gui_objects._xyz_stages import MMStagesWidget
 
 
 class MMTabWidget(QtW.QTabWidget):
@@ -42,7 +41,6 @@ class MMTabWidget(QtW.QTabWidget):
         self.ch_wdg = ChannelWidget()
         self.exp_wdg = DefaultCameraExposureWidget()
         self.ill = MMIlluminationWidget()
-        self.stages_wdg = MMStagesWidget()
         self.mda = MMMultiDWidget()
         self.explorer = MMExploreSample()
         self.group_preset = MMGroupPresetTableWidget()
@@ -129,14 +127,6 @@ class MMTabWidget(QtW.QTabWidget):
         self.ill_wdg.setLayout(self.ill_wdg_layout)
         self.ill_wdg_layout.addWidget(self.ill)
         tab_layout.addWidget(self.ill_wdg)
-
-        self.stages = QtW.QGroupBox()
-        self.stages_layout = QtW.QVBoxLayout()
-        self.stages_layout.setSpacing(0)
-        self.stages_layout.setContentsMargins(5, 0, 5, 0)
-        self.stages.setLayout(self.stages_layout)
-        self.stages_layout.addWidget(self.stages_wdg)
-        tab_layout.addWidget(self.stages)
 
         self.gp = QtW.QGroupBox()
         self.gp_layout = QtW.QVBoxLayout()
