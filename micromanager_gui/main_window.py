@@ -164,12 +164,12 @@ class MainWindow(MicroManagerWidget):
             self._set_enabled(True)
 
     def _set_enabled(self, enabled):
-
-        self.tab_wdg.mda._set_enabled(enabled)
-        if self._mmc.getXYStageDevice():
-            self.tab_wdg.explorer._set_enabled(enabled)
-        else:
-            self.tab_wdg.explorer._set_enabled(False)
+        pass
+        # self.tab_wdg.mda._set_enabled(enabled)
+        # if self._mmc.getXYStageDevice():
+        #     self.tab_wdg.explorer._set_enabled(enabled)
+        # else:
+        #     self.tab_wdg.explorer._set_enabled(False)
 
     @ensure_main_thread
     def update_viewer(self, data=None):

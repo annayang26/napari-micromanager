@@ -44,13 +44,20 @@ class MMTabWidget(QtW.QTabWidget):
         self.mda = MMMultiDWidget()
         self.explorer = MMExploreSample()
         self.group_preset = MMGroupPresetTableWidget()
-        self.hcs_wdg = HCSWidget(self)
+        self.hcs_wdg = HCSWidget()
 
         self._create_gui()
 
         self.addTab(self.mda, "Multi-D Acquisition")
         self.addTab(self.explorer, "Sample Explorer")
         self.addTab(self.hcs_wdg, "HCS")
+
+        self.setTabVisible(1, False)
+        self.setTabVisible(2, False)
+        self.setTabVisible(3, False)
+
+        plus_tab = SelectTabs(self)
+        self.addTab(plus_tab, "+")
 
     def _create_gui(self):
 
@@ -181,3 +188,35 @@ class MMTabWidget(QtW.QTabWidget):
 
     def _resize(self):
         self.setMinimumWidth(self.sizeHint().width())
+
+
+class SelectTabs(QtW.QWidget):
+    def __init__(self, parent: QtW.QTabWidget):
+        super().__init__(parent)
+
+        layout = QtW.QVBoxLayout()
+        layout.setSpacing(10)
+        layout.setContentsMargins(10, 10, 10, 10)
+        self.setLayout(layout)
+
+        for idx in range(1, parent.count()):
+            checkbox = TabCheckbox(parent.tabText(idx), idx, parent)
+            layout.addWidget(checkbox)
+
+        spacer = QtW.QSpacerItem(
+            10, 10, QtW.QSizePolicy.Expanding, QtW.QSizePolicy.Expanding
+        )
+        layout.addItem(spacer)
+
+
+class TabCheckbox(QtW.QCheckBox):
+    def __init__(self, tab_label: str, tab_index: int, parent: QtW.QTabWidget):
+        super().__init__()
+
+        self.tab_wdg = parent
+        self.tab_index = tab_index
+        self.setText(tab_label)
+        self.toggled.connect(self._on_checkbox_toggled)
+
+    def _on_checkbox_toggled(self, state: bool):
+        self.tab_wdg.setTabVisible(self.tab_index, state)

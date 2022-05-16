@@ -48,7 +48,7 @@ class MicroManagerWidget(QWidget):
         stages_coll.layout().setSpacing(0)
         stages_coll.layout().setContentsMargins(0, 0, 5, 10)
         stages_coll.addWidget(self.stages_wdg)
-        stages_coll.expand(animate=False)
+        # stages_coll.expand(animate=False)
 
         stages_layout.addWidget(stages_coll)
 
