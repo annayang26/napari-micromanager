@@ -3,7 +3,7 @@ from typing import Optional
 from pymmcore_plus import DeviceType
 from qtpy.QtCore import QMimeData, Qt
 from qtpy.QtGui import QDrag
-from qtpy.QtWidgets import QGroupBox, QHBoxLayout, QWidget
+from qtpy.QtWidgets import QGroupBox, QHBoxLayout, QSizePolicy, QWidget
 
 from .. import _core
 from .._core_widgets._stage_widget._stage_widget import StageWidget
@@ -15,6 +15,7 @@ class MMStagesWidget(QWidget):
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.setAcceptDrops(True)
+        self.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed))
         self.main_layout = QHBoxLayout()
         self.main_layout.setContentsMargins(5, 5, 5, 5)
         self.main_layout.setSpacing(5)
