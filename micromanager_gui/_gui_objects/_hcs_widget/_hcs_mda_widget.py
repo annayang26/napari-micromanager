@@ -371,7 +371,7 @@ class ChannelPositionWidget(QWidget):
     def _set_focus_device(self, text: str):
         if text == "None":
             return
-        self._mmc.setFocusDevice(text)
+        self._mmc.setProperty("Core", "Focus", text)
 
     def update_stage_combo(self):
         self.z_combo.clear()
