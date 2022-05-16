@@ -49,10 +49,14 @@ class PlateCalibration(QWidget):
 
     def _create_gui(self):
 
-        layout = QHBoxLayout()
-        layout.setSpacing(5)
+        layout = QVBoxLayout()
+        layout.setSpacing(10)
         layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
+
+        self.info_lbl = QLabel()
+        self.info_lbl.setAlignment(Qt.AlignCenter)
+        self.layout().addWidget(self.info_lbl)
 
         group = QGroupBox()
         group_layout = QHBoxLayout()
@@ -64,13 +68,10 @@ class PlateCalibration(QWidget):
         group_layout.addWidget(self.table_1)
 
         bottom_group = QGroupBox()
-        bottom_group_layout = QVBoxLayout()
+        bottom_group_layout = QHBoxLayout()
         bottom_group_layout.setSpacing(10)
         bottom_group_layout.setContentsMargins(10, 10, 10, 10)
         bottom_group.setLayout(bottom_group_layout)
-
-        self.info_lbl = QLabel()
-        self.info_lbl.setAlignment(Qt.AlignCenter)
 
         cal_state_wdg = QWidget()
         cal_state_wdg_layout = QHBoxLayout()
@@ -91,7 +92,7 @@ class PlateCalibration(QWidget):
         calibrate_btn = QPushButton(text="Calibrate Plate")
         calibrate_btn.clicked.connect(self._calibrate_plate)
 
-        bottom_group_layout.addWidget(self.info_lbl)
+        # bottom_group_layout.addWidget(self.info_lbl)
         bottom_group_layout.addWidget(calibrate_btn)
         bottom_group_layout.addWidget(cal_state_wdg)
 
@@ -119,17 +120,18 @@ class PlateCalibration(QWidget):
 
         if self.plate.get("circular"):
             text = (
-                "Add 3 points on the circonference\n" "and click on 'Calibrate Plate'."
+                "Add 3 points on the circonference of the round well"
+                "and click on 'Calibrate Plate'."
             )
         else:
             text = (
-                "Add 2 points (opposite vertices)\n"
-                "or 4 points (1 point per side)\n"
+                "Add 2 points (opposite vertices) "
+                "or 4 points (1 point per side) "
                 "and click on 'Calibrate Plate'."
             )
         self.info_lbl.setText(text)
 
-        # # to test
+        # to test
         # self.table_1.tb.setRowCount(2)
         # self.table_1.tb.setItem(0, 0, QTableWidgetItem("-100"))
         # self.table_1.tb.setItem(0, 1, QTableWidgetItem("100"))
