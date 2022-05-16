@@ -100,7 +100,9 @@ class HCSGui(QWidget):
         self.FOV_selector = SelectFOV()
 
         # add widgets
-        view_group = QGroupBox("Plate Selection")
+        # view_group = QGroupBox("Plate")
+        view_group = QGroupBox()
+        view_group.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed))
         view_gp_layout = QVBoxLayout()
         view_gp_layout.setSpacing(0)
         view_gp_layout.setContentsMargins(10, 10, 10, 10)
@@ -109,8 +111,9 @@ class HCSGui(QWidget):
         view_gp_layout.addWidget(self.view)
         wdg_layout.addWidget(view_group)
 
-        FOV_group = QGroupBox(title="FOVs Selection")
-        FOV_group.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        # FOV_group = QGroupBox(title="FOVs")
+        FOV_group = QGroupBox()
+        FOV_group.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         FOV_gp_layout = QVBoxLayout()
         FOV_gp_layout.setSpacing(0)
         FOV_gp_layout.setContentsMargins(10, 10, 10, 10)
@@ -131,7 +134,9 @@ class HCSGui(QWidget):
         wdg_layout.setContentsMargins(10, 10, 10, 10)
         wdg.setLayout(wdg_layout)
 
-        cal_group = QGroupBox(title="Plate Calibration")
+        # cal_group = QGroupBox(title="Plate Calibration")
+        cal_group = QGroupBox()
+        cal_group.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed))
         cal_group_layout = QVBoxLayout()
         cal_group_layout.setSpacing(0)
         cal_group_layout.setContentsMargins(10, 20, 10, 10)

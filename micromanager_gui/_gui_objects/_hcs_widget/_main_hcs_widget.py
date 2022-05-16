@@ -44,7 +44,7 @@ class HCSWidget(HCSGui):
         self.run_Button.clicked.connect(self._on_run_clicked)
         self.pause_Button.released.connect(lambda: self._mmc.mda.toggle_pause())
         self.cancel_Button.released.connect(lambda: self._mmc.mda.cancel())
-        self.calibration.PlateFromCalibration.connect(self._on_plate_from_calobration)
+        self.calibration.PlateFromCalibration.connect(self._on_plate_from_calibration)
         self.ch_and_pos_list.position_list_button.clicked.connect(
             self._generate_pos_list
         )
@@ -68,7 +68,7 @@ class HCSWidget(HCSGui):
         self._draw_well_plate(value)
         self.calibration._update_gui(value)
 
-    def _on_plate_from_calobration(self, coords: Tuple):
+    def _on_plate_from_calibration(self, coords: Tuple):
         x_list = [x[0] for x in [*coords]]
         y_list = [y[1] for y in [*coords]]
         x_max, x_min = (max(x_list), min(x_list))

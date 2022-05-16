@@ -92,7 +92,6 @@ class PlateCalibration(QWidget):
         calibrate_btn = QPushButton(text="Calibrate Plate")
         calibrate_btn.clicked.connect(self._calibrate_plate)
 
-        # bottom_group_layout.addWidget(self.info_lbl)
         bottom_group_layout.addWidget(calibrate_btn)
         bottom_group_layout.addWidget(cal_state_wdg)
 
@@ -120,11 +119,15 @@ class PlateCalibration(QWidget):
 
         if self.plate.get("circular"):
             text = (
+                "Calibrate Well A1\n"
+                "\n"
                 "Add 3 points on the circonference of the round well"
                 "and click on 'Calibrate Plate'."
             )
         else:
             text = (
+                "Calibrate Well A1\n"
+                "\n"
                 "Add 2 points (opposite vertices) "
                 "or 4 points (1 point per side) "
                 "and click on 'Calibrate Plate'."
@@ -255,8 +258,8 @@ class PlateCalibration(QWidget):
             _range = 4
 
         for r in range(_range):
-            x = float(self.table_1.tb.item(r, 0).text())
-            y = float(self.table_1.tb.item(r, 1).text())
+            x = float(self.table_1.tb.item(r, 1).text())
+            y = float(self.table_1.tb.item(r, 2).text())
             pos += ((x, y),)
 
         if self.plate.get("circular"):
@@ -287,24 +290,18 @@ class CalibrationTable(QWidget):
         layout.setContentsMargins(10, 0, 0, 0)
         self.setLayout(layout)
 
-        self.well_lbl = QLabel()
-        self.well_lbl.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed))
-        self.well_lbl.setAlignment(Qt.AlignCenter)
-        self.well_lbl.setText("Well A1")
-        layout.addWidget(self.well_lbl, 0, 0, 1, 2)
-
         self.tb = QTableWidget()
         self.tb.setMinimumHeight(150)
         hdr = self.tb.horizontalHeader()
         hdr.setSectionResizeMode(hdr.Stretch)
         self.tb.verticalHeader().setVisible(False)
         self.tb.setTabKeyNavigation(True)
-        self.tb.setColumnCount(2)
+        self.tb.setColumnCount(3)
         self.tb.setRowCount(0)
-        self.tb.setHorizontalHeaderLabels(["X", "Y"])
+        self.tb.setHorizontalHeaderLabels(["Well", "X", "Y"])
         self.tb.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.tb.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        layout.addWidget(self.tb, 1, 0, 3, 1)
+        layout.addWidget(self.tb, 0, 0, 3, 1)
 
         btn_sizepolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         min_size = 100
@@ -320,9 +317,9 @@ class CalibrationTable(QWidget):
         clear_btn.clicked.connect(self._clear_table)
         clear_btn.setMinimumWidth(min_size)
         clear_btn.setSizePolicy(btn_sizepolicy)
-        layout.addWidget(add_btn, 1, 1, 1, 1)
-        layout.addWidget(remove_btn, 2, 1, 1, 2)
-        layout.addWidget(clear_btn, 3, 1, 1, 2)
+        layout.addWidget(add_btn, 0, 1, 1, 1)
+        layout.addWidget(remove_btn, 1, 1, 1, 2)
+        layout.addWidget(clear_btn, 2, 1, 1, 2)
 
     def _add_pos(self):
 
@@ -332,9 +329,13 @@ class CalibrationTable(QWidget):
         if len(self._mmc.getLoadedDevices()) > 1:
             idx = self._add_position_row()
 
-            for c, ax in enumerate("XY"):
-                cur = getattr(self._mmc, f"get{ax}Position")()
-                item = QTableWidgetItem(str(cur))
+            for c, ax in enumerate("WXY"):
+                if ax == "W":
+                    item = QTableWidgetItem(f"A1_pos{idx:03d}")
+                else:
+                    cur = getattr(self._mmc, f"get{ax}Position")()
+                    item = QTableWidgetItem(str(cur))
+
                 item.setTextAlignment(int(Qt.AlignHCenter | Qt.AlignVCenter))
                 self.tb.setItem(idx, c, item)
 
