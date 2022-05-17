@@ -1,3 +1,12 @@
+VWR 24  Plastic:
+  circular: true
+  cols: 6
+  id: VWR 24  Plastic
+  rows: 4
+  well_size_x: 15.7
+  well_size_y: 15.7
+  well_spacing_x: 19.2
+  well_spacing_y: 19.2
 _from calibration:
   circular: false
   cols: 1
