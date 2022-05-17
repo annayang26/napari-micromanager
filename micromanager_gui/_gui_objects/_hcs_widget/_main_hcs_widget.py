@@ -76,8 +76,10 @@ class HCSWidget(HCSGui):
 
         print(x_max, x_min, y_max, y_min)
 
-        width_mm = (abs(x_max) + abs(x_min)) / 1000
-        height_mm = (abs(y_max) + abs(y_min)) / 1000
+        # width_mm = (abs(x_max) + abs(x_min)) / 1000
+        # height_mm = (abs(y_max) + abs(y_min)) / 1000
+        width_mm = (x_max - x_min) / 1000
+        height_mm = (y_max - y_min) / 1000
 
         with open(PLATE_DATABASE) as file:
             f = yaml.safe_load(file)
