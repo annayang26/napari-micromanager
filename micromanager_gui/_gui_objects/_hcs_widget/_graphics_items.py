@@ -134,7 +134,7 @@ class FOVPoints(QGraphicsItem):
 
         # fov width and height in scene px
         self._x_size = (scene_size_x * image_size_mm_x) / plate_size_x
-        self._y_size = (scene_size_x * image_size_mm_y) / plate_size_x
+        self._y_size = (scene_size_x * image_size_mm_y) / plate_size_x  ####Fix for not squared sensor
 
         self.width = scene_size_x
         self.height = scene_size_y
@@ -161,4 +161,4 @@ class FOVPoints(QGraphicsItem):
 
     def getPositionsInfo(self):
         xc, yc = self.getCenter()
-        return xc, yc, self.width, self.height, self.fov_row, self.fov_col
+        return xc, yc, self.width, self.height, self.fov_row

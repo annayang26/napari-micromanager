@@ -312,10 +312,11 @@ class SelectFOV(QWidget):
         self._reset_grid_scene()
 
     def _load_plate_info(self, size_x, size_y, is_circular):
+
         self.scene.clear()
 
-        self._plate_size_x = size_x
-        self._plate_size_y = size_y
+        self._plate_size_x = round(size_x, 3)
+        self._plate_size_y = round(size_y, 3)
         self._is_circular = is_circular
 
         if (

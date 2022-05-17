@@ -276,7 +276,6 @@ class PlateCalibration(QWidget):
         self._set_calibrated(True)
 
         if self.plate.get("id") == "_from calibration":
-            print('pos:', pos)
             self.PlateFromCalibration.emit(pos)
 
 
@@ -329,6 +328,9 @@ class CalibrationTable(QWidget):
 
         if not self._mmc.getXYStageDevice():
             return
+        
+        if not self._mmc.getPixelSizeUm():
+            raise ValueError("Pixel Size not defined! Set pixel size first.")
 
         if len(self._mmc.getLoadedDevices()) > 1:
             idx = self._add_position_row()

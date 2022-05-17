@@ -49,12 +49,8 @@ class MMTabWidget(QtW.QTabWidget):
         self._create_gui()
 
         self.addTab(self.mda, "Multi-D Acquisition")
-        self.setTabVisible(1, False)
         self.addTab(self.explorer, "Sample Explorer")
-        self.setTabVisible(2, False)
         self.addTab(self.hcs_wdg, "HCS")
-        self.setTabVisible(3, False)
-
         plus_tab = SelectTabs(self)
         self.addTab(plus_tab, "+")
 
@@ -200,6 +196,9 @@ class SelectTabs(QtW.QWidget):
 
         for idx in range(1, parent.count()):
             checkbox = TabCheckbox(parent.tabText(idx), idx, parent)
+            if parent.isTabVisible(idx):
+                checkbox.setChecked(True)
+
             layout.addWidget(checkbox)
 
         spacer = QtW.QSpacerItem(
