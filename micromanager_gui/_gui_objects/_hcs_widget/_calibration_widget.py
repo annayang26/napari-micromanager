@@ -237,6 +237,9 @@ class PlateCalibration(QWidget):
 
         self._set_calibrated(False)
 
+        if not self._mmc.getPixelSizeUm():
+            raise ValueError("Pixel Size not defined! Set pixel size first.")
+
         if self._mmc.isSequenceRunning():
             self._mmc.stopSequenceAcquisition()
 
@@ -273,6 +276,7 @@ class PlateCalibration(QWidget):
         self._set_calibrated(True)
 
         if self.plate.get("id") == "_from calibration":
+            print('pos:', pos)
             self.PlateFromCalibration.emit(pos)
 
 
