@@ -118,6 +118,7 @@ class FOVPoints(QGraphicsItem):
         scene_size_x: int,
         scene_size_y: int,
         plate_size_x: float,
+        plate_size_y: float,
         image_size_mm_x: float,
         image_size_mm_y: float,
         fov_row: Optional[int] = None,
@@ -134,7 +135,7 @@ class FOVPoints(QGraphicsItem):
 
         # fov width and height in scene px
         self._x_size = (scene_size_x * image_size_mm_x) / plate_size_x
-        self._y_size = (scene_size_x * image_size_mm_y) / plate_size_x  ####Fix for not squared sensor
+        self._y_size = (scene_size_y * image_size_mm_y) / plate_size_y
 
         self.width = scene_size_x
         self.height = scene_size_y
