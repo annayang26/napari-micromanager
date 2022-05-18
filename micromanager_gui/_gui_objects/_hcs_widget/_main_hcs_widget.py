@@ -74,8 +74,6 @@ class HCSWidget(HCSGui):
         x_max, x_min = (max(x_list), min(x_list))
         y_max, y_min = (max(y_list), min(y_list))
 
-        # width_mm = (abs(x_max) + abs(x_min)) / 1000
-        # height_mm = (abs(y_max) + abs(y_min)) / 1000
         width_mm = (x_max - x_min) / 1000
         height_mm = (y_max - y_min) / 1000
 
