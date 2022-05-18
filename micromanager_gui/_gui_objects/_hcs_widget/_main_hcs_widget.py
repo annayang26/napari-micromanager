@@ -278,8 +278,8 @@ class HCSWidget(HCSGui):
         cy = 100
 
         mode = self.FOV_selector.tab_wdg.tabText(
-                self.FOV_selector.tab_wdg.currentIndex()
-            )
+            self.FOV_selector.tab_wdg.currentIndex()
+        )
 
         pos_list = []
         to_add = []
@@ -292,30 +292,30 @@ class HCSWidget(HCSGui):
             well_x_um = well_x * 1000
             well_y_um = well_y * 1000
 
-            if mode == "Grid":
-                previous_row = 0
-                for idx, fov in enumerate(fovs):
-                    # center fov scene x, y coord fx and fov scene width and height
-                    (
-                        center_fov_scene_x,
-                        center_fov_scene_y,
-                        w_fov_scene,
-                        h_fov_scene,
-                        fov_row,
-                    ) = fov
+            previous_row = 0
+            for idx, fov in enumerate(fovs):
+                # center fov scene x, y coord fx and fov scene width and height
+                (
+                    center_fov_scene_x,
+                    center_fov_scene_y,
+                    w_fov_scene,
+                    h_fov_scene,
+                    fov_row,
+                ) = fov
 
-                    # find 1 px value in um depending on well dimension
-                    px_val_x = well_x_um / w_fov_scene
-                    px_val_y = well_y_um / h_fov_scene
+                # find 1 px value in um depending on well dimension
+                px_val_x = well_x_um / w_fov_scene
+                px_val_y = well_y_um / h_fov_scene
 
-                    # shift point coords in px when center is (0, 0)
-                    new_fx = center_fov_scene_x - cx
-                    new_fy = center_fov_scene_y - cy
+                # shift point coords in px when center is (0, 0)
+                new_fx = center_fov_scene_x - cx
+                new_fy = center_fov_scene_y - cy
 
-                    # find stage coords of fov point
-                    stage_coord_x = center_stage_x + (new_fx * px_val_x)
-                    stage_coord_y = center_stage_y + (new_fy * px_val_y)
+                # find stage coords of fov point
+                stage_coord_x = center_stage_x + (new_fx * px_val_x)
+                stage_coord_y = center_stage_y + (new_fy * px_val_y)
 
+                if mode == "Grid":
                     if fov_row > previous_row or idx == len(fovs) - 1:
                         if idx == len(fovs) - 1:
                             to_add.append((well_name, stage_coord_x, stage_coord_y))
@@ -328,29 +328,7 @@ class HCSWidget(HCSGui):
                     to_add.append((well_name, stage_coord_x, stage_coord_y))
                     previous_row = fov_row
 
-            else:
-                for idx, fov in enumerate(fovs):
-                    # center fov scene x, y coord fx and fov scene width and height
-                    (
-                        center_fov_scene_x,
-                        center_fov_scene_y,
-                        w_fov_scene,
-                        h_fov_scene,
-                        fov_row,
-                    ) = fov
-
-                    # find 1 px value in um depending on well dimension
-                    px_val_x = well_x_um / w_fov_scene
-                    px_val_y = well_y_um / h_fov_scene
-
-                    # shift point coords in px when center is (0, 0)
-                    new_fx = center_fov_scene_x - cx
-                    new_fy = center_fov_scene_y - cy
-
-                    # find stage coords of fov point
-                    stage_coord_x = center_stage_x + (new_fx * px_val_x)
-                    stage_coord_y = center_stage_y + (new_fy * px_val_y)
-
+                else:
                     pos_list.append((well_name, stage_coord_x, stage_coord_y))
 
         return pos_list
