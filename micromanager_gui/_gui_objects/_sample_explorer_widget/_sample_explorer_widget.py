@@ -189,7 +189,8 @@ class MMExploreSample(ExplorerGui):
 
         # to match position coordinates with center of the image
         x_pos -= self.pixel_size * (move_x + width)
-        y_pos += self.pixel_size * (move_y + height)
+        # y_pos += self.pixel_size * (move_y + height)
+        y_pos -= self.pixel_size * (move_y + height)
 
         # calculate position increments depending on pixle size
         if overlap_percentage > 0:
@@ -199,32 +200,73 @@ class MMExploreSample(ExplorerGui):
             increment_x = width * self.pixel_size
             increment_y = height * self.pixel_size
 
-        list_pos_order = []
+        list_pos = []
+        x = x_pos
+        y = y_pos
+        z = z_pos
         for r in range(self.scan_size_r):
-            if r % 2:  # for odd rows
-                col = self.scan_size_c - 1
-                for c in range(self.scan_size_c):
-                    if c == 0:
-                        y_pos -= increment_y
-                    if self._mmc.getFocusDevice():
-                        list_pos_order.append([x_pos, y_pos, z_pos])
-                    else:
-                        list_pos_order.append([x_pos, y_pos])
-                    if col > 0:
-                        col -= 1
-                        x_pos -= increment_x
-            else:  # for even rows
-                for c in range(self.scan_size_c):
-                    if r > 0 and c == 0:
-                        y_pos -= increment_y
-                    if self._mmc.getFocusDevice():
-                        list_pos_order.append([x_pos, y_pos, z_pos])
-                    else:
-                        list_pos_order.append([x_pos, y_pos])
-                    if c < self.scan_size_c - 1:
-                        x_pos += increment_x
+            y = y_pos if r == 0 else y + increment_y
+            for c in range(self.scan_size_c):
+                x = x_pos if c == 0 else x + increment_x
+                y = y
+                if self._mmc.getFocusDevice():
+                    list_pos.append((x, y, z, r, c))
+                else:
+                    list_pos.append((x, y, r, c))
 
-        return list_pos_order
+        correct_order = []
+        to_add = []
+        previous_row = list_pos[0][-2]
+        corrent_row = 0
+        for idx, p in enumerate(list_pos):
+            if len(p) == 5:
+                x, y, z, r, c = p
+                pos = (x, y, z)
+            else:
+                x, y, r, c = p
+                pos = (x, y)
+
+            if r > previous_row or idx == len(list_pos) - 1:
+                if idx == len(list_pos) - 1:
+                    to_add.append(pos)
+                if corrent_row % 2 == 0:
+                    correct_order.extend(iter(to_add))
+                else:
+                    correct_order.extend(iter(reversed(to_add)))
+                to_add.clear()
+                corrent_row += 1
+
+            to_add.append(pos)
+            previous_row = r
+
+        return correct_order
+
+        # list_pos_order = []
+        # for r in range(self.scan_size_r):
+        #     if r % 2:  # for odd rows
+        #         col = self.scan_size_c - 1
+        #         for c in range(self.scan_size_c):
+        #             if c == 0:
+        #                 y_pos -= increment_y
+        #             if self._mmc.getFocusDevice():
+        #                 list_pos_order.append([x_pos, y_pos, z_pos])
+        #             else:
+        #                 list_pos_order.append([x_pos, y_pos])
+        #             if col > 0:
+        #                 col -= 1
+        #                 x_pos -= increment_x
+        #     else:  # for even rows
+        #         for c in range(self.scan_size_c):
+        #             if r > 0 and c == 0:
+        #                 y_pos -= increment_y
+        #             if self._mmc.getFocusDevice():
+        #                 list_pos_order.append([x_pos, y_pos, z_pos])
+        #             else:
+        #                 list_pos_order.append([x_pos, y_pos])
+        #             if c < self.scan_size_c - 1:
+        #                 x_pos += increment_x
+
+        # return list_pos_order
 
     def set_explorer_dir(self):
         # set the directory
