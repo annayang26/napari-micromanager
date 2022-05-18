@@ -234,7 +234,7 @@ class HCSWidget(HCSGui):
                 y = a1_y
             else:
                 x = a1_x + ((x_step * 1000) * col)
-                y = a1_y + ((y_step * 1000) * row)
+                y = a1_y - ((y_step * 1000) * row)
 
             ordered_well_list.append((well, x, y))
 
