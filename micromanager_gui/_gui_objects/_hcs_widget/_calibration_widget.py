@@ -1,6 +1,5 @@
 from pathlib import Path
 from typing import Optional, Tuple, overload
-import warnings
 
 import yaml
 from fonticon_mdi6 import MDI6
@@ -329,9 +328,6 @@ class CalibrationTable(QWidget):
 
         if not self._mmc.getXYStageDevice():
             return
-        
-        # if not self._mmc.getPixelSizeUm():
-        #     warnings.warn("Pixel Size not defined!")
 
         if len(self._mmc.getLoadedDevices()) > 1:
             idx = self._add_position_row()
