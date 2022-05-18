@@ -208,19 +208,11 @@ class HCSWidget(HCSGui):
 
         ordered_wells_list = self._get_wells_stage_coords(well_list, plate_info)
 
-        fovs = [
-            item.getPositionsInfo()
-            for item in self.FOV_selector.scene.items()
-            if isinstance(item, FOVPoints)
-        ]
-
-        fovs.reverse()
-
-        pos_list = self._get_well_and_fovs_position_list(
-            plate_info, ordered_wells_list, fovs
+        ordered_wells_and_fovs_list = self._get_well_and_fovs_position_list(
+            plate_info, ordered_wells_list
         )
 
-        for r, f in enumerate(pos_list):
+        for r, f in enumerate(ordered_wells_and_fovs_list):
             well_name, stage_coord_x, stage_coord_y = f
             self._add_to_table(r, well_name, stage_coord_x, stage_coord_y)
 
@@ -232,7 +224,8 @@ class HCSWidget(HCSGui):
         # distance between wells from plate database (mm)
         x_step, y_step = plate_info.get("well_distance")
 
-        well_list_to_order = []
+        # well_list_to_order = []
+        ordered_well_list = []
         for pos in well_list:
             well, row, col = pos
             # find center stage coords for all the selected wells
@@ -243,44 +236,24 @@ class HCSWidget(HCSGui):
                 x = a1_x + ((x_step * 1000) * col)
                 y = a1_y + ((y_step * 1000) * row)
 
-            well_list_to_order.append((row, well, x, y))
+            ordered_well_list.append((well, x, y))
 
-        # reorder wells for "snake" acquisition
-        correct_order = []
-        to_add = []
-        previous_row = well_list_to_order[0][0]
-        corrent_row = 0
-        for idx, wl in enumerate(well_list_to_order):
-            row, well, x, y = wl
-            if row > previous_row or idx == len(well_list_to_order) - 1:
-                if idx == len(well_list_to_order) - 1:
-                    to_add.append((well, x, y))
-                if corrent_row % 2 == 0:
-                    correct_order.extend(iter(to_add))
-                else:
-                    correct_order.extend(iter(reversed(to_add)))
-                to_add.clear()
-                corrent_row += 1
+        return ordered_well_list
 
-            to_add.append((well, x, y))
-            previous_row = row
+    def _get_well_and_fovs_position_list(self, plate_info, ordered_wells_list) -> list:
 
-        return correct_order
-
-    def _get_well_and_fovs_position_list(
-        self, plate_info, ordered_wells_list, fovs
-    ) -> list:
+        fovs = [
+            item.getPositionsInfo()
+            for item in self.FOV_selector.scene.items()
+            if isinstance(item, FOVPoints)
+        ]
+        fovs.reverse()
 
         # center coord in px (of QGraphicsView))
         cx = 100
         cy = 100
 
-        mode = self.FOV_selector.tab_wdg.tabText(
-            self.FOV_selector.tab_wdg.currentIndex()
-        )
-
         pos_list = []
-        to_add = []
         for pos in ordered_wells_list:
             well_name, center_stage_x, center_stage_y = pos
 
@@ -290,15 +263,13 @@ class HCSWidget(HCSGui):
             well_x_um = well_x * 1000
             well_y_um = well_y * 1000
 
-            previous_row = 0
-            for idx, fov in enumerate(fovs):
+            for fov in fovs:
                 # center fov scene x, y coord fx and fov scene width and height
                 (
                     center_fov_scene_x,
                     center_fov_scene_y,
                     w_fov_scene,
                     h_fov_scene,
-                    fov_row,
                 ) = fov
 
                 # find 1 px value in um depending on well dimension
@@ -313,21 +284,7 @@ class HCSWidget(HCSGui):
                 stage_coord_x = center_stage_x + (new_fx * px_val_x)
                 stage_coord_y = center_stage_y + (new_fy * px_val_y)
 
-                if mode == "Grid":
-                    if fov_row > previous_row or idx == len(fovs) - 1:
-                        if idx == len(fovs) - 1:
-                            to_add.append((well_name, stage_coord_x, stage_coord_y))
-                        if previous_row % 2 == 0:
-                            pos_list.extend(iter(to_add))
-                        else:
-                            pos_list.extend(iter(reversed(to_add)))
-                        to_add.clear()
-
-                    to_add.append((well_name, stage_coord_x, stage_coord_y))
-                    previous_row = fov_row
-
-                else:
-                    pos_list.append((well_name, stage_coord_x, stage_coord_y))
+                pos_list.append((well_name, stage_coord_x, stage_coord_y))
 
         return pos_list
 

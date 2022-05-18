@@ -47,7 +47,6 @@ class GraphicsScene(QGraphicsScene):
 
     def mouseReleaseEvent(self, event):
         self.currentQRubberBand.hide()
-        # self._print_selected_wells()  # to be removed
 
     def _clear_selection(self):
         """clear selection"""
@@ -55,23 +54,37 @@ class GraphicsScene(QGraphicsScene):
             if item.isSelected():
                 item.setSelected(False)
                 item.setBrush(self.unselected)
-        # self._print_selected_wells()  # to be removed
 
     def _get_plate_positions(self):
-        return [item.getPos() for item in reversed(self.items()) if item.isSelected()]
 
-    # def _get_A1_position(self):
-    #     for item in reversed(self.items()):
-    #         w = item.getPos()
-    #         if w[0] == "A1":
-    #             return w
+        if not self.items():
+            return
 
-    # def _print_selected_wells(self):  # to be removed
-    #     print("___________")
-    #     print("Selected wells:")
-    #     self._selected_wells = [
-    #         item.getPos() for item in self.items() if item.isSelected()
-    #     ]
-    #     self._selected_wells.sort()
-    #     for i in self._selected_wells:
-    #         print(i)
+        well_list_to_order = [
+            item.getPos() for item in reversed(self.items()) if item.isSelected()
+        ]
+
+        # for 'snake' acquisition
+        correct_order = []
+        to_add = []
+        try:
+            previous_row = well_list_to_order[0][1]
+        except IndexError:
+            return
+        corrent_row = 0
+        for idx, wrc in enumerate(well_list_to_order):
+            well, row, col = wrc
+            if row > previous_row or idx == len(well_list_to_order) - 1:
+                if idx == len(well_list_to_order) - 1:
+                    to_add.append((well, row, col))
+                if corrent_row % 2 == 0:
+                    correct_order.extend(iter(to_add))
+                else:
+                    correct_order.extend(iter(reversed(to_add)))
+                to_add.clear()
+                corrent_row += 1
+
+            to_add.append((well, row, col))
+            previous_row = row
+
+        return correct_order

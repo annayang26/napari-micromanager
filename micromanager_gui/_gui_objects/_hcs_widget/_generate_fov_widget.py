@@ -415,23 +415,16 @@ class SelectFOV(QWidget):
         dx = (dx / 1000) / scene_px_mm_x
 
         if rows == 1 and cols == 1:
-            start_x = cr
-            start_y = cc
+            x = cr
+            y = cc
         else:
-            start_x = cc - ((cols - 1) * (self._x_size / 2)) - ((dx / 2) * (cols - 1))
-            start_y = cr - ((rows - 1) * (self._y_size / 2)) - ((dy / 2) * (rows - 1))
+            x = cc - ((cols - 1) * (self._x_size / 2)) - ((dx / 2) * (cols - 1))
+            y = cr + ((rows - 1) * (self._y_size / 2)) - ((dy / 2) * (rows - 1))
 
         move_x = self._x_size + dx
         move_y = self._y_size + dy
 
-        points = []
-        x, y = (0, 0)
-        for r in range(rows):
-            y = start_y if r == 0 else y + move_y
-            for c in range(cols):
-                x = start_x if c == 0 else x + move_x
-                y = y
-                points.append((x, y, r, c))
+        points = self._create_grid_of_points(rows, cols, x, y, move_x, move_y)
 
         for p in points:
             self.scene.addItem(
@@ -448,6 +441,28 @@ class SelectFOV(QWidget):
                     p[3],
                 )
             )
+
+    def _create_grid_of_points(self, rows, cols, x, y, move_x, move_y):
+        # for 'snake' acquisition
+        points = []
+        for r in range(rows):
+            if r % 2:  # for odd rows
+                col = cols - 1
+                for c in range(cols):
+                    if c == 0:
+                        y -= move_y
+                    points.append((x, y, r, c))
+                    if col > 0:
+                        col -= 1
+                        x -= move_x
+            else:  # for even rows
+                for c in range(cols):
+                    if r > 0 and c == 0:
+                        y -= move_y
+                    points.append((x, y, r, c))
+                    if c < cols - 1:
+                        x += move_x
+        return points
 
     def _update_FOV_center_random(
         self, nFOV: int, mode: str, area_x: float, area_y: float

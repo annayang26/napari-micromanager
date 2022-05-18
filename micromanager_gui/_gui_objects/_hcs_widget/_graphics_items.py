@@ -162,4 +162,4 @@ class FOVPoints(QGraphicsItem):
 
     def getPositionsInfo(self):
         xc, yc = self.getCenter()
-        return xc, yc, self.width, self.height, self.fov_row
+        return xc, yc, self.width, self.height
