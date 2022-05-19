@@ -137,8 +137,8 @@ class FOVPoints(QGraphicsItem):
         self._x_size = (scene_size_x * image_size_mm_x) / plate_size_x
         self._y_size = (scene_size_y * image_size_mm_y) / plate_size_y
 
-        self.width = scene_size_x
-        self.height = scene_size_y
+        self.scene_width = scene_size_x
+        self.scene_width = scene_size_y
 
     def boundingRect(self):
         return QRectF(0, 0, self._view_size, self._view_size)
@@ -162,4 +162,4 @@ class FOVPoints(QGraphicsItem):
 
     def getPositionsInfo(self):
         xc, yc = self.getCenter()
-        return xc, yc, self.width, self.height
+        return xc, yc, self.scene_width, self.scene_width

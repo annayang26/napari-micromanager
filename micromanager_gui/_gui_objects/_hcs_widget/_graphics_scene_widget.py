@@ -71,20 +71,33 @@ class GraphicsScene(QGraphicsScene):
             previous_row = well_list_to_order[0][1]
         except IndexError:
             return
-        corrent_row = 0
+        current_row = 0
         for idx, wrc in enumerate(well_list_to_order):
-            well, row, col = wrc
-            if row > previous_row or idx == len(well_list_to_order) - 1:
-                if idx == len(well_list_to_order) - 1:
-                    to_add.append((well, row, col))
-                if corrent_row % 2 == 0:
-                    correct_order.extend(iter(to_add))
-                else:
-                    correct_order.extend(iter(reversed(to_add)))
-                to_add.clear()
-                corrent_row += 1
+            _, row, _ = wrc
 
-            to_add.append((well, row, col))
-            previous_row = row
+            if idx == 0:
+                correct_order.append(wrc)
+            elif row == previous_row:
+                to_add.append(wrc)
+                if idx == len(well_list_to_order) - 1:
+                    if current_row % 2:
+                        correct_order.extend(iter(reversed(to_add)))
+                    else:
+                        correct_order.extend(iter(to_add))
+            else:
+                if current_row % 2:
+                    correct_order.extend(iter(reversed(to_add)))
+                else:
+                    correct_order.extend(iter(to_add))
+                to_add.clear()
+                to_add.append(wrc)
+                if idx == len(well_list_to_order) - 1:
+                    if current_row % 2:
+                        correct_order.extend(iter(reversed(to_add)))
+                    else:
+                        correct_order.extend(iter(to_add))
+
+                previous_row = row
+                current_row += 1
 
         return correct_order
