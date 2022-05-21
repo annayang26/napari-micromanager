@@ -282,7 +282,7 @@ class SelectFOV(QWidget):
         rows = self.rows.value()
         cols = self.cols.value()
         dx = self.spacing_x.value()
-        dy = self.spacing_y.value()
+        dy = -(self.spacing_y.value())
         self._update_FOV_grid(rows, cols, dx, dy)
 
     def _on_tab_changed(self, tab_index: int):
