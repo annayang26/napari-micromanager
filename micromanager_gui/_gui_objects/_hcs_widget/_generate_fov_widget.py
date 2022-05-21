@@ -1,6 +1,8 @@
 import contextlib
 import math
 import random
+import time
+import warnings
 from typing import Optional
 
 import numpy as np
@@ -515,7 +517,13 @@ class SelectFOV(QWidget):
             self.scene.addItem(
                 WellArea(True, center, center, diameter, diameter, area_pen)
             )
-            points = self._random_points_in_circle(nFOV, diameter, center)
+
+            min_dist_x = (self._scene_size_x * _image_size_mm_x) / area_x
+            min_dist_y = (self._scene_size_y * _image_size_mm_y) / area_x
+
+            points = self._random_points_in_circle(
+                nFOV, diameter, center, min_dist_x, min_dist_y
+            )
             for p in points:
                 self.scene.addItem(
                     FOVPoints(
@@ -553,13 +561,25 @@ class SelectFOV(QWidget):
             size_y = (self._scene_size_y * area_y) / self._plate_size_y
             center_x = (self._view_size - size_x) / 2
             center_y = (self._view_size - size_y) / 2
+
             self.scene.addItem(
                 WellArea(False, center_x, center_y, size_x, size_y, area_pen)
             )
+
             points_area_x = (self._scene_size_x * area_x) / self._plate_size_x
             points_area_y = (self._scene_size_y * area_y) / self._plate_size_y
+
+            min_dist_x = (self._scene_size_x * _image_size_mm_x) / area_x
+            min_dist_y = (self._scene_size_y * _image_size_mm_y) / area_y
+
             points = self._random_points_in_square(
-                nFOV, points_area_x, points_area_y, self._view_size, self._view_size
+                nFOV,
+                points_area_x,
+                points_area_y,
+                self._view_size,
+                self._view_size,
+                min_dist_x,
+                min_dist_y,
             )
             for p in points:
                 self.scene.addItem(
@@ -575,12 +595,14 @@ class SelectFOV(QWidget):
                     )
                 )
 
-    def _random_points_in_circle(self, nFOV, diameter: float, center):
-        points = []
+    def _random_points_in_circle(
+        self, nFOV, diameter: float, center, min_dist_x, min_dist_y
+    ) -> list:
         radius = diameter / 2
         _to_add = center + radius
-
-        for _ in range(nFOV):
+        points = []
+        t = time.time()
+        while len(points) < nFOV:
             # random angle
             alpha = 2 * math.pi * random.random()
             # random radius
@@ -588,22 +610,55 @@ class SelectFOV(QWidget):
             # calculating coordinates
             x = r * math.cos(alpha) + _to_add
             y = r * math.sin(alpha) + _to_add
-            points.append((x, y))
+            if self.dist((x, y), points, (min_dist_x, min_dist_y)):
+                points.append((x, y))
+            t1 = time.time()
+            if t1 - t > 0.5:
+                warnings.warn(
+                    f"Area too small to generate {nFOV} fovs. "
+                    f"Only {len(points)} were generated."
+                )
+                with signals_blocked(self.number_of_FOV):
+                    self.number_of_FOV.setValue(len(points))
+                return points
         return points
 
-    def _random_points_in_square(self, nFOV, size_x, size_y, max_size_x, max_size_y):
-
+    def _random_points_in_square(
+        self, nFOV, size_x, size_y, max_size_x, max_size_y, min_dist_x, min_dist_y
+    ) -> list:
         x_left = (max_size_x - size_x) / 2  # left bound
         x_right = x_left + size_x  # right bound
         y_up = (max_size_y - size_y) / 2  # upper bound
         y_down = y_up + size_y  # lower bound
 
         points = []
-        for _ in range(nFOV):
+        t = time.time()
+        while len(points) < nFOV:
             x = np.random.randint(x_left, x_right)
             y = np.random.randint(y_up, y_down)
-            points.append((x, y))
+            if self.dist((x, y), points, (min_dist_x, min_dist_y)):
+                points.append((x, y))
+            t1 = time.time()
+            if t1 - t > 0.5:
+                warnings.warn(
+                    f"Area too small to generate {nFOV} fovs. "
+                    f"Only {len(points)} were generated."
+                )
+                with signals_blocked(self.number_of_FOV):
+                    self.number_of_FOV.setValue(len(points))
+                return points
         return points
+
+    def dist(self, new_point: tuple, points: list, min_distance: tuple) -> bool:
+        for point in points:
+            x_new, y_new = new_point[0], new_point[1]
+            x, y = point[0], point[1]
+            min_distance_x, min_distance_y = min_distance[0], min_distance[1]
+            x_max, x_min = max(x, x_new), min(x, x_new)
+            y_max, y_min = max(y, y_new), min(y, y_new)
+            if x_max - x_min < min_distance_x and y_max - y_min < min_distance_y:
+                return False
+        return True
 
 
 if __name__ == "__main__":
