@@ -424,7 +424,7 @@ class SelectFOV(QWidget):
             y = cr + ((rows - 1) * (self._y_size / 2)) - ((dy / 2) * (rows - 1))
 
         move_x = self._x_size + dx
-        move_y = self._y_size + dy
+        move_y = self._y_size - dy
 
         points = self._create_grid_of_points(rows, cols, x, y, move_x, move_y)
 
