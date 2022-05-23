@@ -24,11 +24,11 @@ from micromanager_gui._gui_objects._hcs_widget._calibration_widget import (
     PlateCalibration,
 )
 from micromanager_gui._gui_objects._hcs_widget._generate_fov_widget import SelectFOV
-from micromanager_gui._gui_objects._hcs_widget._graphics_scene_widget import (
-    GraphicsScene,
-)
 from micromanager_gui._gui_objects._hcs_widget._hcs_mda_widget import (
     ChannelPositionWidget,
+)
+from micromanager_gui._gui_objects._hcs_widget._plate_graphics_scene_widget import (
+    GraphicsScene,
 )
 
 PLATE_DATABASE = Path(__file__).parent / "_well_plate.yaml"
