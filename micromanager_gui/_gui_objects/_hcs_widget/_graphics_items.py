@@ -148,18 +148,11 @@ class FOVPoints(QGraphicsItem):
         pen.setWidth(2)
         painter.setPen(pen)
 
-        # x, y = self.getCenter()
-        # painter.drawPoint(x, y)
+        # painter.drawPoint(self._x, self._y)
 
         start_x = self._x - (self._x_size / 2)
         start_y = self._y - (self._y_size / 2)
         painter.drawRect(QRectF(start_x, start_y, self._x_size, self._y_size))
 
-    def getCenter(self):
-        xc = round(self._x)
-        yc = round(self._y)
-        return xc, yc
-
     def getPositionsInfo(self):
-        xc, yc = self.getCenter()
-        return xc, yc, self.scene_width, self.scene_width
+        return self._x, self._y, self.scene_width, self.scene_width
