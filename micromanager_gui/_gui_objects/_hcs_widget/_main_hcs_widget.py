@@ -5,6 +5,7 @@ import yaml
 from pymmcore_plus import CMMCorePlus
 from pymmcore_plus.mda import PMDAEngine
 from qtpy.QtCore import Qt
+from qtpy.QtGui import QBrush
 from qtpy.QtWidgets import QApplication, QTableWidgetItem, QWidget
 from superqt.utils import signals_blocked
 from useq import MDASequence
@@ -130,6 +131,13 @@ class HCSWidget(HCSGui):
             text_size,
             self.wp.circular,
         )
+
+        # select the plate area if is not a multi well
+        items = self.scene.items()
+        if len(items) == 1:
+            item = items[0]
+            item.setSelected(True)
+            item.setBrush(QBrush(Qt.magenta))
 
         self.FOV_selector._load_plate_info(
             self.wp.well_size_x, self.wp.well_size_y, self.wp.circular
