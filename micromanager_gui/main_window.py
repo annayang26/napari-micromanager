@@ -394,9 +394,7 @@ class MainWindow(MicroManagerWidget):
             except KeyError:  # add the new layer to the viewer
                 seq = event.sequence
                 _image = image[(np.newaxis,) * len(seq.shape)]
-                layer = self.viewer.add_image(
-                    _image, name=layer_name, blending="additive"
-                )
+                layer = self.viewer.add_image(_image, name=layer_name)
 
                 # dimensions labels
                 labels = [i for i in seq.axis_order if i in event.index] + ["y", "x"]
