@@ -413,7 +413,7 @@ class HCSWidget(HCSGui):
         experiment = self.get_state()
 
         SEQUENCE_META[experiment] = SequenceMeta(
-            mode="hca",
+            mode="hcs",
             split_channels=False,
             should_save=False,
             file_name="",
