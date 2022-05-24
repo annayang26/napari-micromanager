@@ -34,6 +34,7 @@ class HCSWidget(HCSGui):
 
         # connect
         self._mmc = mmcore or get_core_singleton()
+        self._mmc.events.systemConfigurationLoaded.connect(self._on_sys_cfg)
         self._mmc.mda.events.sequenceStarted.connect(self._on_mda_started)
         self._mmc.mda.events.sequenceFinished.connect(self._on_mda_finished)
         self._mmc.mda.events.sequencePauseToggled.connect(self._on_mda_paused)
@@ -51,6 +52,9 @@ class HCSWidget(HCSGui):
         )
 
         self._update_wp_combo()
+
+    def _on_sys_cfg(self):
+        self._on_combo_changed( self.wp_combo.currentText())
 
     def _update_wp_combo(self):
         plates = self._plates_names_from_database()
