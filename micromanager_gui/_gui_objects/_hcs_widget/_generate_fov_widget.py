@@ -613,7 +613,7 @@ class SelectFOV(QWidget):
             if self.dist((x, y), points, (min_dist_x, min_dist_y)):
                 points.append((x, y))
             t1 = time.time()
-            if t1 - t > 0.5:
+            if t1 - t > 1:
                 warnings.warn(
                     f"Area too small to generate {nFOV} fovs. "
                     f"Only {len(points)} were generated."
