@@ -361,6 +361,7 @@ class HCSWidget(HCSGui):
 
         for r in range(self.ch_and_pos_list.stage_tableWidget.rowCount()):
             pos = {
+                "name": self.ch_and_pos_list.stage_tableWidget.item(r, 0).text(),
                 "x": float(self.ch_and_pos_list.stage_tableWidget.item(r, 1).text()),
                 "y": float(self.ch_and_pos_list.stage_tableWidget.item(r, 2).text()),
             }
