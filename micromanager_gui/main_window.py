@@ -319,6 +319,7 @@ class MainWindow(MicroManagerWidget):
                 layer.metadata[
                     "ch_id"
                 ] = f'{event.channel.config}_idx{event.index["c"]}'
+
         elif meta.mode == "explorer":
 
             seq = event.sequence
