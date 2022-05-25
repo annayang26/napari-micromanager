@@ -54,7 +54,7 @@ class HCSWidget(HCSGui):
         self._update_wp_combo()
 
     def _on_sys_cfg(self):
-        self._on_combo_changed( self.wp_combo.currentText())
+        self._on_combo_changed(self.wp_combo.currentText())
 
     def _update_wp_combo(self):
         plates = self._plates_names_from_database()
@@ -423,9 +423,9 @@ class HCSWidget(HCSGui):
             mode="hcs",
             split_channels=False,
             should_save=False,
-            file_name="",
-            save_dir="",
-            save_pos=False,
+            file_name=self.fname_lineEdit.text(),
+            save_dir=self.dir_lineEdit.text(),
+            save_pos=self.checkBox_save_pos.isChecked(),
         )
         self._mmc.run_mda(experiment)  # run the MDA experiment asynchronously
         return
