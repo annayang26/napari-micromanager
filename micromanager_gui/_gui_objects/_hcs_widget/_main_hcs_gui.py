@@ -5,11 +5,13 @@ from fonticon_mdi6 import MDI6
 from qtpy.QtCore import QSize, Qt
 from qtpy.QtWidgets import (
     QApplication,
+    QCheckBox,
     QComboBox,
     QGraphicsView,
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QPushButton,
     QScrollArea,
     QSizePolicy,
@@ -63,7 +65,7 @@ class HCSGui(QWidget):
         select_plate_tab = self._create_plate_and_fov_tab()
         calibration = self._create_calibration_tab()
         self.ch_and_pos_list = ChannelPositionWidget()
-        self.saving_tab = QWidget()
+        self.saving_tab = self._create_save_wdg()
 
         tab.addTab(select_plate_tab, "  Plate and FOVs Selection  ")
         tab.addTab(calibration, "  Plate Calibration  ")
@@ -226,6 +228,76 @@ class HCSGui(QWidget):
         combo_wdg.setLayout(wp_combo_layout)
 
         return combo_wdg
+
+    def _create_save_wdg(self):
+        wdg = QWidget()
+        wdg_layout = QVBoxLayout()
+        wdg_layout.setSpacing(0)
+        wdg_layout.setContentsMargins(10, 10, 10, 10)
+        wdg.setLayout(wdg_layout)
+        save_group = self._create_save_group()
+        wdg_layout.addWidget(save_group)
+
+        verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+        wdg_layout.addItem(verticalSpacer)
+
+        return wdg
+
+    def _create_save_group(self):
+        self.save_groupBox = QGroupBox(title="Save HCS Acquisition")
+        self.save_groupBox.setSizePolicy(
+            QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        )
+        self.save_groupBox.setCheckable(True)
+        self.save_groupBox.setChecked(False)
+        group_layout = QVBoxLayout()
+        group_layout.setSpacing(10)
+        group_layout.setContentsMargins(10, 10, 10, 10)
+        self.save_groupBox.setLayout(group_layout)
+
+        # directory
+        dir_group = QWidget()
+        dir_group_layout = QHBoxLayout()
+        dir_group_layout.setSpacing(5)
+        dir_group_layout.setContentsMargins(0, 10, 0, 5)
+        dir_group.setLayout(dir_group_layout)
+        lbl_sizepolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        min_lbl_size = 80
+        btn_sizepolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        dir_lbl = QLabel(text="Directory:")
+        dir_lbl.setMinimumWidth(min_lbl_size)
+        dir_lbl.setSizePolicy(lbl_sizepolicy)
+        self.dir_lineEdit = QLineEdit()
+        self.browse_save_Button = QPushButton(text="...")
+        self.browse_save_Button.setSizePolicy(btn_sizepolicy)
+        dir_group_layout.addWidget(dir_lbl)
+        dir_group_layout.addWidget(self.dir_lineEdit)
+        dir_group_layout.addWidget(self.browse_save_Button)
+
+        # filename
+        fname_group = QWidget()
+        fname_group_layout = QHBoxLayout()
+        fname_group_layout.setSpacing(5)
+        fname_group_layout.setContentsMargins(0, 5, 0, 10)
+        fname_group.setLayout(fname_group_layout)
+        fname_lbl = QLabel(text="File Name: ")
+        fname_lbl.setMinimumWidth(min_lbl_size)
+        fname_lbl.setSizePolicy(lbl_sizepolicy)
+        self.fname_lineEdit = QLineEdit()
+        self.fname_lineEdit.setText("HCS")
+        fname_group_layout.addWidget(fname_lbl)
+        fname_group_layout.addWidget(self.fname_lineEdit)
+
+        # checkbox
+        self.checkBox_save_pos = QCheckBox(
+            text="Save Wells Positions in separate files"
+        )
+
+        group_layout.addWidget(dir_group)
+        group_layout.addWidget(fname_group)
+        group_layout.addWidget(self.checkBox_save_pos)
+
+        return self.save_groupBox
 
 
 if __name__ == "__main__":
