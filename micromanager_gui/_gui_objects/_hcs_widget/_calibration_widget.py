@@ -137,11 +137,11 @@ class PlateCalibration(QWidget):
         # to test
         # self.table_1.tb.setRowCount(2)
         # self.table_1.tb.setItem(0, 0, QTableWidgetItem("A1"))
-        # self.table_1.tb.setItem(0, 1, QTableWidgetItem("-1000"))
-        # self.table_1.tb.setItem(0, 2, QTableWidgetItem("1000"))
+        # self.table_1.tb.setItem(0, 1, QTableWidgetItem("-2000"))
+        # self.table_1.tb.setItem(0, 2, QTableWidgetItem("2000"))
         # self.table_1.tb.setItem(1, 0, QTableWidgetItem("A1"))
-        # self.table_1.tb.setItem(1, 1, QTableWidgetItem("1000"))
-        # self.table_1.tb.setItem(1, 2, QTableWidgetItem("-1000"))
+        # self.table_1.tb.setItem(1, 1, QTableWidgetItem("2000"))
+        # self.table_1.tb.setItem(1, 2, QTableWidgetItem("-2000"))
 
     def _set_calibrated(self, state: bool):
         if state:
