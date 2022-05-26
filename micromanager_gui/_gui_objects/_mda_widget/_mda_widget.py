@@ -64,7 +64,6 @@ class MMMultiDWidget(MultiDWidgetGui):
         self.save_groupBox.toggled.connect(self._toggle_checkbox)
         self.stage_pos_groupBox.toggled.connect(self._toggle_checkbox)
         self.checkBox_split_pos.toggled.connect(self._toggle_checkbox)
-
         self.save_groupBox.toggled.connect(self.toggle_save_group)
         self.stage_pos_groupBox.toggled.connect(self.toggle_pos_group)
 
@@ -213,6 +212,9 @@ class MMMultiDWidget(MultiDWidgetGui):
             with signals_blocked(self.checkBox_split_pos):
                 self.checkBox_split_pos.setEnabled(False)
                 self.checkBox_split_pos.setCheckState(Qt.CheckState.Unchecked)
+            with signals_blocked(self.checkBox_save_pos):
+                self.checkBox_save_pos.setEnabled(False)
+                self.checkBox_save_pos.setCheckState(Qt.CheckState.Unchecked)
 
     # add, remove, clear, move_to positions table
     def add_position(self):
