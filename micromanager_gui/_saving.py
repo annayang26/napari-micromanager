@@ -29,6 +29,30 @@ def save_sequence(sequence: MDASequence, layers: LayerList, meta: SequenceMeta):
     raise NotImplementedError(f"cannot save experiment with mode: {meta.mode}")
 
 
+# def _save_mda_sequence(sequence: MDASequence, layers: LayerList, meta: SequenceMeta):
+#     path = Path(meta.save_dir)
+#     file_name = meta.file_name
+#     folder_name = ensure_unique(path / file_name, extension="", ndigits=3)
+
+#     # if split_channels, then create a new layer for each channel
+#     if meta.split_channels:
+#         folder_name.mkdir(parents=True, exist_ok=True)
+
+#         if meta.save_pos:
+#             # save each position/channels in a separate file.
+#             _save_pos_separately(sequence, folder_name, folder_name.stem, layers)
+#         else:
+#             # save each channel layer.
+#             for lay in layers:
+#                 if lay.metadata.get("uid") != sequence.uid:
+#                     continue
+#                 fname = f'{folder_name.stem}_{lay.metadata.get("ch_id")}.tif'
+#                 _imsave(folder_name / fname, lay.data.squeeze())
+#         return
+
+# not splitting channels
+
+
 def _save_mda_sequence(sequence: MDASequence, layers: LayerList, meta: SequenceMeta):
     path = Path(meta.save_dir)
     file_name = meta.file_name
@@ -47,10 +71,13 @@ def _save_mda_sequence(sequence: MDASequence, layers: LayerList, meta: SequenceM
                 if lay.metadata.get("uid") != sequence.uid:
                     continue
                 fname = f'{folder_name.stem}_{lay.metadata.get("ch_id")}.tif'
-                _imsave(folder_name / fname, lay.data.squeeze())
+                # TODO: smarter behavior w.r.t type of lay.data
+                # currently this will force the data into memory which may cause a crash
+                # long term solution is to remove this code and rely on an
+                # mda-writer either in pymmcore-plus or elsewhere.
+                _imsave(folder_name / fname, np.squeeze(lay.data))
         return
 
-    # not splitting channels
     active_layer = next(x for x in layers if x.metadata.get("uid") == sequence.uid)
 
     if meta.save_pos:

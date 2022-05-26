@@ -112,9 +112,7 @@ class MultiDWidgetGui(QWidget):
         fname_group_layout.addWidget(self.fname_lineEdit)
 
         # checkbox
-        self.checkBox_save_pos = QCheckBox(
-            text="Save XY Positions in separate files (ImageJ compatibility)"
-        )
+        self.checkBox_save_pos = QCheckBox(text="Save XY Positions in separate files")
 
         group_layout.addWidget(dir_group)
         group_layout.addWidget(fname_group)
@@ -416,6 +414,9 @@ class MultiDWidgetGui(QWidget):
         group_layout.addWidget(self.add_pos_Button, 0, 1, 1, 1)
         group_layout.addWidget(self.remove_pos_Button, 1, 1, 1, 2)
         group_layout.addWidget(self.clear_pos_Button, 2, 1, 1, 2)
+
+        self.checkBox_split_pos = QCheckBox(text="Split Positions")
+        group_layout.addWidget(self.checkBox_split_pos, 3, 0, 1, 1)
 
         return group
 
