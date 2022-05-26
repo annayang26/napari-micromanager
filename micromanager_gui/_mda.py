@@ -17,6 +17,7 @@ __all__ = [
 class SequenceMeta:
     mode: Union[Literal["mda"], Literal["explorer"]] = ""
     split_channels: bool = False
+    split_positions: bool = False
     should_save: bool = False
     file_name: str = ""
     save_dir: str = ""

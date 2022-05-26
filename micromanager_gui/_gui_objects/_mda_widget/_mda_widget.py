@@ -457,6 +457,7 @@ class MMMultiDWidget(MultiDWidgetGui):
         SEQUENCE_META[experiment] = SequenceMeta(
             mode="mda",
             split_channels=self.checkBox_split_channels.isChecked(),
+            split_positions=self.checkBox_split_pos.isChecked(),
             should_save=self.save_groupBox.isChecked(),
             file_name=self.fname_lineEdit.text(),
             save_dir=self.dir_lineEdit.text(),
