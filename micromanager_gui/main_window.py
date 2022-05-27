@@ -16,7 +16,7 @@ from qtpy import QtWidgets as QtW
 from qtpy.QtCore import Qt, QTimer
 from qtpy.QtGui import QColor, QIcon
 from superqt.utils import ensure_main_thread
-from useq import MDAEvent, MDASequence
+from useq import MDASequence
 
 from . import _core, _mda
 from ._camera_roi import CameraROI
@@ -48,6 +48,8 @@ class MainWindow(MicroManagerWidget):
         self._mmc = _core.get_core_singleton(remote)
 
         self.viewer = viewer
+
+        self.sub_positions = []
 
         adapter_path = find_micromanager()
         if not adapter_path:
@@ -283,35 +285,46 @@ class MainWindow(MicroManagerWidget):
     @ensure_main_thread
     def _on_mda_started(self, sequence: useq.MDASequence):
         """ "create temp folder and block gui when mda starts."""
-        self._set_enabled(False)
+        # self._set_enabled(False)
 
-        self._mda_meta = _mda.SEQUENCE_META.get(sequence, _mda.SequenceMeta())
-        if self._mda_meta.mode in {"explorer", "hcs"}:
+        self._meta = _mda.SEQUENCE_META.get(sequence, _mda.SequenceMeta())
+
+        if self._meta.mode == "explorer":
             # shortcircuit - nothing to do
             return
-        elif self._mda_meta.mode == "":
+        elif self._meta.mode == "":
             # originated from user script - assume it's an mda
-            self._mda_meta.mode = "mda"
+            self._meta.mode = "mda"
 
         # work out what the shapes of the layers will be
         # this depends on whether the user selected Split Channels or not
-        (
-            shape,
-            channels,
-            positions,
-            labels,
-        ) = self._interpret_split_channel_and_position(sequence)
+        if self._meta.mode == "hcs":
+            self.sub_positions.clear()
+            (
+                shape,
+                positions,
+                self.sub_positions,
+                labels,
+            ) = self._interpret_split_position(sequence)
+
+        else:
+            (
+                shape,
+                channels,
+                labels,
+            ) = self._interpret_split_channel(sequence)
 
         # acutally create the viewer layers backed by zarr stores
-        if self._mda_meta.split_positions:
-            self._add_mda_position_layers(shape, positions, sequence)
+        if self._meta.mode == "hcs":
+            print("_______________shape:", shape)
+            self._add_hcs_position_layers(shape, positions, sequence)
         else:
             self._add_mda_channel_layers(shape, channels, sequence)
 
         # set axis_labels after adding the images to ensure that the dims exist
         self.viewer.dims.axis_labels = labels
 
-    def _interpret_split_channel_and_position(
+    def _interpret_split_channel(
         self, sequence: MDASequence
     ) -> Tuple[List[int], List[str], List[str]]:
         """
@@ -331,7 +344,7 @@ class MainWindow(MicroManagerWidget):
         labels.extend(["y", "x"])
         shape.extend(img_shape)
 
-        if self._mda_meta.split_channels:
+        if self._meta.split_channels:
             channels = [f"{c.config}_" for c in sequence.channels]
             with contextlib.suppress(ValueError):
                 c_idx = labels.index("c")
@@ -340,22 +353,93 @@ class MainWindow(MicroManagerWidget):
         else:
             channels = [""]
 
-        if self._mda_meta.split_positions:
-            if sequence.stage_positions[0].name:
-                positions = [f"{p.name}_" for p in sequence.stage_positions]
-            else:
-                positions = [
-                    f"pos_{i:03d}_" for i in range(len(sequence.stage_positions))
-                ]
+        return shape, channels, labels
 
-            with contextlib.suppress(ValueError):
-                p_idx = labels.index("p")
-                labels.pop(p_idx)
+    # def _interpret_split_position(
+    #     self, sequence: MDASequence
+    # ) -> Tuple[List[int], List[str], List[str]]:
+    #     """
+    #     Determine the shape of layers and the dimension labels based
+    #     on whether we are splitting on channels
+    #     """
+    #     img_shape = self._mmc.getImageHeight(), self._mmc.getImageWidth()
+    #     # dimensions labels
+    #     axis_order = event_indices(next(sequence.iter_events()))
+    #     labels = []
+    #     shape = []
+    #     for i, a in enumerate(axis_order):
+    #         dim = sequence.shape[i]
+    #         if dim != 1:
+    #             labels.append(a)
+    #             shape.append(dim)
+    #     labels.extend(["y", "x"])
+    #     shape.extend(img_shape)
+
+    #     if self._meta.split_positions:
+    #         if sequence.stage_positions[0].name:
+    #             positions = [f"{p.name}_" for p in sequence.stage_positions]
+    #         else:
+    #             positions = [
+    #                 f"pos_{i:03d}_" for i in range(len(sequence.stage_positions))
+    #             ]
+
+    #         with contextlib.suppress(ValueError):
+    #             p_idx = labels.index("p")
+    #             labels.pop(p_idx)
+    #             shape.pop(p_idx)
+    #     else:
+    #         positions = [""]
+
+    #     return shape, positions, labels
+    def _interpret_split_position(
+        self, sequence: MDASequence
+    ) -> Tuple[List[int], List[str], List[str], List[str]]:
+        """
+        Determine the shape of layers and the dimension labels based
+        on whether we are splitting on channels
+        """
+        img_shape = self._mmc.getImageHeight(), self._mmc.getImageWidth()
+        # dimensions labels
+        axis_order = event_indices(next(sequence.iter_events()))
+        labels = []
+        shape = []
+        for i, a in enumerate(axis_order):
+            dim = sequence.shape[i]
+            if dim != 1:
+                labels.append(a)
+                shape.append(dim)
+        labels.extend(["y", "x"])
+        shape.extend(img_shape)
+
+        if self._meta.split_positions:
+            positions = []
+            sub_positions = []
+            for p in sequence.stage_positions:
+                well = p.name.split("_")[0]
+                pos = p.name.split("_")[-1]
+                if f"{well}_" not in positions:
+                    positions.append(f"{well}_")
+                if pos not in sub_positions:
+                    sub_positions.append(pos)
+
+            p_idx = labels.index("p")
+
+            print("_____________SHAPE:", shape)
+
+            if len(sub_positions) == 1:
                 shape.pop(p_idx)
+            else:
+                new_p_shape = int(shape[p_idx] / len(sub_positions))
+                print("NEW SHAPE:", new_p_shape)
+                shape[p_idx] = new_p_shape
+
+            print("Final SHAPE:", shape)
+
         else:
             positions = [""]
+            sub_positions = [""]
 
-        return shape, channels, positions, labels
+        return shape, positions, sub_positions, labels
 
     def _add_mda_channel_layers(
         self, shape: Tuple[int], channels: List[str], sequence: MDASequence
@@ -383,9 +467,7 @@ class MainWindow(MicroManagerWidget):
             self._mda_temp_arrays[id_] = self._z = zarr.open(
                 str(tmp.name), shape=shape, dtype=dtype
             )
-            file_name = (
-                self._mda_meta.file_name if self._mda_meta.should_save else "Exp"
-            )
+            file_name = self._meta.file_name if self._meta.should_save else "Exp"
             layer_name = f"{file_name}_{id_}"
             layer = self.viewer.add_image(
                 self._mda_temp_arrays[id_], name=layer_name, blending="additive"
@@ -396,43 +478,6 @@ class MainWindow(MicroManagerWidget):
             layer.metadata["useq_sequence"] = sequence
             layer.metadata["uid"] = sequence.uid
             layer.metadata["ch_id"] = f"{channel}_idx{i}"
-
-    def _add_mda_position_layers(
-        self, shape: Tuple[int], positions: List[str], sequence: MDASequence
-    ):
-        """
-        Create Zarr stores and for the images of the MDA and display as a new
-        viewer layer.
-        If splitting on Channels then channels will look like ["BF", "GFP",...]
-        and if we do not split on channels it will look like [""] and only one
-        layer/zarr store will be created.
-        """
-
-        dtype = f"uint{self._mmc.getImageBitDepth()}"
-
-        # create a zarr store for each channel (or all channels when not splitting)
-        # to store the images to display so we don't overflow memory.
-        for position in positions:
-            id_ = position + str(sequence.uid)
-            tmp = tempfile.TemporaryDirectory()
-            # keep track of temp files so we can clean them up when we quit
-            # we can't have them auto clean up because then the zarr wouldn't last
-            # till the end
-            # TODO: when the layer is deleted we should release the zarr store.
-            self._mda_temp_files[id_] = tmp
-            self._mda_temp_arrays[id_] = self._z = zarr.open(
-                str(tmp.name), shape=shape, dtype=dtype
-            )
-            file_name = (
-                self._mda_meta.file_name if self._mda_meta.should_save else "Exp"
-            )
-            layer_name = f"{file_name}_{id_}"
-            layer = self.viewer.add_image(self._mda_temp_arrays[id_], name=layer_name)
-            # add metadata to layer
-            # storing event.index in addition to channel.config because it's
-            # possible to have two of the same channel in one sequence.
-            layer.metadata["useq_sequence"] = sequence
-            layer.metadata["uid"] = sequence.uid
 
     def _add_hcs_position_layers(
         self, shape: Tuple[int], positions: List[str], sequence: MDASequence
@@ -449,8 +494,8 @@ class MainWindow(MicroManagerWidget):
 
         # create a zarr store for each channel (or all channels when not splitting)
         # to store the images to display so we don't overflow memory.
-        for position in positions:
-            id_ = position + str(sequence.uid)
+        for well in positions:
+            id_ = well + str(sequence.uid)
             tmp = tempfile.TemporaryDirectory()
             # keep track of temp files so we can clean them up when we quit
             # we can't have them auto clean up because then the zarr wouldn't last
@@ -460,32 +505,17 @@ class MainWindow(MicroManagerWidget):
             self._mda_temp_arrays[id_] = self._z = zarr.open(
                 str(tmp.name), shape=shape, dtype=dtype
             )
-            file_name = (
-                self._mda_meta.file_name if self._mda_meta.should_save else "Exp"
-            )
+            file_name = self._meta.file_name if self._meta.should_save else "HCS"
             layer_name = f"{file_name}_{id_}"
             layer = self.viewer.add_image(self._mda_temp_arrays[id_], name=layer_name)
             # add metadata to layer
-            # storing event.index in addition to channel.config because it's
-            # possible to have two of the same channel in one sequence.
             layer.metadata["useq_sequence"] = sequence
             layer.metadata["uid"] = sequence.uid
-
-    def _get_pos_name(self, event: MDAEvent):
-        # to be changed when event is aware of pos_name
-        return next(
-            (
-                p.name
-                for p in event.sequence.stage_positions
-                if (p.x, p.y, p.z) == (event.x_pos, event.y_pos, event.z_pos)
-            ),
-            "",
-        )
 
     @ensure_main_thread
     def _on_mda_frame(self, image: np.ndarray, event: useq.MDAEvent):
 
-        meta = self._mda_meta
+        meta = self._meta
         if meta.mode == "mda":
             sequence = event.sequence
             axis_order = list(event_indices(event))
@@ -502,18 +532,11 @@ class MainWindow(MicroManagerWidget):
                 channel = f"{event.channel.config}_"
                 with contextlib.suppress(ValueError):
                     idxs.remove("c")
-            position = ""
-            if meta.split_positions:
-                pos_name = self._get_pos_name(event) or f"pos_{event.index['p']:03d}"
-                position = f"{pos_name}_"
-                with contextlib.suppress(ValueError):
-                    idxs.remove("p")
+
             # get the actual index of this image into the array and
             # add it to the zarr store
             im_idx = tuple(event.index[k] for k in idxs)
-            self._mda_temp_arrays[channel + position + str(event.sequence.uid)][
-                im_idx
-            ] = image
+            self._mda_temp_arrays[channel + str(event.sequence.uid)][im_idx] = image
 
             # move the viewer step to the most recently added image
             for a, v in enumerate(im_idx):
@@ -569,22 +592,86 @@ class MainWindow(MicroManagerWidget):
             # This will filter out any dimensions with length 1 as we don't display them
             # necessary for easy indexing of the zarr array.
             idxs = [k for k in axis_order if sequence.shape[axis_order.index(k)] != 1]
+            print("_____________idxs:", idxs)
+            # get the actual index of this image into the array and
+            im_idx = tuple(event.index[k] for k in idxs)
+            print("_____________im_idx:", im_idx)
 
             # Remove 'c' from idxs if we are splitting channels
             # also prepare the channel suffix that we use for keeping track of arrays
-            channel = ""
+            position = ""
             if meta.split_positions:
-                # channel = f"{event.channel.config}_"
+                # pos_name = self._get_pos_name(event)
+                pos_name = event.position.name
+                position = f"{pos_name.split('_')[0]}_"
+
+                # get the actual index of this image into the array and
+                im_idx = tuple(event.index[k] for k in idxs)
+                print("_____________im_idx:", im_idx)
+
+                if (
+                    len(self._mda_temp_arrays[position + str(event.sequence.uid)].shape)
+                    > 2
+                ):
+                    p_idx = idxs.index("p")
+                    im_p_idx = int(event.position.name.split("_")[-1][-3:])
+
+                    list_im_idx = list(im_idx)
+                    list_im_idx[p_idx] = im_p_idx
+                    im_idx = tuple(list_im_idx)
+
+                else:
+                    with contextlib.suppress(ValueError):
+                        idxs.remove("p")
+                        # get the actual index of this image into the array and
+                    im_idx = tuple(event.index[k] for k in idxs)
+            else:
                 with contextlib.suppress(ValueError):
                     idxs.remove("p")
-            # get the actual index of this image into the array and
+                # get the actual index of this image into the array and
+                im_idx = tuple(event.index[k] for k in idxs)
+
             # add it to the zarr store
-            im_idx = tuple(event.index[k] for k in idxs)
-            self._mda_temp_arrays[channel + str(event.sequence.uid)][im_idx] = image
+            print(
+                "zarr shape:",
+                self._mda_temp_arrays[position + str(event.sequence.uid)].shape,
+            )
+            print("_____________im_idx:", im_idx)
+            print(
+                "________________",
+                self._mda_temp_arrays[position + str(event.sequence.uid)],
+            )
+            print("________________", position + str(event.sequence.uid))
+            print("________________", image.shape)
+            self._mda_temp_arrays[position + str(event.sequence.uid)][im_idx] = image
 
             # move the viewer step to the most recently added image
             for a, v in enumerate(im_idx):
                 self.viewer.dims.set_point(a, v)
+
+            # sequence = event.sequence
+            # axis_order = list(event_indices(event))
+
+            # Get the dimensions that we need to keep track of for display.
+            # This will filter out any dimensions with length 1 as we don't display them
+            # necessary for easy indexing of the zarr array.
+            # idxs = [k for k in axis_order if sequence.shape[axis_order.index(k)] != 1]
+
+            # # Remove 'c' from idxs if we are splitting channels
+            # # also prepare the channel suffix that we use for keeping track of arrays
+            # channel = ""
+            # if meta.split_positions:
+            #     # channel = f"{event.channel.config}_"
+            #     with contextlib.suppress(ValueError):
+            #         idxs.remove("p")
+            # # get the actual index of this image into the array and
+            # # add it to the zarr store
+            # im_idx = tuple(event.index[k] for k in idxs)
+            # self._mda_temp_arrays[channel + str(event.sequence.uid)][im_idx] = image
+
+            # # move the viewer step to the most recently added image
+            # for a, v in enumerate(im_idx):
+            #     self.viewer.dims.set_point(a, v)
 
             # # pick layer name
             # file_name = meta.file_name if meta.should_save else "HCS"
@@ -790,7 +877,7 @@ class MainWindow(MicroManagerWidget):
                     layergroups[key].add(lay)
             for group in layergroups.values():
                 link_layers(group)
-        meta = _mda.SEQUENCE_META.pop(sequence, self._mda_meta)
+        meta = _mda.SEQUENCE_META.pop(sequence, self._meta)
         save_sequence(sequence, self.viewer.layers, meta)
         # reactivate gui when mda finishes.
         self._set_enabled(True)

@@ -423,11 +423,12 @@ class HCSWidget(HCSGui):
 
         SEQUENCE_META[experiment] = SequenceMeta(
             mode="hcs",
-            split_channels=False,
+            split_positions=self.ch_and_pos_list.checkBox_split_pos.isChecked(),
             should_save=self.save_hcs_groupBox.isChecked(),
             file_name=self.fname_lineEdit.text(),
             save_dir=self.dir_lineEdit.text(),
-            save_pos=self.checkBox_save_pos.isChecked(),
+            save_pos=False
+            # save_pos=self.checkBox_save_pos.isChecked(),
         )
         self._mmc.run_mda(experiment)  # run the MDA experiment asynchronously
         return

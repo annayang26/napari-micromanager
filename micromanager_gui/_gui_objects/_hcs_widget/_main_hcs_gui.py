@@ -5,7 +5,6 @@ from fonticon_mdi6 import MDI6
 from qtpy.QtCore import QSize, Qt
 from qtpy.QtWidgets import (
     QApplication,
-    QCheckBox,
     QComboBox,
     QFileDialog,
     QGraphicsView,
@@ -291,13 +290,13 @@ class HCSGui(QWidget):
         fname_group_layout.addWidget(self.fname_lineEdit)
 
         # checkbox
-        self.checkBox_save_pos = QCheckBox(
-            text="Save Wells Positions in separate files"
-        )
+        # self.checkBox_save_pos = QCheckBox(
+        #     text="Save Wells Positions in separate files"
+        # )
 
         group_layout.addWidget(dir_group)
         group_layout.addWidget(fname_group)
-        group_layout.addWidget(self.checkBox_save_pos)
+        # group_layout.addWidget(self.checkBox_save_pos)
 
         return self.save_hcs_groupBox
 
