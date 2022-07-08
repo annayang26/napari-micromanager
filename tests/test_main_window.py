@@ -45,7 +45,7 @@ def test_saving_mda(
 ):
 
     NAME = "test_mda"
-    _mda = main_window.mda
+    _mda = main_window.tab_wdg.mda
     _mda.save_groupBox.setChecked(True)
     _mda.dir_lineEdit.setText(str(tmp_path))
     _mda.fname_lineEdit.setText(NAME)

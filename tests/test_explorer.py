@@ -53,7 +53,7 @@ def test_explorer(explorer_one_channel: ExplorerTuple, qtbot: QtBot):
 
     # wait to finish returning to start pos
     mmc.waitForSystem()
-    assert main_win.explorer.set_grid() == [
+    assert main_win.tab_wdg.explorer.set_grid() == [
         (-256.0, 256.0, 0.0),
         (256.0, 256.0, 0.0),
         (256.0, -256.0, 0.0),

@@ -40,7 +40,7 @@ def main_window(global_mmcore, make_napari_viewer):
 @pytest.fixture
 def explorer_one_channel(main_window: MainWindow) -> ExplorerTuple:
 
-    explorer = main_window.explorer
+    explorer = main_window.tab_wdg.explorer
     explorer.scan_size_spinBox_r.setValue(2)
     explorer.scan_size_spinBox_c.setValue(2)
     explorer.ovelap_spinBox.setValue(0)
@@ -52,7 +52,7 @@ def explorer_one_channel(main_window: MainWindow) -> ExplorerTuple:
 @pytest.fixture
 def explorer_two_channel(main_window: MainWindow) -> ExplorerTuple:
 
-    explorer = main_window.explorer
+    explorer = main_window.tab_wdg.explorer
     explorer.scan_size_spinBox_r.setValue(2)
     explorer.scan_size_spinBox_c.setValue(2)
     explorer.ovelap_spinBox.setValue(0)

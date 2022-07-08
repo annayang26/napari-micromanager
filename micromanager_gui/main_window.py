@@ -4,7 +4,6 @@ import atexit
 import contextlib
 import tempfile
 from collections import defaultdict
-from pathlib import Path
 from typing import TYPE_CHECKING, List, Tuple
 
 import napari
@@ -15,13 +14,13 @@ from pymmcore_plus._util import find_micromanager
 from pymmcore_widgets.core import get_core_singleton
 from pymmcore_widgets.mda_widget import _mda
 from pymmcore_widgets.property_browser import PropertyBrowser
+from pymmcore_widgets.set_pixel_size_widget import PixelSizeWidget
 from qtpy import QtWidgets as QtW
 from qtpy.QtCore import QTimer
-from qtpy.QtGui import QColor, QIcon
+from qtpy.QtGui import QColor
 from superqt.utils import create_worker, ensure_main_thread
 from useq import MDASequence
 
-from ._camera_roi import _CameraROI
 from ._gui_objects._mm_widget import MicroManagerWidget
 from ._saving import save_sequence
 from ._util import event_indices
@@ -34,10 +33,6 @@ if TYPE_CHECKING:
     import useq
     from pymmcore_plus.core.events import QCoreSignaler
     from pymmcore_plus.mda import PMDAEngine
-
-ICONS = Path(__file__).parent / "icons"
-CAM_ICON = QIcon(str(ICONS / "vcam.svg"))
-CAM_STOP_ICON = QIcon(str(ICONS / "cam_stop.svg"))
 
 
 class MainWindow(MicroManagerWidget):
@@ -67,15 +62,12 @@ class MainWindow(MicroManagerWidget):
 
         self.streaming_timer: QTimer | None = None
 
-        # disable gui
-        self._set_enabled(False)
-
         # connect mmcore signals
         sig: QCoreSignaler = self._mmc.events
 
         # note: don't use lambdas with closures on `self`, since the connection
         # to core may outlive the lifetime of this particular widget.
-        sig.systemConfigurationLoaded.connect(self._on_system_cfg_loaded)
+
         sig.exposureChanged.connect(self._update_live_exp)
 
         sig.imageSnapped.connect(self.update_viewer)
@@ -109,13 +101,6 @@ class MainWindow(MicroManagerWidget):
                 with contextlib.suppress(NotADirectoryError):
                     v.cleanup()
 
-        self.cam_roi = _CameraROI(
-            self.viewer,
-            self._mmc,
-            self.cam_wdg.cam_roi_combo,
-            self.cam_wdg.crop_btn,
-        )
-
         self.viewer.layers.events.connect(self._update_max_min)
         self.viewer.layers.selection.events.active.connect(self._update_max_min)
         self.viewer.dims.events.current_step.connect(self._update_max_min)
@@ -130,6 +115,9 @@ class MainWindow(MicroManagerWidget):
         action = self._menu.addAction("Device Property Browser...")
         action.triggered.connect(self._show_prop_browser)
 
+        action_1 = self._menu.addAction("Set Pixel Size...")
+        action_1.triggered.connect(self._show_pixel_size_table)
+
         bar = w._qt_window.menuBar()
         bar.insertMenu(list(bar.actions())[-1], self._menu)
 
@@ -139,30 +127,12 @@ class MainWindow(MicroManagerWidget):
         self._prop_browser.show()
         self._prop_browser.raise_()
 
-    def _on_system_cfg_loaded(self):
-        if len(self._mmc.getLoadedDevices()) > 1:
-            self._set_enabled(True)
-
-    def _set_enabled(self, enabled):
-        if self._mmc.getCameraDevice():
-            self._camera_group_wdg(enabled)
-            self.tab_wdg.snap_live_tab.setEnabled(enabled)
-            self.tab_wdg.snap_live_tab.setEnabled(enabled)
-        else:
-            self._camera_group_wdg(False)
-            self.tab_wdg.snap_live_tab.setEnabled(False)
-            self.tab_wdg.snap_live_tab.setEnabled(False)
-
-        self.illum_btn.setEnabled(enabled)
-
-        self.mda._set_enabled(enabled)
-        if self._mmc.getXYStageDevice():
-            self.explorer._set_enabled(enabled)
-        else:
-            self.explorer._set_enabled(False)
-
-    def _camera_group_wdg(self, enabled):
-        self.cam_wdg.setEnabled(enabled)
+    def _show_pixel_size_table(self):
+        if len(self._mmc.getLoadedDevices()) <= 1:
+            raise Warning("System Configuration not loaded!")
+        if not hasattr(self, "_px_size_wdg"):
+            self._px_size_wdg = PixelSizeWidget(self._mmc, self)
+        self._px_size_wdg.show()
 
     @ensure_main_thread
     def update_viewer(self, data=None):
@@ -185,9 +155,6 @@ class MainWindow(MicroManagerWidget):
             self.viewer.reset_view()
 
     def _update_max_min(self, event=None):
-
-        if self.tab_wdg.tabWidget.currentIndex() != 0:
-            return
 
         min_max_txt = ""
 
@@ -232,8 +199,6 @@ class MainWindow(MicroManagerWidget):
     @ensure_main_thread
     def _on_mda_started(self, sequence: useq.MDASequence):
         """Create temp folder and block gui when mda starts."""
-        self._set_enabled(False)
-
         self._mda_meta = _mda.SEQUENCE_META.get(sequence, _mda.SequenceMeta())
         if self._mda_meta.mode == "explorer":
             # shortcircuit - nothing to do
@@ -347,8 +312,8 @@ class MainWindow(MicroManagerWidget):
             if meta.mode != "explorer":
                 return
 
-            x = event.x_pos / self.explorer.pixel_size
-            y = event.y_pos / self.explorer.pixel_size * (-1)
+            x = event.x_pos / self.tab_wdg.explorer.pixel_size
+            y = event.y_pos / self.tab_wdg.explorer.pixel_size * (-1)
 
             pos_idx = event.index["p"]
             file_name = meta.file_name if meta.should_save else "Exp"
@@ -373,9 +338,10 @@ class MainWindow(MicroManagerWidget):
             )
 
             zoom_out_factor = (
-                self.explorer.scan_size_r
-                if self.explorer.scan_size_r >= self.explorer.scan_size_c
-                else self.explorer.scan_size_c
+                self.tab_wdg.explorer.scan_size_r
+                if self.tab_wdg.explorer.scan_size_r
+                >= self.tab_wdg.explorer.scan_size_c
+                else self.tab_wdg.explorer.scan_size_c
             )
             self.viewer.camera.zoom = 1 / zoom_out_factor
             self.viewer.reset_view()
@@ -395,11 +361,9 @@ class MainWindow(MicroManagerWidget):
                 link_layers(group)
         meta = _mda.SEQUENCE_META.pop(sequence, self._mda_meta)
         save_sequence(sequence, self.viewer.layers, meta)
-        # reactivate gui when mda finishes.
-        self._set_enabled(True)
 
     def _get_event_explorer(self, viewer, event):
-        if not self.explorer.isVisible():
+        if not self.tab_wdg.explorer.isVisible():
             return
         if self._mmc.getPixelSizeUm() > 0:
             width = self._mmc.getROI(self._mmc.getCameraDevice())[2]
@@ -415,8 +379,8 @@ class MainWindow(MicroManagerWidget):
         else:
             x, y = "None", "None"
 
-        self.explorer.x_lineEdit.setText(x)
-        self.explorer.y_lineEdit.setText(y)
+        self.tab_wdg.explorer.x_lineEdit.setText(x)
+        self.tab_wdg.explorer.y_lineEdit.setText(y)
 
     def _update_live_exp(self, camera: str, exposure: float):
         if self.streaming_timer:
