@@ -1,17 +1,17 @@
 from __future__ import annotations
 
+from pymmcore_widgets.group_preset_table_widget import MMGroupPresetTableWidget
+from pymmcore_widgets.mda_widget.mda_widget import MMMultiDWidget
+from pymmcore_widgets.objective_widget import MMObjectivesWidget
+from pymmcore_widgets.slider_dialog import SliderDialog
+from pymmcore_widgets.system_cfg_widget import MMConfigurationWidget
 from qtpy import QtWidgets as QtW
 from qtpy.QtCore import Qt
 from superqt import QCollapsible
 
 from ._camera_widget import MMCameraWidget
-from ._config_widget import MMConfigurationWidget
-from ._group_preset_table_widget import MMGroupPresetTableWidget
-from ._mda_widget._mda_widget import MMMultiDWidget
-from ._objective_widget import MMObjectivesWidget
 from ._sample_explorer_widget._sample_explorer_widget import MMExploreSample
 from ._shutters_widget import MMShuttersWidget
-from ._slider_dialog import SliderDialog
 from ._tab_widget import MMTabWidget
 from ._xyz_stages import MMStagesWidget
 
