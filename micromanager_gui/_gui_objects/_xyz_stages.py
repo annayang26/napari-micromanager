@@ -1,12 +1,11 @@
 from typing import Optional
 
 from pymmcore_plus import DeviceType
+from pymmcore_widgets.core import get_core_singleton
 from pymmcore_widgets.stage_widget import StageWidget
 from qtpy.QtCore import QMimeData, Qt
 from qtpy.QtGui import QDrag
 from qtpy.QtWidgets import QGroupBox, QHBoxLayout, QWidget
-
-from .. import _core
 
 STAGE_DEVICES = {DeviceType.Stage, DeviceType.XYStage}
 
@@ -22,7 +21,7 @@ class MMStagesWidget(QWidget):
         self.main_layout.setSpacing(5)
         self.setLayout(self.main_layout)
 
-        self._mmc = _core.get_core_singleton()
+        self._mmc = get_core_singleton()
         self._on_cfg_loaded()
         self._mmc.events.systemConfigurationLoaded.connect(self._on_cfg_loaded)
 

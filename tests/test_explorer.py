@@ -5,18 +5,20 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Tuple
 
 import tifffile
+from pymmcore_widgets.mda_widget import _mda
 
-from micromanager_gui import _mda
 from micromanager_gui._saving import save_sequence
 
 if TYPE_CHECKING:
     from pytestqt.qtbot import QtBot
     from useq import MDASequence
 
-    from micromanager_gui._gui_objects._sample_explorer_widget import ExploreSample
+    from micromanager_gui._gui_objects._sample_explorer_widget._sample_explorer_widget import (  # noqa: E501
+        MMExploreSample,
+    )
     from micromanager_gui.main_window import MainWindow
 
-    ExplorerTuple = Tuple[MainWindow, ExploreSample]
+    ExplorerTuple = Tuple[MainWindow, MMExploreSample]
 
 
 def test_explorer(explorer_one_channel: ExplorerTuple, qtbot: QtBot):

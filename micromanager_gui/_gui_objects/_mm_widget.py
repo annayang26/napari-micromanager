@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from pymmcore_widgets.group_preset_table_widget import MMGroupPresetTableWidget
-from pymmcore_widgets.mda_widget.mda_widget import MMMultiDWidget
-from pymmcore_widgets.objective_widget import MMObjectivesWidget
+from pymmcore_widgets.group_preset_table_widget import GroupPresetTableWidget
+from pymmcore_widgets.mda_widget.mda_widget import MultiDWidget
+from pymmcore_widgets.objective_widget import ObjectivesWidget
 from pymmcore_widgets.slider_dialog import SliderDialog
-from pymmcore_widgets.system_cfg_widget import MMConfigurationWidget
+from pymmcore_widgets.system_cfg_widget import ConfigurationWidget
 from qtpy import QtWidgets as QtW
 from qtpy.QtCore import Qt
 from superqt import QCollapsible
@@ -22,15 +22,15 @@ class MicroManagerWidget(QtW.QWidget):
     def __init__(self):
         super().__init__()
         # sub_widgets
-        self.cfg_wdg = MMConfigurationWidget()
-        self.obj_wdg = MMObjectivesWidget()
+        self.cfg_wdg = ConfigurationWidget()
+        self.obj_wdg = ObjectivesWidget()
         self.cam_wdg = MMCameraWidget()
         self.stage_wdg = MMStagesWidget()
         self.illum_btn = QtW.QPushButton("Light Sources")
         self.illum_btn.clicked.connect(self._show_illum_dialog)
         self.tab_wdg = MMTabWidget()
         self.shutter_wdg = MMShuttersWidget()
-        self.mda = MMMultiDWidget()
+        self.mda = MultiDWidget()
         self.explorer = MMExploreSample()
         self.create_gui()
 
@@ -84,7 +84,7 @@ class MicroManagerWidget(QtW.QWidget):
         self.stages_group.setLayout(self.stages_group_layout)
         self.main_layout.addWidget(self.stages_group)
 
-        self.group_preset_table_wdg = MMGroupPresetTableWidget()
+        self.group_preset_table_wdg = GroupPresetTableWidget()
 
         # add tab widget
         self.main_layout.addWidget(self.tab_wdg)

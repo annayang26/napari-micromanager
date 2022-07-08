@@ -4,9 +4,9 @@ from typing import TYPE_CHECKING
 import numpy as np
 import pytest
 from pymmcore_plus.mda import MDAEngine
+from pymmcore_widgets.mda_widget import _mda
 from useq import MDASequence
 
-from micromanager_gui import _mda
 from micromanager_gui._util import event_indices
 from micromanager_gui.main_window import MainWindow
 

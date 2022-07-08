@@ -1,7 +1,7 @@
 from qtpy import QtWidgets as QtW
 from qtpy.QtCore import Qt
 
-from .. import _core
+from .._util import update_pixel_size
 
 policy_max = QtW.QSizePolicy.Policy.Maximum
 
@@ -32,7 +32,7 @@ class MMCameraWidget(QtW.QWidget):
         layout.addWidget(self.px_size_spinbox)
         self.setLayout(layout)
 
-        self.px_size_spinbox.valueChanged.connect(_core.update_pixel_size)
+        self.px_size_spinbox.valueChanged.connect(update_pixel_size)
 
     def setEnabled(self, enabled: bool) -> None:
         self.cam_roi_combo.setEnabled(enabled)
@@ -41,4 +41,4 @@ class MMCameraWidget(QtW.QWidget):
 
     def _update_pixel_size(self):
         """Update core pixel size config using the current pixel size spinbox."""
-        _core.update_pixel_size(self.px_size_spinbox.value())
+        update_pixel_size(self.px_size_spinbox.value())
