@@ -1,3 +1,4 @@
+from pymmcore_widgets.camera_roi_widget import CameraWidget
 from pymmcore_widgets.channel_widget import ChannelWidget
 from pymmcore_widgets.core import get_core_singleton
 from pymmcore_widgets.exposure_widget import DefaultCameraExposureWidget
@@ -8,6 +9,7 @@ from pymmcore_widgets.objective_widget import ObjectivesWidget
 from pymmcore_widgets.snap_button_widget import SnapButton
 from qtpy import QtWidgets as QtW
 from qtpy.QtCore import Qt
+from superqt import QCollapsible
 
 from .._gui_objects._sample_explorer_widget._sample_explorer_widget import (
     MMExploreSample,
@@ -43,6 +45,7 @@ class MMTabWidget(QtW.QTabWidget):
         self.mda = MultiDWidget()
         self.explorer = MMExploreSample()
         self.group_preset = GroupPresetTableWidget()
+        self.cam_wdg = CameraWidget()
 
         self._create_gui()
 
@@ -77,7 +80,8 @@ class MMTabWidget(QtW.QTabWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab.setLayout(tab_layout)
 
-        tab_layout.addWidget(self.shutter_wdg)
+        cam = self._create_cam_collapsible()
+        tab_layout.addWidget(cam)
 
         self.obj = QtW.QGroupBox()
         self.obj_layout = QtW.QHBoxLayout()
@@ -128,6 +132,26 @@ class MMTabWidget(QtW.QTabWidget):
         tab_layout.addWidget(self.gp)
 
         return tab
+
+    def _create_cam_collapsible(self) -> QtW.QWidget:
+
+        cam = QtW.QGroupBox()
+        cam.setSizePolicy(
+            QtW.QSizePolicy(QtW.QSizePolicy.Expanding, QtW.QSizePolicy.Fixed)
+        )
+        cam_layout = QtW.QVBoxLayout()
+        cam_layout.setSpacing(0)
+        cam_layout.setContentsMargins(0, 0, 0, 0)
+        cam.setLayout(cam_layout)
+
+        coll = QCollapsible(title="Camera ROI")
+        coll.layout().setSpacing(0)
+        coll.layout().setContentsMargins(0, 0, 0, 0)
+        coll.addWidget(self.cam_wdg)
+
+        cam_layout.addWidget(coll)
+
+        return cam
 
     def _create_ch_exp_wdg(self):
         self.ch_exp_wdg = QtW.QWidget()

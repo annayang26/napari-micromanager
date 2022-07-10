@@ -106,6 +106,8 @@ class MainWindow(MicroManagerWidget):
         self.viewer.dims.events.current_step.connect(self._update_max_min)
         self.viewer.mouse_drag_callbacks.append(self._get_event_explorer)
 
+        self.viewer.mouse_drag_callbacks.append(self._update_cam_roi)
+
         self._add_menu()
 
     def _add_menu(self):
@@ -362,7 +364,35 @@ class MainWindow(MicroManagerWidget):
         meta = _mda.SEQUENCE_META.pop(sequence, self._mda_meta)
         save_sequence(sequence, self.viewer.layers, meta)
 
+    def _update_cam_roi(self, layer, event) -> None:  # type: ignore
+
+        active_layer = self.viewer.layers.selection.active
+        if not isinstance(active_layer, napari.layers.shapes.shapes.Shapes):
+            return
+
+        print("mouse down")
+        dragged = False
+        yield
+        # on move
+        while event.type == "mouse_move":
+            # print(event.position)
+            dragged = True
+            yield
+        # on release
+        if dragged:
+            print("drag end")
+            if not active_layer.data:
+                return
+            data = active_layer.data[-1]
+            x = round(data[0][1])
+            y = round(data[0][1])
+            width = round(data[1][1] - x)
+            heigh = round(data[2][0] - y)
+            cam = self._mmc.getCameraDevice()
+            self._mmc.events.camRoiSet.emit(cam, x, y, width, heigh)
+
     def _get_event_explorer(self, viewer, event):
+
         if not self.tab_wdg.explorer.isVisible():
             return
         if self._mmc.getPixelSizeUm() > 0:
