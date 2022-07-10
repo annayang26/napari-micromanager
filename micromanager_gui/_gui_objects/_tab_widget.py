@@ -80,9 +80,6 @@ class MMTabWidget(QtW.QTabWidget):
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab.setLayout(tab_layout)
 
-        cam = self._create_cam_collapsible()
-        tab_layout.addWidget(cam)
-
         self.obj = QtW.QGroupBox()
         self.obj_layout = QtW.QHBoxLayout()
         self.obj_layout.setSpacing(10)
@@ -93,6 +90,9 @@ class MMTabWidget(QtW.QTabWidget):
         self.escape_btn.clicked.connect(self._escape)
         self.obj_layout.addWidget(self.escape_btn)
         tab_layout.addWidget(self.obj)
+
+        cam = self._create_cam_collapsible()
+        tab_layout.addWidget(cam)
 
         self.ch_exp_snap_live = QtW.QGroupBox()
         self.ch_exp_snap_live_layout = QtW.QVBoxLayout()

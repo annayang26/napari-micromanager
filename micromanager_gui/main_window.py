@@ -106,7 +106,10 @@ class MainWindow(MicroManagerWidget):
         self.viewer.dims.events.current_step.connect(self._update_max_min)
         self.viewer.mouse_drag_callbacks.append(self._get_event_explorer)
 
-        self.viewer.mouse_drag_callbacks.append(self._update_cam_roi)
+        self.viewer.mouse_drag_callbacks.append(self._update_cam_roi_layer)
+
+        self.tab_wdg.cam_wdg.roiInfo.connect(self._on_roi_info)
+        self.tab_wdg.cam_wdg.crop_btn.clicked.connect(self._on_crop_btn)
 
         self._add_menu()
 
@@ -364,33 +367,6 @@ class MainWindow(MicroManagerWidget):
         meta = _mda.SEQUENCE_META.pop(sequence, self._mda_meta)
         save_sequence(sequence, self.viewer.layers, meta)
 
-    def _update_cam_roi(self, layer, event) -> None:  # type: ignore
-
-        active_layer = self.viewer.layers.selection.active
-        if not isinstance(active_layer, napari.layers.shapes.shapes.Shapes):
-            return
-
-        print("mouse down")
-        dragged = False
-        yield
-        # on move
-        while event.type == "mouse_move":
-            # print(event.position)
-            dragged = True
-            yield
-        # on release
-        if dragged:
-            print("drag end")
-            if not active_layer.data:
-                return
-            data = active_layer.data[-1]
-            x = round(data[0][1])
-            y = round(data[0][1])
-            width = round(data[1][1] - x)
-            heigh = round(data[2][0] - y)
-            cam = self._mmc.getCameraDevice()
-            self._mmc.events.camRoiSet.emit(cam, x, y, width, heigh)
-
     def _get_event_explorer(self, viewer, event):
 
         if not self.tab_wdg.explorer.isVisible():
@@ -417,3 +393,68 @@ class MainWindow(MicroManagerWidget):
             self.streaming_timer.setInterval(int(exposure))
             self._mmc.stopSequenceAcquisition()
             self._mmc.startContinuousSequenceAcquisition(exposure)
+
+    def _on_roi_info(
+        self, start_x: int, start_y: int, width: int, height: int, mode: str = ""
+    ) -> None:
+
+        if mode == "Full":
+            self._on_crop_btn()
+            return
+
+        try:
+            cam_roi_layer = self.viewer.layers["set_cam_ROI"]
+            cam_roi_layer.data = self._set_cam_roi_shape(
+                start_x, start_y, width, height
+            )
+        except KeyError:
+            cam_roi_layer = self.viewer.add_shapes(name="set_cam_ROI")
+            cam_roi_layer.data = self._set_cam_roi_shape(
+                start_x, start_y, width, height
+            )
+
+        self.viewer.reset_view()
+
+    def _set_cam_roi_shape(
+        self, start_x: int, start_y: int, width: int, height: int
+    ) -> List[list]:
+        return [
+            [start_y, start_x],
+            [start_y, width + start_x],
+            [height + start_y, width + start_x],
+            [height + start_y, start_x],
+        ]
+
+    def _on_crop_btn(self):
+        with contextlib.suppress(Exception):
+            cam_roi_layer = self.viewer.layers["set_cam_ROI"]
+            self.viewer.layers.remove(cam_roi_layer)
+        self.viewer.reset_view()
+
+    def _update_cam_roi_layer(self, layer, event) -> None:  # type: ignore
+
+        active_layer = self.viewer.layers.selection.active
+        if not isinstance(active_layer, napari.layers.shapes.shapes.Shapes):
+            return
+
+        if active_layer.name != "set_cam_ROI":
+            return
+
+        # mouse down
+        dragged = False
+        yield
+        # on move
+        while event.type == "mouse_move":
+            dragged = True
+            yield
+        # on release
+        if dragged:
+            if not active_layer.data:
+                return
+            data = active_layer.data[-1]
+            x = round(data[0][1])
+            y = round(data[0][0])
+            width = round(data[1][1] - x)
+            heigh = round(data[2][0] - y)
+            cam = self._mmc.getCameraDevice()
+            self._mmc.events.camRoiSet.emit(cam, x, y, width, heigh)
