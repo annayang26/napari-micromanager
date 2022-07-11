@@ -106,8 +106,8 @@ class MainWindow(MicroManagerWidget):
         self.viewer.dims.events.current_step.connect(self._update_max_min)
         self.viewer.mouse_drag_callbacks.append(self._get_event_explorer)
 
+        # for camera_roi widget
         self.viewer.mouse_drag_callbacks.append(self._update_cam_roi_layer)
-
         self.tab_wdg.cam_wdg.roiInfo.connect(self._on_roi_info)
         self.tab_wdg.cam_wdg.crop_btn.clicked.connect(self._on_crop_btn)
 
@@ -407,11 +407,13 @@ class MainWindow(MicroManagerWidget):
             cam_roi_layer.data = self._set_cam_roi_shape(
                 start_x, start_y, width, height
             )
+            cam_roi_layer.mode = "select"
         except KeyError:
             cam_roi_layer = self.viewer.add_shapes(name="set_cam_ROI")
             cam_roi_layer.data = self._set_cam_roi_shape(
                 start_x, start_y, width, height
             )
+            cam_roi_layer.mode = "select"
 
         self.viewer.reset_view()
 
