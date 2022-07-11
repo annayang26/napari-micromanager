@@ -455,6 +455,7 @@ class MainWindow(MicroManagerWidget):
             x = round(data[0][1])
             y = round(data[0][0])
             width = round(data[1][1] - x)
-            heigh = round(data[2][0] - y)
+            height = round(data[2][0] - y)
+
             cam = self._mmc.getCameraDevice()
-            self._mmc.events.camRoiSet.emit(cam, x, y, width, heigh)
+            self._mmc.events.camRoiSet.emit(cam, x, y, width, height)
