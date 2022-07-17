@@ -1,12 +1,13 @@
-from pymmcore_widgets.camera_roi_widget import CameraWidget
-from pymmcore_widgets.channel_widget import ChannelWidget
-from pymmcore_widgets.core import get_core_singleton
-from pymmcore_widgets.exposure_widget import DefaultCameraExposureWidget
-from pymmcore_widgets.group_preset_table_widget import GroupPresetTableWidget
-from pymmcore_widgets.live_button_widget import LiveButton
-from pymmcore_widgets.mda_widget.mda_widget import MultiDWidget
-from pymmcore_widgets.objective_widget import ObjectivesWidget
-from pymmcore_widgets.snap_button_widget import SnapButton
+from pymmcore_widgets._camera_roi_widget import CameraRoiWidget
+from pymmcore_widgets._channel_widget import ChannelWidget
+from pymmcore_widgets._core import get_core_singleton
+from pymmcore_widgets._exposure_widget import DefaultCameraExposureWidget
+from pymmcore_widgets._group_preset_table_widget import GroupPresetTableWidget
+from pymmcore_widgets._live_button_widget import LiveButton
+
+# from pymmcore_widgets.mda_widget.mda_widget import MultiDWidget
+from pymmcore_widgets._objective_widget import ObjectivesWidget
+from pymmcore_widgets._snap_button_widget import SnapButton
 from qtpy import QtWidgets as QtW
 from qtpy.QtCore import Qt
 from superqt import QCollapsible
@@ -14,7 +15,8 @@ from superqt import QCollapsible
 from .._gui_objects._sample_explorer_widget._sample_explorer_widget import (
     MMExploreSample,
 )
-from .._gui_objects._shutters_widget import MMShuttersWidget
+
+# from .._gui_objects._shutters_widget import MMShuttersWidget
 from ._illumination_widget import IlluminationWidget
 
 
@@ -37,19 +39,19 @@ class MMTabWidget(QtW.QTabWidget):
         )
 
         # sub_widgets
-        self.shutter_wdg = MMShuttersWidget()
+        # self.shutter_wdg = MMShuttersWidget()
         self.obj_wdg = ObjectivesWidget()
         self.ch_wdg = ChannelWidget()
         self.exp_wdg = DefaultCameraExposureWidget()
         self.ill = IlluminationWidget()
-        self.mda = MultiDWidget()
+        # self.mda = MultiDWidget()
         self.explorer = MMExploreSample()
         self.group_preset = GroupPresetTableWidget()
-        self.cam_wdg = CameraWidget()
+        self.cam_wdg = CameraRoiWidget()
 
         self._create_gui()
 
-        self.addTab(self.mda, "Multi-D Acquisition")
+        # self.addTab(self.mda, "Multi-D Acquisition")
         self.addTab(self.explorer, "Sample Explorer")
         plus_tab = SelectTabs(self)
         self.addTab(plus_tab, "+")

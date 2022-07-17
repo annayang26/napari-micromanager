@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pymmcore_widgets.system_cfg_widget import ConfigurationWidget
+from pymmcore_widgets._load_system_cfg_widget import ConfigurationWidget
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QGroupBox, QSizePolicy, QVBoxLayout, QWidget
 from superqt import QCollapsible

@@ -5,12 +5,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import useq
-from pymmcore_widgets.core import get_core_singleton
-from pymmcore_widgets.mda_widget import _mda
+from pymmcore_widgets._core import get_core_singleton
 from qtpy import QtWidgets as QtW
 from useq import MDASequence
 
 from ..._gui_objects._sample_explorer_widget._sample_explorer_gui import ExplorerGui
+from .. import _mda
 
 if TYPE_CHECKING:
     from pymmcore_plus.mda import PMDAEngine

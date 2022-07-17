@@ -11,16 +11,19 @@ import numpy as np
 import zarr
 from napari.experimental import link_layers
 from pymmcore_plus._util import find_micromanager
-from pymmcore_widgets.core import get_core_singleton
-from pymmcore_widgets.mda_widget import _mda
-from pymmcore_widgets.property_browser import PropertyBrowser
-from pymmcore_widgets.set_pixel_size_widget import PixelSizeWidget
+from pymmcore_widgets._core import get_core_singleton
+
+# from pymmcore_widgets._mda_widget import _mda
+from pymmcore_widgets._property_browser import PropertyBrowser
+
+# from pymmcore_widgets._set_pixel_size_widget import PixelSizeWidget
 from qtpy import QtWidgets as QtW
 from qtpy.QtCore import QTimer
 from qtpy.QtGui import QColor
 from superqt.utils import create_worker, ensure_main_thread
 from useq import MDASequence
 
+from ._gui_objects import _mda
 from ._gui_objects._mm_widget import MicroManagerWidget
 from ._saving import save_sequence
 from ._util import event_indices
@@ -120,8 +123,8 @@ class MainWindow(MicroManagerWidget):
         action = self._menu.addAction("Device Property Browser...")
         action.triggered.connect(self._show_prop_browser)
 
-        action_1 = self._menu.addAction("Set Pixel Size...")
-        action_1.triggered.connect(self._show_pixel_size_table)
+        # action_1 = self._menu.addAction("Set Pixel Size...")
+        # action_1.triggered.connect(self._show_pixel_size_table)
 
         bar = w._qt_window.menuBar()
         bar.insertMenu(list(bar.actions())[-1], self._menu)
@@ -132,12 +135,12 @@ class MainWindow(MicroManagerWidget):
         self._prop_browser.show()
         self._prop_browser.raise_()
 
-    def _show_pixel_size_table(self):
-        if len(self._mmc.getLoadedDevices()) <= 1:
-            raise Warning("System Configuration not loaded!")
-        if not hasattr(self, "_px_size_wdg"):
-            self._px_size_wdg = PixelSizeWidget(self._mmc, self)
-        self._px_size_wdg.show()
+    # def _show_pixel_size_table(self):
+    #     if len(self._mmc.getLoadedDevices()) <= 1:
+    #         raise Warning("System Configuration not loaded!")
+    #     if not hasattr(self, "_px_size_wdg"):
+    #         self._px_size_wdg = PixelSizeWidget(self._mmc, self)
+    #     self._px_size_wdg.show()
 
     @ensure_main_thread
     def update_viewer(self, data=None):

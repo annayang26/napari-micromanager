@@ -2,8 +2,8 @@ import re
 from typing import Optional
 
 from pymmcore_plus import CMMCorePlus, PropertyType
-from pymmcore_widgets.core import get_core_singleton, iter_dev_props
-from pymmcore_widgets.property_widget import PropertyWidget
+from pymmcore_widgets._core import get_core_singleton, iter_dev_props
+from pymmcore_widgets._property_widget import PropertyWidget
 from qtpy.QtWidgets import QApplication, QGridLayout, QLabel, QWidget
 
 
