@@ -445,14 +445,14 @@ class MainWindow(MicroManagerWidget):
         if active_layer.name != "set_cam_ROI":
             return
 
-        # mouse down
+        # on mouse pressed
         dragged = False
         yield
-        # on move
+        # on mouse move
         while event.type == "mouse_move":
             dragged = True
             yield
-        # on release
+        # on mouse release
         if dragged:
             if not active_layer.data:
                 return
@@ -461,34 +461,16 @@ class MainWindow(MicroManagerWidget):
             x_max = self.tab_wdg.cam_wdg.chip_size_x
             y_max = self.tab_wdg.cam_wdg.chip_size_y
 
-            updated_data = self._update_shape_if_out_of_border(x_max, y_max, data)
+            x = round(data[0][1])
+            y = round(data[0][0])
+            width = round(data[1][1] - x)
+            height = round(data[2][0] - y)
 
-            x = round(updated_data[0][1])
-            y = round(updated_data[0][0])
-            width = round(updated_data[1][1] - x)
-            height = round(updated_data[2][0] - y)
+            # change shape if out of cam area
+            if x + width >= x_max:
+                x = x - ((x + width) - x_max)
+            if y + height >= y_max:
+                y = y - ((y + height) - y_max)
 
             cam = self._mmc.getCameraDevice()
             self._mmc.events.camRoiSet.emit(cam, x, y, width, height)
-
-    def _update_shape_if_out_of_border(
-        self, x_max: int, y_max: int, data: list
-    ) -> List[Tuple]:
-
-        if round(data[0][1]) > x_max:  # top_left_x
-            data[0][1] = 0
-        if round(data[0][0]) > y_max:  # top_left_y
-            data[0][0] = 0
-
-        if round(data[1][1]) > x_max:  # top_right_x
-            data[1][1] = x_max
-
-        if round(data[2][1]) > x_max:  # bottom_right_x
-            data[2][1] = x_max
-        if round(data[2][0]) > y_max:  # bottom_right_y
-            data[2][0] = y_max
-
-        if round(data[3][0]) > y_max:  # bottom_left_y
-            data[3][0] = y_max
-
-        return data
