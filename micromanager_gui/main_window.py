@@ -397,6 +397,11 @@ class MainWindow(MicroManagerWidget):
             self._mmc.stopSequenceAcquisition()
             self._mmc.startContinuousSequenceAcquisition(exposure)
 
+    def _get_roi_layer(self) -> napari.layers.shapes.shapes.Shapes:
+        for layer in self.viewer.layers:
+            if layer.metadata.get("layer_id"):
+                return layer
+
     def _on_roi_info(
         self, start_x: int, start_y: int, width: int, height: int, mode: str = ""
     ) -> None:
@@ -406,18 +411,18 @@ class MainWindow(MicroManagerWidget):
             return
 
         try:
-            cam_roi_layer = self.viewer.layers["set_cam_ROI"]
+            cam_roi_layer = self._get_roi_layer()
             cam_roi_layer.data = self._set_cam_roi_shape(
                 start_x, start_y, width, height
             )
-            cam_roi_layer.mode = "select"
-        except KeyError:
+        except AttributeError:
             cam_roi_layer = self.viewer.add_shapes(name="set_cam_ROI")
+            cam_roi_layer.metadata["layer_id"] = "set_cam_ROI"
             cam_roi_layer.data = self._set_cam_roi_shape(
                 start_x, start_y, width, height
             )
-            cam_roi_layer.mode = "select"
 
+        cam_roi_layer.mode = "select"
         self.viewer.reset_view()
 
     def _set_cam_roi_shape(
@@ -432,7 +437,7 @@ class MainWindow(MicroManagerWidget):
 
     def _on_crop_btn(self):
         with contextlib.suppress(Exception):
-            cam_roi_layer = self.viewer.layers["set_cam_ROI"]
+            cam_roi_layer = self._get_roi_layer()
             self.viewer.layers.remove(cam_roi_layer)
         self.viewer.reset_view()
 
@@ -442,7 +447,7 @@ class MainWindow(MicroManagerWidget):
         if not isinstance(active_layer, napari.layers.shapes.shapes.Shapes):
             return
 
-        if active_layer.name != "set_cam_ROI":
+        if active_layer.metadata.get("layer_id") != "set_cam_ROI":
             return
 
         # on mouse pressed
