@@ -44,6 +44,16 @@ class MicroManagerWidget(QtW.QWidget):
         self.main_layout.setAlignment(Qt.AlignCenter)
         # add cfg_wdg
         self.main_layout.addWidget(self.cfg_wdg)
+
+        # add shutters
+        s_wdg = QtW.QGroupBox()
+        s_l = QtW.QHBoxLayout()
+        s_l.setAlignment(Qt.AlignLeft)
+        s_l.setContentsMargins(5, 5, 5, 5)
+        s_wdg.setLayout(s_l)
+        s_l.addWidget(self.shutter_wdg)
+        self.main_layout.addWidget(s_wdg)
+
         # add microscope collapsible
         self.mic_group = QtW.QGroupBox()
         self.mic_group_layout = QtW.QVBoxLayout()
@@ -57,14 +67,9 @@ class MicroManagerWidget(QtW.QWidget):
         self.mic_coll.layout().setContentsMargins(0, 0, 0, 0)
         self.mic_coll.setSizePolicy(coll_sizepolicy)
 
-        # add objective, property browser, illumination and camera widgets
+        # add objective, illumination
         obj_prop = self.add_mm_objectives_widget()
-        ill_shutter = self.add_shutter_widgets()
-        cam = self.add_camera_widget()
         self.mic_coll.addWidget(obj_prop)
-        self.mic_coll.addWidget(ill_shutter)
-        self.mic_coll.addWidget(cam)
-        self.mic_coll.expand(animate=False)
         self.mic_group_layout.addWidget(self.mic_coll)
         self.mic_group.setLayout(self.mic_group_layout)
         self.main_layout.addWidget(self.mic_group)
@@ -80,7 +85,7 @@ class MicroManagerWidget(QtW.QWidget):
         self.stages_coll.layout().setSpacing(0)
         self.stages_coll.layout().setContentsMargins(0, 0, 0, 0)
         self.stages_coll.addWidget(self.stage_wdg)
-        self.stages_coll.expand(animate=False)
+        # self.stages_coll.expand(animate=False)
 
         self.stages_group_layout.addWidget(self.stages_coll)
         self.stages_group.setLayout(self.stages_group_layout)
@@ -112,18 +117,9 @@ class MicroManagerWidget(QtW.QWidget):
         obj_wdg_layout.setContentsMargins(5, 5, 5, 5)
         obj_wdg_layout.setSpacing(7)
         obj_wdg_layout.addWidget(self.obj_wdg)
+        obj_wdg_layout.addWidget(self.illum_btn)
         obj_wdg.setLayout(obj_wdg_layout)
         return obj_wdg
-
-    def add_shutter_widgets(self):
-        shutter_wdg = QtW.QWidget()
-        shutter_wdg_layout = QtW.QHBoxLayout()
-        shutter_wdg_layout.setContentsMargins(5, 5, 5, 5)
-        shutter_wdg_layout.setSpacing(7)
-        shutter_wdg_layout.addWidget(self.shutter_wdg)
-        shutter_wdg_layout.addWidget(self.illum_btn)
-        shutter_wdg.setLayout(shutter_wdg_layout)
-        return shutter_wdg
 
     def _show_illum_dialog(self):
         if not hasattr(self, "_illumination"):
