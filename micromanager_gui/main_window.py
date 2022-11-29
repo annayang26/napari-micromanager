@@ -25,7 +25,7 @@ from ._gui_objects._group_preset_widget import GroupPreset
 from ._gui_objects._illumination_widget import IlluminationWidget
 from ._gui_objects._mda_widget import MultiDWidget
 from ._gui_objects._min_max_widget import MinMax
-from ._gui_objects._mm_widget import MicroManagerWidget
+from ._gui_objects._mm_toolbar_gui import MicroManagerWidget
 from ._gui_objects._sample_explorer_widget import SampleExplorer
 from ._gui_objects._stages_widget import MMStagesWidget
 from ._mda_meta import SequenceMeta
