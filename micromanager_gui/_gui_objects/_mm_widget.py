@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pymmcore_widgets import (
+    CameraRoiWidget,
     ConfigurationWidget,
     GroupPresetTableWidget,
     ObjectivesWidget,
@@ -40,6 +41,9 @@ class MicroManagerWidget(QWidget):
         self.shutter_wdg = MMShuttersWidget()
         self.mda = MultiDWidget()
         self.explorer = SampleExplorer()
+
+        # self.cam_roi = CamROI(parent=self)
+        self.cam_roi = CameraRoiWidget(parent=self)
 
         self.setLayout(QVBoxLayout())
         self.layout().setSpacing(10)
