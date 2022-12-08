@@ -56,7 +56,7 @@ class MultiDWidget(MDAWidget):
             self._toggle_checkbox_save_pos
         )
 
-        self.channel_groupbox.channel_tableWidget.model().rowsRemoved.connect(
+        self.channel_groupbox._table.model().rowsRemoved.connect(
             self._toggle_split_channel
         )
 

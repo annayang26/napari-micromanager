@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pytest
 from napari_micromanager._gui_objects._sample_explorer_widget import SampleExplorer
@@ -31,7 +31,7 @@ def test_explorer_main(main_window: MainWindow, qtbot: QtBot):
     explorer.scan_size_spinBox_r.setValue(2)
     explorer.scan_size_spinBox_c.setValue(2)
     explorer.ovelap_spinBox.setValue(0)
-    explorer.channel_groupbox.add_ch_button.click()
+    explorer.channel_groupbox._add_button.click()
     explorer.radiobtn_grid.setChecked(True)
 
     assert not main_window.viewer.layers
@@ -103,36 +103,38 @@ def test_saving_explorer(
 
     NAME = "test_explorer"
     main_window._show_dock_widget("Explorer")
+    mmc = main_window._mmc
     _exp = main_window._dock_widgets["Explorer"].widget()
     assert isinstance(_exp, SampleExplorer)
-    _exp.save_explorer_groupbox.setChecked(True)
-    _exp.dir_explorer_lineEdit.setText(str(tmp_path))
-    _exp.fname_explorer_lineEdit.setText(NAME)
+
+    _exp = cast(SampleExplorer, _exp)
+    _exp.save_groupbox.setChecked(True)
+    _exp.dir_lineEdit.setText(str(tmp_path))
+    _exp.fname_lineEdit.setText(NAME)
 
     _exp.scan_size_spinBox_r.setValue(2)
     _exp.scan_size_spinBox_c.setValue(1)
     _exp.ovelap_spinBox.setValue(0)
 
     _exp.time_groupbox.setChecked(bool(T))
-    _exp.time_groupbox.time_comboBox.setCurrentText("ms")
-    _exp.time_groupbox.timepoints_spinBox.setValue(3)
-    _exp.time_groupbox.interval_spinBox.setValue(250)
+    _exp.time_groupbox._units_combo.setCurrentText("ms")
+    _exp.time_groupbox._timepoints_spinbox.setValue(3)
+    _exp.time_groupbox._interval_spinbox.setValue(250)
 
     _exp.stack_groupbox.setChecked(bool(Z))
     _exp.stack_groupbox._zmode_tabs.setCurrentIndex(1)
     z_range_wdg = _exp.stack_groupbox._zmode_tabs.widget(1)
     assert isinstance(z_range_wdg, ZRangeAroundSelect)
+
+    z_range_wdg = cast(ZRangeAroundSelect, z_range_wdg)
     z_range_wdg._zrange_spinbox.setValue(3)
     _exp.stack_groupbox._zstep_spinbox.setValue(1)
 
     # 2 Channels
-    _exp.channel_groupbox.add_ch_button.click()
-    _exp.channel_groupbox.channel_tableWidget.cellWidget(0, 0).setCurrentText("DAPI")
-    _exp.channel_groupbox.channel_tableWidget.cellWidget(0, 1).setValue(5)
+    mmc.setExposure(5)
+    _exp.channel_groupbox._add_button.click()
     if C:
-        _exp.channel_groupbox.add_ch_button.click()
-        _exp.channel_groupbox.channel_tableWidget.cellWidget(1, 0).setCurrentText("Cy5")
-        _exp.channel_groupbox.channel_tableWidget.cellWidget(1, 1).setValue(5)
+        _exp.channel_groupbox._add_button.click()
 
     if Tr:
         _exp.radiobtn_grid.setChecked(True)

@@ -31,14 +31,14 @@ class SampleExplorer(SampleExplorerWidget):
 
         self.channel_groupbox.setMinimumHeight(175)
 
-        self.save_explorer_groupbox = self._create_save_group()
-        v_layout = cast(QVBoxLayout, self.explorer_wdg.layout())
-        v_layout.insertWidget(0, self.save_explorer_groupbox)
+        self.save_groupbox = self._create_save_group()
+        v_layout = cast(QVBoxLayout, self._wdg.layout())
+        v_layout.insertWidget(0, self.save_groupbox)
 
         self.checkbox = self._create_radiobtn()
         v_layout.insertWidget(4, self.checkbox)
 
-        self.browse_save_explorer_Button.clicked.connect(self._set_explorer_dir)
+        self.browse_save_button.clicked.connect(self._set_explorer_dir)
 
     def _create_save_group(self) -> QGroupBox:
 
@@ -63,12 +63,12 @@ class SampleExplorer(SampleExplorerWidget):
         dir_lbl = QLabel(text="Directory:")
         dir_lbl.setMinimumWidth(min_lbl_size)
         dir_lbl.setSizePolicy(lbl_sizepolicy)
-        self.dir_explorer_lineEdit = QLineEdit()
-        self.browse_save_explorer_Button = QPushButton(text="...")
-        self.browse_save_explorer_Button.setSizePolicy(btn_sizepolicy)
+        self.dir_lineEdit = QLineEdit()
+        self.browse_save_button = QPushButton(text="...")
+        self.browse_save_button.setSizePolicy(btn_sizepolicy)
         dir_group_layout.addWidget(dir_lbl)
-        dir_group_layout.addWidget(self.dir_explorer_lineEdit)
-        dir_group_layout.addWidget(self.browse_save_explorer_Button)
+        dir_group_layout.addWidget(self.dir_lineEdit)
+        dir_group_layout.addWidget(self.browse_save_button)
 
         # filename
         fname_group = QWidget()
@@ -79,10 +79,10 @@ class SampleExplorer(SampleExplorerWidget):
         fname_lbl = QLabel(text="File Name:")
         fname_lbl.setMinimumWidth(min_lbl_size)
         fname_lbl.setSizePolicy(lbl_sizepolicy)
-        self.fname_explorer_lineEdit = QLineEdit()
-        self.fname_explorer_lineEdit.setText("Experiment")
+        self.fname_lineEdit = QLineEdit()
+        self.fname_lineEdit.setText("Experiment")
         fname_group_layout.addWidget(fname_lbl)
-        fname_group_layout.addWidget(self.fname_explorer_lineEdit)
+        fname_group_layout.addWidget(self.fname_lineEdit)
 
         group_layout.addWidget(dir_group)
         group_layout.addWidget(fname_group)
@@ -125,7 +125,7 @@ class SampleExplorer(SampleExplorerWidget):
         self.dir = QFileDialog(self)
         self.dir.setFileMode(QFileDialog.FileMode.DirectoryOnly)
         self.save_dir = QFileDialog.getExistingDirectory(self.dir)
-        self.dir_explorer_lineEdit.setText(self.save_dir)
+        self.dir_lineEdit.setText(self.save_dir)
         self.parent_path = Path(self.save_dir)
 
     def _create_translation_points(
@@ -162,7 +162,9 @@ class SampleExplorer(SampleExplorerWidget):
 
     def _set_translate_point_list(self) -> List[Tuple[float, float, int, int]]:
 
-        t_list = self._create_translation_points(self.scan_size_r, self.scan_size_c)
+        t_list = self._create_translation_points(
+            self.scan_size_spinBox_r.value(), self.scan_size_spinBox_c.value()
+        )
         if self.stage_pos_groupbox.stage_tableWidget.rowCount() > 0:
             t_list = t_list * self.stage_pos_groupbox.stage_tableWidget.rowCount()
         return t_list
@@ -171,13 +173,13 @@ class SampleExplorer(SampleExplorerWidget):
         sequence = cast(MDASequence, super().get_state())
         sequence.metadata[SEQUENCE_META_KEY] = SequenceMeta(
             mode="explorer",
-            should_save=self.save_explorer_groupbox.isChecked(),
-            file_name=self.fname_explorer_lineEdit.text(),
-            save_dir=self.dir_explorer_lineEdit.text()
+            should_save=self.save_groupbox.isChecked(),
+            file_name=self.fname_lineEdit.text(),
+            save_dir=self.dir_lineEdit.text()
             or str(Path(__file__).parent.parent.parent),
             translate_explorer=self.radiobtn_grid.isChecked(),
             explorer_translation_points=self._set_translate_point_list(),
-            scan_size_c=self.scan_size_c,
-            scan_size_r=self.scan_size_r,
+            scan_size_c=self.scan_size_spinBox_c.value(),
+            scan_size_r=self.scan_size_spinBox_r.value(),
         )
         return sequence
