@@ -122,7 +122,7 @@ class MultiDWidget(MDAWidget):
         self.parent_path = Path(self.save_dir)
 
     def _toggle_split_channel(self) -> None:
-        if self.channel_groupbox.channel_tableWidget.rowCount() <= 1:
+        if self.channel_groupbox._table.rowCount() <= 1:
             self.checkBox_split_channels.setChecked(False)
 
     def _toggle_checkbox_save_pos(self) -> None:

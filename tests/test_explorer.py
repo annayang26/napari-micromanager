@@ -36,7 +36,7 @@ def test_explorer_main(main_window: MainWindow, qtbot: QtBot):
 
     assert not main_window.viewer.layers
 
-    assert explorer._set_grid() == [
+    assert explorer._create_grid_coords() == [
         ("Grid_001_Pos000", -256.0, 256.0, 0.0),
         ("Grid_001_Pos001", 256.0, 256.0, 0.0),
         ("Grid_001_Pos002", 256.0, -256.0, 0.0),
