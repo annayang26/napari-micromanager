@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from pymmcore_plus import CMMCorePlus
 from pymmcore_widgets import SampleExplorerWidget
@@ -16,7 +16,11 @@ from qtpy.QtWidgets import (
 from useq import MDASequence
 
 from .._mda_meta import SEQUENCE_META_KEY, SequenceMeta
+from ._mm_channel_table import _MMChannelTable
 from ._save_widget import SaveWidget
+
+if TYPE_CHECKING:
+    from pymmcore_widgets._mda import ChannelTable
 
 
 class SampleExplorer(SampleExplorerWidget):
@@ -27,7 +31,15 @@ class SampleExplorer(SampleExplorerWidget):
     ) -> None:
         super().__init__(include_run_button=True, parent=parent, mmcore=mmcore)
 
-        self.channel_groupbox.setMinimumHeight(175)
+        # replace ChannelTable with its _MMChannelTable subclass
+        self.channel_groupbox.deleteLater()
+        self.channel_groupbox: ChannelTable
+        self.channel_groupbox = _MMChannelTable()
+        self.channel_groupbox.valueChanged.connect(self._enable_run_btn)
+        layout = cast(QVBoxLayout, self.explorer_wdg.layout())
+        layout.insertWidget(1, self.channel_groupbox)
+
+        self.channel_groupbox.checkBox_split_channels.hide()
 
         self._save_groupbox = SaveWidget("Save Scan")
         self._save_groupbox._split_pos_checkbox.hide()
