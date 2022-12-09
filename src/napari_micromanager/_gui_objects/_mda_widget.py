@@ -10,7 +10,7 @@ from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 from useq import MDASequence
 
-from ._mm_channel_table import _MMChannelTable
+from ._mm_channel_table import MMChannelTable
 from ._save_widget import SaveWidget
 
 if TYPE_CHECKING:
@@ -37,7 +37,7 @@ class MultiDWidget(MDAWidget):
         # replace ChannelTable with its _MMChannelTable subclass
         self.channel_groupbox: ChannelTable
         self.channel_groupbox.deleteLater()
-        self.channel_groupbox = _MMChannelTable()
+        self.channel_groupbox = MMChannelTable()
         self.channel_groupbox.valueChanged.connect(self._enable_run_btn)
         layout = cast(QVBoxLayout, self._wdg.layout())
         layout.insertWidget(1, self.channel_groupbox)

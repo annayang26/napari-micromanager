@@ -26,7 +26,7 @@ if TYPE_CHECKING:
         acquire_every: int
 
 
-class _MMChannelTable(ChannelTable):
+class MMChannelTable(ChannelTable):
     """Subclass of pymmcore-widgets ChannelTable."""
 
     def __init__(
