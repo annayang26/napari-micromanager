@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 from pymmcore_plus import CMMCorePlus
 from pymmcore_widgets import SampleExplorerWidget
@@ -16,11 +16,7 @@ from qtpy.QtWidgets import (
 from useq import MDASequence
 
 from .._mda_meta import SEQUENCE_META_KEY, SequenceMeta
-from ._mm_channel_table import MMChannelTable
 from ._save_widget import SaveWidget
-
-if TYPE_CHECKING:
-    from pymmcore_widgets._mda import ChannelTable
 
 
 class SampleExplorer(SampleExplorerWidget):
@@ -31,16 +27,6 @@ class SampleExplorer(SampleExplorerWidget):
     ) -> None:
         super().__init__(include_run_button=True, parent=parent, mmcore=mmcore)
 
-        # replace ChannelTable with its _MMChannelTable subclass
-        self.channel_groupbox.deleteLater()
-        self.channel_groupbox: ChannelTable
-        self.channel_groupbox = MMChannelTable()
-        self.channel_groupbox.valueChanged.connect(self._enable_run_btn)
-        layout = cast(QVBoxLayout, self.explorer_wdg.layout())
-        layout.insertWidget(1, self.channel_groupbox)
-
-        self.channel_groupbox.checkBox_split_channels.hide()
-
         self._save_groupbox = SaveWidget("Save Scan")
         self._save_groupbox._split_pos_checkbox.hide()
         self._save_groupbox.setSizePolicy(
@@ -48,11 +34,11 @@ class SampleExplorer(SampleExplorerWidget):
         )
         self._save_groupbox.setChecked(False)
 
-        v_layout = cast(QVBoxLayout, self.explorer_wdg.layout())
-        v_layout.insertWidget(0, self._save_groupbox)
+        central_layout = cast(QVBoxLayout, self._central_widget.layout())
+        central_layout.insertWidget(0, self._save_groupbox)
 
         self.checkbox = self._create_radiobtn()
-        v_layout.insertWidget(4, self.checkbox)
+        central_layout.insertWidget(4, self.checkbox)
 
     def _create_radiobtn(self) -> QGroupBox:
 
@@ -120,8 +106,8 @@ class SampleExplorer(SampleExplorerWidget):
     def _set_translate_point_list(self) -> list[tuple[float, float, int, int]]:
 
         t_list = self._create_translation_points(self.scan_size_r, self.scan_size_c)
-        if self.stage_pos_groupbox.stage_tableWidget.rowCount() > 0:
-            t_list = t_list * self.stage_pos_groupbox.stage_tableWidget.rowCount()
+        if self.position_groupbox.stage_tableWidget.rowCount() > 0:
+            t_list = t_list * self.position_groupbox.stage_tableWidget.rowCount()
         return t_list
 
     def get_state(self) -> MDASequence:

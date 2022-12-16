@@ -1,20 +1,16 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 from napari_micromanager._mda_meta import SEQUENCE_META_KEY, SequenceMeta
 from pymmcore_plus import CMMCorePlus
 from pymmcore_widgets import MDAWidget
 from qtpy.QtCore import Qt
-from qtpy.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QCheckBox, QSizePolicy, QVBoxLayout, QWidget
 from useq import MDASequence
 
-from ._mm_channel_table import MMChannelTable
 from ._save_widget import SaveWidget
-
-if TYPE_CHECKING:
-    from pymmcore_widgets._mda import ChannelTable
 
 
 class MultiDWidget(MDAWidget):
@@ -30,36 +26,39 @@ class MultiDWidget(MDAWidget):
             QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed
         )
         self._save_groupbox.setChecked(False)
-
-        v_layout = cast(QVBoxLayout, self._wdg.layout())
-        v_layout.insertWidget(0, self._save_groupbox)
-
-        # replace ChannelTable with its _MMChannelTable subclass
-        self.channel_groupbox: ChannelTable
-        self.channel_groupbox.deleteLater()
-        self.channel_groupbox = MMChannelTable()
-        self.channel_groupbox.valueChanged.connect(self._enable_run_btn)
-        layout = cast(QVBoxLayout, self._wdg.layout())
-        layout.insertWidget(1, self.channel_groupbox)
-
-        # TODO: stage_pos_groupbox should have a valueChanged signal
-        # and that should be connected to _toggle_checkbox_save_pos
         self._save_groupbox.toggled.connect(self._toggle_checkbox_save_pos)
-        self.stage_pos_groupbox.toggled.connect(self._toggle_checkbox_save_pos)
-        self.stage_pos_groupbox.add_pos_button.clicked.connect(
+
+        central_layout = cast(QVBoxLayout, self._central_widget.layout())
+        central_layout.insertWidget(0, self._save_groupbox)
+
+        # add split channel checkbox
+        self.checkBox_split_channels = QCheckBox(text="Split Channels")
+        self.checkBox_split_channels.toggled.connect(self._toggle_split_channel)
+        self.channel_groupbox.valueChanged.connect(self._toggle_split_channel)
+        self.channel_groupbox.layout().addWidget(self.checkBox_split_channels, 1, 0)
+
+        # TODO: position_groupbox should have a valueChanged signal
+        # and that should be connected to _toggle_checkbox_save_pos
+        self.position_groupbox.toggled.connect(self._toggle_checkbox_save_pos)
+        self.position_groupbox.add_pos_button.clicked.connect(
             self._toggle_checkbox_save_pos
         )
-        self.stage_pos_groupbox.remove_pos_button.clicked.connect(
+        self.position_groupbox.remove_pos_button.clicked.connect(
             self._toggle_checkbox_save_pos
         )
-        self.stage_pos_groupbox.clear_pos_button.clicked.connect(
+        self.position_groupbox.clear_pos_button.clicked.connect(
             self._toggle_checkbox_save_pos
         )
+
+    def _toggle_split_channel(self) -> None:
+        channels = self.channel_groupbox.value()
+        if len(channels) <= 1:
+            self.checkBox_split_channels.setChecked(False)
 
     def _toggle_checkbox_save_pos(self) -> None:
         if (
-            self.stage_pos_groupbox.isChecked()
-            and self.stage_pos_groupbox.stage_tableWidget.rowCount() > 0
+            self.position_groupbox.isChecked()
+            and self.position_groupbox.stage_tableWidget.rowCount() > 0
         ):
             self._save_groupbox._split_pos_checkbox.setEnabled(True)
 
