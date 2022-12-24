@@ -56,7 +56,7 @@ class MultiDWidget(MDAWidget):
 
         # the self.position_groupbox variable will be then used to define if
         # the sequence will take positions info from single positions or grid
-        # positions tab (see _on_tab_changed method).
+        # positions tab (see _on_tab_changed method). Maybe find a better way?
         self.position_groupbox: PositionTable
         self._update_position_widget()
 
@@ -69,28 +69,17 @@ class MultiDWidget(MDAWidget):
         self._central_widget.layout().addWidget(tab)
 
         # single positions tab
-        pos_tab = QWidget()
-        pos_tab_layout = QHBoxLayout()
-        pos_tab_layout.setSpacing(0)
-        pos_tab_layout.setContentsMargins(10, 10, 10, 10)
-        pos_tab_layout.addWidget(self.single_position_groupbox)
-        pos_tab.setLayout(pos_tab_layout)
-
+        pos_tab = self._create_single_position_tab()
         tab.addTab(pos_tab, "Single Positions")
 
-        self.single_position_groupbox.grid_button.hide()
-        self.single_position_groupbox.toggled.connect(self._toggle_checkbox_save_pos)
-        self.single_position_groupbox.add_pos_button.clicked.connect(
-            self._toggle_checkbox_save_pos
-        )
-        self.single_position_groupbox.remove_pos_button.clicked.connect(
-            self._toggle_checkbox_save_pos
-        )
-        self.single_position_groupbox.clear_pos_button.clicked.connect(
-            self._toggle_checkbox_save_pos
-        )
-
         # grid tab
+        grid_tab = self._create_grid_position_tab()
+        tab.addTab(grid_tab, "Grid Positions")
+
+        # connect tab signal
+        tab.currentChanged.connect(self._on_tab_changed)
+
+    def _create_grid_position_tab(self) -> QWidget:
         grid_tab = QWidget()
         grid_tab_layout = QVBoxLayout()
         grid_tab_layout.setSpacing(0)
@@ -181,10 +170,29 @@ class MultiDWidget(MDAWidget):
 
         grid_tab_layout.addWidget(self.grid_position_groupbox)
 
-        tab.addTab(grid_tab, "Grid Positions")
+        return grid_tab
 
-        # connect tab signal
-        tab.currentChanged.connect(self._on_tab_changed)
+    def _create_single_position_tab(self) -> QWidget:
+        pos_tab = QWidget()
+        pos_tab_layout = QHBoxLayout()
+        pos_tab_layout.setSpacing(0)
+        pos_tab_layout.setContentsMargins(10, 10, 10, 10)
+        pos_tab_layout.addWidget(self.single_position_groupbox)
+        pos_tab.setLayout(pos_tab_layout)
+
+        self.single_position_groupbox.grid_button.hide()
+        self.single_position_groupbox.toggled.connect(self._toggle_checkbox_save_pos)
+        self.single_position_groupbox.add_pos_button.clicked.connect(
+            self._toggle_checkbox_save_pos
+        )
+        self.single_position_groupbox.remove_pos_button.clicked.connect(
+            self._toggle_checkbox_save_pos
+        )
+        self.single_position_groupbox.clear_pos_button.clicked.connect(
+            self._toggle_checkbox_save_pos
+        )
+
+        return pos_tab
 
     def _create_radiobtn(self) -> QGroupBox:
 
