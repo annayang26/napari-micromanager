@@ -39,8 +39,8 @@ def save_sequence(sequence: MDASequence, layers: LayerList, meta: SequenceMeta) 
         return
     if meta.mode in ("mda", ""):
         return _save_mda_sequence(sequence, layers, meta)
-    if meta.mode == "explorer":
-        return _save_explorer_scan(sequence, layers, meta)
+    if meta.mode == "grid":
+        return _save_grid_scan(sequence, layers, meta)
     raise NotImplementedError(f"cannot save experiment with mode: {meta.mode}")
 
 
@@ -113,14 +113,14 @@ def _save_pos_separately(
 
 
 # TODO: to be fixed
-def _save_explorer_scan(
+def _save_grid_scan(
     sequence: MDASequence, layers: LayerList, meta: SequenceMeta
 ) -> None:
-    if not meta.translate_explorer:
+    if not meta.translate_grid:
         _save_mda_sequence(sequence, layers, meta)
     else:
         path = Path(meta.save_dir)
-        folder = ensure_unique(path / "explorer_scan", extension="", ndigits=3)
+        folder = ensure_unique(path / "grid_scan", extension="", ndigits=3)
         folder.mkdir(parents=True, exist_ok=True)
 
         mda_layers = [i for i in layers if i.metadata.get("uid") == sequence.uid]

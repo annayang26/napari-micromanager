@@ -24,8 +24,9 @@ class SequenceMeta:
     file_name: str = ""
     save_dir: str = ""
     save_pos: bool = False
-    translate_explorer: bool = False
-    explorer_translation_points: list = field(default_factory=list)
+    grid_info: dict = field(default_factory=dict)
+    translate_grid: bool = False
+    grid_translation_points: list = field(default_factory=list)
     scan_size_r: int = 0
     scan_size_c: int = 0
 

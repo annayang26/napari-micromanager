@@ -63,7 +63,7 @@ class MultiDWidget(MDAWidget):
     def _update_position_widget(self) -> None:
         self.single_position_groupbox = self.position_groupbox
 
-        # create tab
+        # create tab widget
         tab = QTabWidget()
         self._central_widget.layout().removeWidget(self.single_position_groupbox)
         self._central_widget.layout().addWidget(tab)
@@ -78,6 +78,28 @@ class MultiDWidget(MDAWidget):
 
         # connect tab signal
         tab.currentChanged.connect(self._on_tab_changed)
+
+    def _create_single_position_tab(self) -> QWidget:
+        pos_tab = QWidget()
+        pos_tab_layout = QHBoxLayout()
+        pos_tab_layout.setSpacing(0)
+        pos_tab_layout.setContentsMargins(10, 10, 10, 10)
+        pos_tab_layout.addWidget(self.single_position_groupbox)
+        pos_tab.setLayout(pos_tab_layout)
+
+        self.single_position_groupbox.grid_button.hide()
+        self.single_position_groupbox.toggled.connect(self._toggle_checkbox_save_pos)
+        self.single_position_groupbox.add_pos_button.clicked.connect(
+            self._toggle_checkbox_save_pos
+        )
+        self.single_position_groupbox.remove_pos_button.clicked.connect(
+            self._toggle_checkbox_save_pos
+        )
+        self.single_position_groupbox.clear_pos_button.clicked.connect(
+            self._toggle_checkbox_save_pos
+        )
+
+        return pos_tab
 
     def _create_grid_position_tab(self) -> QWidget:
         grid_tab = QWidget()
@@ -102,7 +124,7 @@ class MultiDWidget(MDAWidget):
             self._on_grid_pos_toggled
         )
 
-        # remove table, buttons from layout
+        # remove table and buttons from layout
         widgets = [
             self.grid_position_groupbox.layout().itemAt(i).widget()
             for i in range(self.single_position_groupbox.layout().count())
@@ -111,7 +133,7 @@ class MultiDWidget(MDAWidget):
         self.grid_position_groupbox.layout().removeWidget(_table)
         self.grid_position_groupbox.layout().removeWidget(_btns)
 
-        # table_btns groupbox
+        # table and buttons groupbox
         table_btns_group = QWidget()
         table_btns_group.setLayout(QHBoxLayout())
         table_btns_group.layout().setSpacing(15)
@@ -151,7 +173,7 @@ class MultiDWidget(MDAWidget):
         gen_btn.setText("Add")
         gen_btn.setMinimumWidth(100)
         grid_wdgs[1].layout().removeWidget(gen_btn)
-        # add generate_position_btn to table buttons layout
+        # add generate_position_btn to buttons layout
         _btns.layout().insertWidget(0, gen_btn)
 
         # create new widget for grid_position_groupbox
@@ -171,28 +193,6 @@ class MultiDWidget(MDAWidget):
         grid_tab_layout.addWidget(self.grid_position_groupbox)
 
         return grid_tab
-
-    def _create_single_position_tab(self) -> QWidget:
-        pos_tab = QWidget()
-        pos_tab_layout = QHBoxLayout()
-        pos_tab_layout.setSpacing(0)
-        pos_tab_layout.setContentsMargins(10, 10, 10, 10)
-        pos_tab_layout.addWidget(self.single_position_groupbox)
-        pos_tab.setLayout(pos_tab_layout)
-
-        self.single_position_groupbox.grid_button.hide()
-        self.single_position_groupbox.toggled.connect(self._toggle_checkbox_save_pos)
-        self.single_position_groupbox.add_pos_button.clicked.connect(
-            self._toggle_checkbox_save_pos
-        )
-        self.single_position_groupbox.remove_pos_button.clicked.connect(
-            self._toggle_checkbox_save_pos
-        )
-        self.single_position_groupbox.clear_pos_button.clicked.connect(
-            self._toggle_checkbox_save_pos
-        )
-
-        return pos_tab
 
     def _create_radiobtn(self) -> QGroupBox:
 
@@ -260,16 +260,88 @@ class MultiDWidget(MDAWidget):
             self._save_groupbox._split_pos_checkbox.setEnabled(False)
 
     def get_state(self) -> MDASequence:
+        """Return an MDASequence built using the MDA GUI."""
         sequence = cast(MDASequence, super().get_state())
 
-        # if grid, mode = explorer
+        if (
+            self.grid_position_groupbox.isChecked()
+            and self.grid_position_groupbox.stage_tableWidget.rowCount() > 0
+        ):
 
-        sequence.metadata[SEQUENCE_META_KEY] = SequenceMeta(
-            mode="mda",
-            split_channels=self.checkBox_split_channels.isChecked(),
-            **self._save_groupbox.get_state(),
-        )
+            self._get_grid_meta()
+
+            sequence.metadata[SEQUENCE_META_KEY] = SequenceMeta(
+                mode="grid",
+                **self._save_groupbox.get_state(),
+                grid_info=self._get_grid_meta(),
+                translate_grid=self.radiobtn_grid.isChecked(),
+                grid_translation_points=self._set_translate_point_list(),
+                scan_size_c=self.grid_control.scan_size_spinBox_c.value(),
+                scan_size_r=self.grid_control.scan_size_spinBox_r.value(),
+            )
+        else:
+            sequence.metadata[SEQUENCE_META_KEY] = SequenceMeta(
+                mode="mda",
+                split_channels=self.checkBox_split_channels.isChecked(),
+                **self._save_groupbox.get_state(),
+            )
+
         return sequence
+
+    def _get_grid_meta(self) -> dict:
+        table = self.grid_position_groupbox.stage_tableWidget
+        grid_info = {}
+        for row in range(table.rowCount()):
+            name = table.item(row, 0).text()
+            grid_name, grid_pos = table.item(row, 0).whatsThis().split("_")
+            grid_info[name] = (grid_name, grid_pos)
+        print(grid_info)
+        return grid_info
+
+    def _create_translation_points(
+        self, rows: int, cols: int
+    ) -> list[tuple[float, float, int, int]]:
+
+        cam_size_x = self._mmc.getROI(self._mmc.getCameraDevice())[2]
+        cam_size_y = self._mmc.getROI(self._mmc.getCameraDevice())[3]
+        move_x = (
+            cam_size_x - (self.grid_control.ovelap_spinBox.value() * cam_size_x) / 100
+        )
+        move_y = (
+            cam_size_y - (self.grid_control.ovelap_spinBox.value() * cam_size_y) / 100
+        )
+        x = -((cols - 1) * (cam_size_x / 2))
+        y = (rows - 1) * (cam_size_y / 2)
+
+        # for 'snake' acquisition
+        points = []
+        for r in range(rows):
+            if r % 2:  # for odd rows
+                col = cols - 1
+                for c in range(cols):
+                    if c == 0:
+                        y -= move_y
+                    points.append((x, y, r, c))
+                    if col > 0:
+                        col -= 1
+                        x -= move_x
+            else:  # for even rows
+                for c in range(cols):
+                    if r > 0 and c == 0:
+                        y -= move_y
+                    points.append((x, y, r, c))
+                    if c < cols - 1:
+                        x += move_x
+        return points
+
+    def _set_translate_point_list(self) -> list[tuple[float, float, int, int]]:
+        t_list = self._create_translation_points(
+            self.grid_control.scan_size_spinBox_r.value(),
+            self.grid_control.scan_size_spinBox_c.value(),
+        )
+        if self.position_groupbox.stage_tableWidget.rowCount() > 0:
+            t_list = t_list * self.position_groupbox.stage_tableWidget.rowCount()
+        return t_list
 
     def set_state(self, state: dict | MDASequence | str | Path) -> None:
         super().set_state(state)

@@ -132,11 +132,11 @@ class _NapariMDAHandler:
 
         if meta.mode in ("mda", ""):
             self._add_frame_to_mda_layer(image, event, meta)
-        elif meta.mode == "explorer":
-            if meta.translate_explorer:
-                self._add_frame_to_explorer_translate_layer(image, event, meta)
+        elif meta.mode == "grid":
+            if meta.translate_grid:
+                self._add_frame_to_grid_translate_layer(image, event, meta)
             else:
-                self._add_frame_to_explorer_layer(image, event, meta)
+                self._add_frame_to_grid_layer(image, event, meta)
 
     def _on_mda_finished(self, sequence: MDASequence) -> None:
         # Save layer and add increment to save name.
@@ -191,7 +191,7 @@ class _NapariMDAHandler:
         layergroups = defaultdict(set)
         for lay in self.viewer.layers:
             if lay.metadata.get("uid") == event.sequence.uid:
-                key = lay.metadata.get("grid")[:8]
+                key = lay.metadata.get("grid_name")[:8]
                 layergroups[key].add(lay)
         return layergroups
 
@@ -232,7 +232,7 @@ class _NapariMDAHandler:
             layer.visible = True
         # layer.reset_contrast_limits()
 
-    def _add_frame_to_explorer_layer(
+    def _add_frame_to_grid_layer(
         self, image: np.ndarray, event: ActiveMDAEvent, meta: SequenceMeta
     ) -> None:
 
@@ -251,7 +251,7 @@ class _NapariMDAHandler:
             layer.visible = True
         layer.reset_contrast_limits()
 
-    def _add_frame_to_explorer_translate_layer(
+    def _add_frame_to_grid_translate_layer(
         self, image: np.ndarray, event: ActiveMDAEvent, meta: SequenceMeta
     ) -> None:
         im_idx = tuple(event.index[k] for k in event.sequence.used_axes if k != "p")
@@ -259,8 +259,8 @@ class _NapariMDAHandler:
         z_arr = self._tmp_arrays[layer_name][0]
         z_arr[im_idx] = image
 
-        x = meta.explorer_translation_points[event.index["p"]][0]
-        y = -meta.explorer_translation_points[event.index["p"]][1]
+        x = meta.grid_translation_points[event.index["p"]][0]
+        y = -meta.grid_translation_points[event.index["p"]][1]
 
         layergroups = self._get_defaultdict_layers(event)
         # unlink layers to translate
@@ -336,25 +336,23 @@ def _determine_sequence_layers(
     # each item is a tuple of (id, shape, layer_metadata)
     _layer_info: list[tuple[str, list[int], dict[str, Any]]] = []
 
-    # in explorer/translate mode, we need to create a layer for each position
-    if meta.mode == "explorer" and meta.translate_explorer:
+    # in grid/translate mode, we need to create a layer for each position
+    if meta.mode == "grid" and meta.translate_grid:
         p_idx = axis_labels.index("p")
         axis_labels.pop(p_idx)
         layer_shape.pop(p_idx)
         for p in sequence.stage_positions:
-            # TODO: modify id_ to try and divide the grids when saving
-            # see also line 378 (layer.metadata["grid"])
-            if not p.name or "_" not in p.name:
-                raise ValueError(
-                    f"Invalid stage position name: {p.name!r}. "
-                    "Expected something like 'Grid_001_Pos000'"
-                )
-            # FIXME: the location of a stage position within a grid should not
-            # be stored in the position name, but rather in the metadata.
-            # e.g. sequence.metata["grid"] = {(x,y,z): (grid, grid_pos)}
-            *_, grid, grid_pos = p.name.split("_")
             id_ = f"{p.name}_{sequence.uid}"
-            _layer_info.append((id_, layer_shape, {"grid": grid, "grid_pos": grid_pos}))
+            _layer_info.append(
+                (
+                    id_,
+                    layer_shape,
+                    {
+                        "grid_name": meta.grid_info[p.name][0],
+                        "grid_pos": meta.grid_info[p.name][1],
+                    },
+                )
+            )
 
     # in split channels mode, we need to create a layer for each channel
     elif meta.split_channels:
