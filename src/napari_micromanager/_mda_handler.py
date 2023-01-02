@@ -230,7 +230,7 @@ class _NapariMDAHandler:
         layer = self.viewer.layers[layer_name]
         if not layer.visible:
             layer.visible = True
-        # layer.reset_contrast_limits()
+        layer.reset_contrast_limits()
 
     def _add_frame_to_grid_layer(
         self, image: np.ndarray, event: ActiveMDAEvent, meta: SequenceMeta
@@ -286,6 +286,7 @@ class _NapariMDAHandler:
         # to fix a bug in display (e.g. 3x3 grid)
         layer.visible = False
         layer.visible = True
+        layer.reset_contrast_limits()
 
         zoom_out_factor = (
             meta.scan_size_r
