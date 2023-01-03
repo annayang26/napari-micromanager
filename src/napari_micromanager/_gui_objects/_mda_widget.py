@@ -89,13 +89,13 @@ class MultiDWidget(MDAWidget):
 
         self.single_position_groupbox.grid_button.hide()
         self.single_position_groupbox.toggled.connect(self._toggle_checkbox_save_pos)
-        self.single_position_groupbox.add_pos_button.clicked.connect(
+        self.single_position_groupbox.add_button.clicked.connect(
             self._toggle_checkbox_save_pos
         )
-        self.single_position_groupbox.remove_pos_button.clicked.connect(
+        self.single_position_groupbox.remove_button.clicked.connect(
             self._toggle_checkbox_save_pos
         )
-        self.single_position_groupbox.clear_pos_button.clicked.connect(
+        self.single_position_groupbox.clear_button.clicked.connect(
             self._toggle_checkbox_save_pos
         )
 
@@ -113,14 +113,14 @@ class MultiDWidget(MDAWidget):
         self.grid_position_groupbox.stage_tableWidget.setMinimumHeight(175)
         self.grid_position_groupbox.layout().setSpacing(0)
         self.grid_position_groupbox.layout().setContentsMargins(0, 7, 0, 0)
-        self.grid_position_groupbox.add_pos_button.hide()
+        self.grid_position_groupbox.add_button.hide()
         self.grid_position_groupbox.grid_button.hide()
 
         self.grid_position_groupbox.toggled.connect(self._on_grid_pos_toggled)
-        self.grid_position_groupbox.remove_pos_button.clicked.connect(
+        self.grid_position_groupbox.remove_button.clicked.connect(
             self._on_grid_pos_toggled
         )
-        self.grid_position_groupbox.clear_pos_button.clicked.connect(
+        self.grid_position_groupbox.clear_button.clicked.connect(
             self._on_grid_pos_toggled
         )
 
