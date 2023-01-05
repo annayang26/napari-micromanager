@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import cast
 
+import numpy as np
 from napari_micromanager._mda_meta import SEQUENCE_META_KEY, SequenceMeta
 from pymmcore_plus import CMMCorePlus
 from pymmcore_widgets import MDAWidget
@@ -300,47 +301,44 @@ class MultiDWidget(MDAWidget):
 
     def _create_translation_points(
         self, rows: int, cols: int
-    ) -> list[tuple[float, float, int, int]]:
+    ) -> list[tuple[float, float]]:
+
+        grid_array = np.arange(rows * cols).reshape((rows, cols))
+
+        # flip odd rows
+        for i in range(len(grid_array)):
+            if i % 2 != 0:
+                grid_array[i] = np.flip(grid_array[i])
 
         cam_size_x = self._mmc.getROI(self._mmc.getCameraDevice())[2]
         cam_size_y = self._mmc.getROI(self._mmc.getCameraDevice())[3]
-        move_x = (
-            cam_size_x - (self.grid_control.ovelap_spinBox.value() * cam_size_x) / 100
-        )
-        move_y = (
-            cam_size_y - (self.grid_control.ovelap_spinBox.value() * cam_size_y) / 100
-        )
-        x = -((cols - 1) * (cam_size_x / 2))
-        y = (rows - 1) * (cam_size_y / 2)
+        percent_overlap = self.grid_control.ovelap_spinBox.value()
+        move_x = float(cam_size_x - (percent_overlap * cam_size_x) / 100)
+        move_y = float(cam_size_y - (percent_overlap * cam_size_y) / 100)
 
-        # for 'snake' acquisition
-        points = []
-        for r in range(rows):
-            if r % 2:  # for odd rows
-                col = cols - 1
-                for c in range(cols):
-                    if c == 0:
-                        y -= move_y
-                    points.append((x, y, r, c))
-                    if col > 0:
-                        col -= 1
-                        x -= move_x
-            else:  # for even rows
-                for c in range(cols):
-                    if r > 0 and c == 0:
-                        y -= move_y
-                    points.append((x, y, r, c))
-                    if c < cols - 1:
-                        x += move_x
-        return points
+        row = 0
+        col = 0
+        translate_x = 0.0
+        translate_y = 0.0
+        translate_pos_list = []
+        for pos_idx in range((rows * cols) + 1):
+            for idx, grid_array_item in enumerate(grid_array):
+                if pos_idx in grid_array_item:
+                    row = idx
+                    col = list(grid_array_item).index(pos_idx)
+                    translate_x = col * move_x
+                    translate_y = row * move_y
+                    translate_pos_list.append((translate_x, translate_y))
+                    break
 
-    def _set_translate_point_list(self) -> list[tuple[float, float, int, int]]:
-        t_list = self._create_translation_points(
-            self.grid_control.scan_size_spinBox_r.value(),
-            self.grid_control.scan_size_spinBox_c.value(),
-        )
-        if self.position_groupbox.stage_tableWidget.rowCount() > 0:
-            t_list = t_list * self.position_groupbox.stage_tableWidget.rowCount()
+        return translate_pos_list
+
+    def _set_translate_point_list(self) -> list[tuple[float, float]]:
+        rows = self.grid_control.scan_size_spinBox_r.value()
+        cols = self.grid_control.scan_size_spinBox_c.value()
+        t_list = self._create_translation_points(rows, cols)
+        if self.position_groupbox.stage_tableWidget.rowCount() > rows * cols:
+            t_list = t_list * (rows * cols)
         return t_list
 
     def set_state(self, state: dict | MDASequence | str | Path) -> None:

@@ -260,7 +260,7 @@ class _NapariMDAHandler:
         z_arr[im_idx] = image
 
         x = meta.grid_translation_points[event.index["p"]][0]
-        y = -meta.grid_translation_points[event.index["p"]][1]
+        y = meta.grid_translation_points[event.index["p"]][1]
 
         layergroups = self._get_defaultdict_layers(event)
         # unlink layers to translate
