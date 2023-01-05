@@ -101,7 +101,7 @@ class _NapariMDAHandler:
         yx_shape = [self._mmc.getImageHeight(), self._mmc.getImageWidth()]
 
         # now create a zarr array in a temporary directory for each layer
-        for (id_, shape, kwargs) in layers_to_create:
+        for idx, (id_, shape, kwargs) in enumerate(layers_to_create):
             tmp = tempfile.TemporaryDirectory()
             dtype = f"uint{self._mmc.getImageBitDepth()}"
 
@@ -112,6 +112,13 @@ class _NapariMDAHandler:
 
             # store the zarr array and temporary directory for later cleanup
             self._tmp_arrays[id_] = (z, tmp)
+
+            ##############################################################################
+            if meta.mode == "grid" and meta.translate_grid and idx == 0:
+                stitched = zarr.open("TEST", shape=meta.for_stitched, dtype=dtype)
+                self.viewer.add_image(stitched, name="TEST")
+                self._tmp_arrays["TEST"] = (stitched, tmp)
+        ##############################################################################
 
         # set axis_labels after adding the images to ensure that the dims exist
         self.viewer.dims.axis_labels = axis_labels
@@ -295,6 +302,15 @@ class _NapariMDAHandler:
         )
         self.viewer.camera.zoom = 1 / zoom_out_factor
         self.viewer.reset_view()
+
+        ##############################################################################
+        cam_size_x = self._mmc.getROI(self._mmc.getCameraDevice())[2]
+        cam_size_y = self._mmc.getROI(self._mmc.getCameraDevice())[3]
+        st_z_arr = self._tmp_arrays["TEST"][0]
+        st_z_arr[int(x) : int(x) + cam_size_x, int(y) : int(y) + cam_size_y] = image
+
+
+##############################################################################
 
 
 def _determine_sequence_layers(

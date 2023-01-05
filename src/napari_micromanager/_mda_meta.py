@@ -29,6 +29,9 @@ class SequenceMeta:
     grid_translation_points: list = field(default_factory=list)
     scan_size_r: int = 0
     scan_size_c: int = 0
+    #######################################
+    for_stitched: tuple = field(default_factory=tuple)
+    #######################################
 
     def replace(self, **kwargs: Any) -> SequenceMeta:
         """Return a new SequenceMeta with the given kwargs replaced."""

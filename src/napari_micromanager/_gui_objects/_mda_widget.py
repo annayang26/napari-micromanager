@@ -279,6 +279,9 @@ class MultiDWidget(MDAWidget):
                 grid_translation_points=self._set_translate_point_list(),
                 scan_size_c=self.grid_control.scan_size_spinBox_c.value(),
                 scan_size_r=self.grid_control.scan_size_spinBox_r.value(),
+                #######################################
+                for_stitched=self._get_stitched_shape()
+                #######################################
             )
         else:
             sequence.metadata[SEQUENCE_META_KEY] = SequenceMeta(
@@ -339,6 +342,16 @@ class MultiDWidget(MDAWidget):
         if self.position_groupbox.stage_tableWidget.rowCount() > rows * cols:
             t_list = t_list * (rows * cols)
         return t_list
+
+    #######################################
+    def _get_stitched_shape(self) -> tuple:
+        cam_size_x = self._mmc.getROI(self._mmc.getCameraDevice())[2]
+        cam_size_y = self._mmc.getROI(self._mmc.getCameraDevice())[3]
+        rows = self.grid_control.scan_size_spinBox_r.value()
+        cols = self.grid_control.scan_size_spinBox_c.value()
+        return (cols * cam_size_x, rows * cam_size_y)
+
+    #######################################
 
     def set_state(self, state: dict | MDASequence | str | Path) -> None:
         super().set_state(state)
