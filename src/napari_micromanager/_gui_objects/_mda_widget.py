@@ -296,7 +296,6 @@ class MultiDWidget(MDAWidget):
             name = table.item(row, 0).text()
             grid_name, grid_pos = table.item(row, 0).whatsThis().split("_")
             grid_info[name] = (grid_name, grid_pos)
-        print(grid_info)
         return grid_info
 
     def _create_translation_points(
