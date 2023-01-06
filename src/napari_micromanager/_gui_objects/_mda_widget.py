@@ -35,6 +35,8 @@ class MultiDWidget(MDAWidget):
     ) -> None:
         super().__init__(include_run_button=True, parent=parent, mmcore=mmcore)
 
+        self._row_col: list[tuple[str, int, int]] = []
+
         v_layout = cast(QVBoxLayout, self._central_widget.layout())
         self._save_groupbox = SaveWidget()
         self._save_groupbox.setSizePolicy(
@@ -60,6 +62,8 @@ class MultiDWidget(MDAWidget):
         # positions tab (see _on_tab_changed method). Maybe find a better way?
         self.position_groupbox: PositionTable
         self._update_position_widget()
+
+        self._mmc.events.systemConfigurationLoaded.connect(self._row_col.clear)
 
     def _update_position_widget(self) -> None:
         self.single_position_groupbox = self.position_groupbox
@@ -125,6 +129,11 @@ class MultiDWidget(MDAWidget):
             self._on_grid_pos_toggled
         )
 
+        self.grid_position_groupbox.remove_button.clicked.connect(
+            self._update_rows_cols
+        )
+        self.grid_position_groupbox.clear_button.clicked.connect(self._update_rows_cols)
+
         # remove table and buttons from layout
         widgets = [
             self.grid_position_groupbox.layout().itemAt(i).widget()
@@ -150,6 +159,7 @@ class MultiDWidget(MDAWidget):
         self.grid_control.sendPosList.connect(
             self.grid_position_groupbox._add_grid_positions_to_table
         )
+        self.grid_control.sendPosList.connect(self._store_rows_cols)
 
         grid_wdgs = [
             self.grid_control.layout().itemAt(i).widget()
@@ -226,6 +236,35 @@ class MultiDWidget(MDAWidget):
 
         return group
 
+    def _store_rows_cols(self) -> None:
+        row = self.grid_control.scan_size_spinBox_r.value()
+        col = self.grid_control.scan_size_spinBox_c.value()
+        n_rows = self.grid_position_groupbox.stage_tableWidget.rowCount()
+        last_added = self.grid_position_groupbox.stage_tableWidget.item(n_rows - 1, 0)
+        grid_n = last_added.whatsThis().split("_")[0]
+        self._row_col.append((grid_n, row, col))
+        print("______add______", self._row_col)
+
+    def _update_rows_cols(self) -> None:
+        if not self.grid_position_groupbox.stage_tableWidget.rowCount():
+            self._row_col.clear()
+            return
+
+        rows = {
+            r.row()
+            for r in self.grid_position_groupbox.stage_tableWidget.selectedIndexes()
+        }
+        for r in rows:
+            whatsthis = self.grid_position_groupbox.stage_tableWidget.item(
+                r, 0
+            ).whatsThis()
+            for idx, (grid, _, _) in enumerate(self._row_col):
+                if whatsthis.split("_")[0] == grid:
+                    self._row_col.pop(idx)
+                    break
+
+        print("_____del_______", self._row_col)
+
     def _on_tab_changed(self, idx: int) -> None:
         if idx == 0:
             self.position_groupbox = self.single_position_groupbox
@@ -275,8 +314,10 @@ class MultiDWidget(MDAWidget):
                 grid_info=self._get_grid_meta(),
                 translate_grid=self.radiobtn_grid.isChecked(),
                 grid_translation_points=self._set_translate_point_list(),
-                scan_size_c=self.grid_control.scan_size_spinBox_c.value(),
-                scan_size_r=self.grid_control.scan_size_spinBox_r.value(),
+                scan_size_r=max(i[1] for i in self._row_col),
+                scan_size_c=max(i[2] for i in self._row_col)
+                # scan_size_c=self.grid_control.scan_size_spinBox_c.value(),
+                # scan_size_r=self.grid_control.scan_size_spinBox_r.value(),
             )
         else:
             sequence.metadata[SEQUENCE_META_KEY] = SequenceMeta(
