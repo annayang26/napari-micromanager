@@ -364,8 +364,8 @@ class MultiDWidget(MDAWidget):
                 if pos_idx in grid_array_item:
                     row = idx
                     col = list(grid_array_item).index(pos_idx)
-                    translate_x = col * move_x
-                    translate_y = row * move_y
+                    translate_x = (col * move_x) * self._mmc.getPixelSizeUm()
+                    translate_y = (row * move_y) * self._mmc.getPixelSizeUm()
                     translate_pos_list.append((translate_x, translate_y))
                     break
 
