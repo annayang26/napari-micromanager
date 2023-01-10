@@ -11,6 +11,7 @@ from pymmcore_widgets import (
     ConfigurationWidget,
     DefaultCameraExposureWidget,
     GroupPresetTableWidget,
+    HCSWidget,
     LiveButton,
     ObjectivesWidget,
     PixelSizeWidget,
@@ -38,6 +39,7 @@ from ._min_max_widget import MinMax
 from ._shutters_widget import MMShuttersWidget
 from ._stages_widget import MMStagesWidget
 
+
 if TYPE_CHECKING:
 
     import napari.viewer
@@ -56,6 +58,7 @@ DOCK_WIDGETS: Dict[str, Tuple[type[QWidget], str | None]] = {  # noqa: U006
     "Camera ROI": (CameraRoiWidget, MDI6.crop),
     "Pixel Size Table": (PixelSizeWidget, MDI6.ruler),
     "MDA": (MultiDWidget, None),
+    "HCS": (HCSWidget, None),
 }
 
 
@@ -316,6 +319,9 @@ class MicroManagerToolbar(QMainWindow):
 
         mda = self._make_plugin_button("MDA", "MultiDimensional Acquisition")
         wdg.layout().addWidget(mda)
+
+        hcs = self._make_plugin_button("HCS", "MUlti Well Acquisition")
+        wdg.layout().addWidget(hcs)
 
         plgs_toolbar.addWidget(wdg)
 
