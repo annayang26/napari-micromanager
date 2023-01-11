@@ -99,9 +99,13 @@ class MicroManagerToolbar(QMainWindow):
             self._add_snap_live_toolbar(),
             self._add_tools_toolsbar(),
             self._add_plugins_toolbar(),
+            "",
             self._add_shutter_toolbar(),
         ]
         for item in toolbar_items:
+            if not item:
+                self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
+                continue
             self.addToolBar(Qt.ToolBarArea.TopToolBarArea, item)
 
         self.installEventFilter(self)
