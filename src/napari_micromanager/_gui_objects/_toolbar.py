@@ -7,6 +7,7 @@ from fonticon_mdi6 import MDI6
 from pymmcore_plus import CMMCorePlus
 from pymmcore_widgets import (
     CameraRoiWidget,
+    ChannelGroupWidget,
     ChannelWidget,
     ConfigurationWidget,
     DefaultCameraExposureWidget,
@@ -212,10 +213,12 @@ class MicroManagerToolbar(QMainWindow):
         ch_toolbar.setMinimumHeight(TOOLBAR_SIZE)
 
         wdg = self._create_groupbox()
+        wdg.layout().setSpacing(5)
         wdg.setStyleSheet(GROUPBOX_STYLE)
 
         ch_lbl = QLabel(text="Channel:")
         wdg.layout().addWidget(ch_lbl)
+        wdg.layout().addWidget(ChannelGroupWidget())
         wdg.layout().addWidget(ChannelWidget())
 
         ch_toolbar.addWidget(wdg)
