@@ -18,6 +18,8 @@ from pymmcore_widgets import (
     PropertyBrowser,
     SnapButton,
 )
+
+# MDAWidget
 from qtpy.QtCore import QEvent, QObject, QSize, Qt
 from qtpy.QtWidgets import (
     QDockWidget,
@@ -57,6 +59,7 @@ DOCK_WIDGETS: Dict[str, Tuple[type[QWidget], str | None]] = {  # noqa: U006
     "Camera ROI": (CameraRoiWidget, MDI6.crop),
     "Pixel Size Table": (PixelSizeWidget, MDI6.ruler),
     "MDA": (MultiDWidget, None),
+    # "MDA": (MDAWidget, None)
 }
 
 
@@ -305,7 +308,7 @@ class MicroManagerToolbar(QMainWindow):
     def _add_plugins_toolbar(self) -> QToolBar:
         """Add a QToolBar containing plugins QPushButtons.
 
-        e.g. MDA, Explore, ...
+        e.g. MDA, ...
 
         QPushButtons are connected to the `_show_dock_widget` method.
 
@@ -343,6 +346,7 @@ class MicroManagerToolbar(QMainWindow):
         `key` must be a key in the DOCK_WIDGETS dict or a `str` stored in
         the `whatsThis` property of a `sender` `QPushButton`.
         """
+        floating = False
         if not key:
             # using QPushButton.whatsThis() property to get the key.
             btn = cast(QPushButton, self.sender())
@@ -364,6 +368,9 @@ class MicroManagerToolbar(QMainWindow):
                     f"Must be one of {list(DOCK_WIDGETS)} "
                     " or the `whatsThis` property of a `sender` `QPushButton`."
                 ) from e
+            # if wdg_cls == MDAWidget:
+            #     wdg = wdg_cls(parent=self, mmcore=self._mmc, include_run_button=True)
+            # else:
             wdg = wdg_cls(parent=self, mmcore=self._mmc)
 
             if isinstance(wdg, PropertyBrowser):
@@ -373,8 +380,9 @@ class MicroManagerToolbar(QMainWindow):
                 wdg._prop_table.setVerticalScrollBarPolicy(
                     Qt.ScrollBarPolicy.ScrollBarAlwaysOff
                 )
+                floating = True
 
-            dock_wdg = self._add_dock_widget(wdg, key, tabify=True)
+            dock_wdg = self._add_dock_widget(wdg, key, floating=floating, tabify=True)
             self._dock_widgets[key] = dock_wdg
 
     def _add_dock_widget(
@@ -387,7 +395,7 @@ class MicroManagerToolbar(QMainWindow):
             area="right",
             tabify=tabify,
         )
-        dock_wdg.setFloating(floating)
         with contextlib.suppress(AttributeError):
             dock_wdg._close_btn = False
+        dock_wdg.setFloating(floating)
         return dock_wdg

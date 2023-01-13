@@ -115,7 +115,7 @@ class MultiDWidget(MDAWidget):
 
         # Position table
         self.grid_position_groupbox = PositionTable("Grid Positions")
-        self.grid_position_groupbox.stage_tableWidget.setMinimumHeight(175)
+        self.grid_position_groupbox._table.setMinimumHeight(175)
         self.grid_position_groupbox.layout().setSpacing(0)
         self.grid_position_groupbox.layout().setContentsMargins(0, 7, 0, 0)
         self.grid_position_groupbox.add_button.hide()
@@ -239,25 +239,20 @@ class MultiDWidget(MDAWidget):
     def _store_rows_cols(self) -> None:
         row = self.grid_control.scan_size_spinBox_r.value()
         col = self.grid_control.scan_size_spinBox_c.value()
-        n_rows = self.grid_position_groupbox.stage_tableWidget.rowCount()
-        last_added = self.grid_position_groupbox.stage_tableWidget.item(n_rows - 1, 0)
+        n_rows = self.grid_position_groupbox._table.rowCount()
+        last_added = self.grid_position_groupbox._table.item(n_rows - 1, 0)
         grid_n = last_added.whatsThis().split("_")[0]
         self._row_col.append((grid_n, row, col))
         print("______add______", self._row_col)
 
     def _update_rows_cols(self) -> None:
-        if not self.grid_position_groupbox.stage_tableWidget.rowCount():
+        if not self.grid_position_groupbox._table.rowCount():
             self._row_col.clear()
             return
 
-        rows = {
-            r.row()
-            for r in self.grid_position_groupbox.stage_tableWidget.selectedIndexes()
-        }
+        rows = {r.row() for r in self.grid_position_groupbox._table.selectedIndexes()}
         for r in rows:
-            whatsthis = self.grid_position_groupbox.stage_tableWidget.item(
-                r, 0
-            ).whatsThis()
+            whatsthis = self.grid_position_groupbox._table.item(r, 0).whatsThis()
             for idx, (grid, _, _) in enumerate(self._row_col):
                 if whatsthis.split("_")[0] == grid:
                     self._row_col.pop(idx)
@@ -289,7 +284,7 @@ class MultiDWidget(MDAWidget):
     def _toggle_checkbox_save_pos(self) -> None:
         if (
             self.single_position_groupbox.isChecked()
-            and self.single_position_groupbox.stage_tableWidget.rowCount() > 0
+            and self.single_position_groupbox._table.rowCount() > 0
         ):
             self._save_groupbox._split_pos_checkbox.setEnabled(True)
 
@@ -305,7 +300,7 @@ class MultiDWidget(MDAWidget):
 
         if (
             self.grid_position_groupbox.isChecked()
-            and self.grid_position_groupbox.stage_tableWidget.rowCount() > 0
+            and self.grid_position_groupbox._table.rowCount() > 0
         ):
 
             sequence.metadata[SEQUENCE_META_KEY] = SequenceMeta(
@@ -329,7 +324,7 @@ class MultiDWidget(MDAWidget):
         return sequence
 
     def _get_grid_meta(self) -> dict:
-        table = self.grid_position_groupbox.stage_tableWidget
+        table = self.grid_position_groupbox._table
         grid_info = {}
         for row in range(table.rowCount()):
             name = table.item(row, 0).text()
@@ -375,7 +370,7 @@ class MultiDWidget(MDAWidget):
         rows = self.grid_control.scan_size_spinBox_r.value()
         cols = self.grid_control.scan_size_spinBox_c.value()
         t_list = self._create_translation_points(rows, cols)
-        if self.position_groupbox.stage_tableWidget.rowCount() > rows * cols:
+        if self.position_groupbox._table.rowCount() > rows * cols:
             t_list = t_list * (rows * cols)
         return t_list
 
