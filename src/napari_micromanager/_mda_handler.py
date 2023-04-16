@@ -2,13 +2,20 @@ from __future__ import annotations
 
 import contextlib
 import tempfile
-from typing import TYPE_CHECKING, Any, Callable, cast
+import time
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Deque,
+    cast,
+)
 
 import napari
 import numpy as np
 import zarr
 from pymmcore_plus import CMMCorePlus
-from superqt.utils import ensure_main_thread
+from superqt.utils import create_worker, ensure_main_thread
 from useq import MDAEvent, MDASequence
 
 from ._mda_meta import SEQUENCE_META_KEY, SequenceMeta
@@ -69,6 +76,7 @@ class _NapariMDAHandler:
 
         # mapping of id -> (zarr.Array, temporary directory) for each layer created
         self._tmp_arrays: dict[str, tuple[zarr.Array, tempfile.TemporaryDirectory]] = {}
+        self._deck: Deque[tuple[np.ndarray, MDAEvent]] = Deque()
 
         # Add all core connections to this list.  This makes it easy to disconnect
         # from core when this widget is closed.
@@ -130,11 +138,35 @@ class _NapariMDAHandler:
         for i in self.viewer.layers:
             if i.metadata.get("uid") == sequence.uid:
                 self._mmc.mda.toggle_pause()
-                return
 
-    @ensure_main_thread  # type: ignore [misc]
+        self._mda_running = True
+        # init index will always be less than any event index
+        self._largest_idx: tuple[int, ...] = (-1,)
+        self._io_t = create_worker(self._watch_mda, _start_thread=True)
+
+    def _watch_mda(self) -> None:
+        while self._mda_running:
+            with contextlib.suppress(IndexError):
+                self._process_frame(*self._deck.pop())
+        time.sleep(0.1)
+        # Add any images earlier images we may have skipped for performance
+        while self._deck:
+            self._process_frame(*self._deck.pop())
+
+    # with a Generator, some frame are skipped...
+    # def _watch_mda(self) -> Generator[None, None, None]:
+    #     while self._mda_running:
+    #         if self._deck:
+    #             self._process_frame(*self._deck.pop())
+    #         else:
+    #             time.sleep(0.5)
+    #         yield
+
     def _on_mda_frame(self, image: np.ndarray, event: MDAEvent) -> None:
         """Called on the `frameReady` event from the core."""
+        self._deck.append((image, event))
+
+    def _process_frame(self, image: np.ndarray, event: MDAEvent) -> None:
         seq_meta = getattr(event.sequence, "metadata", None)
 
         if not (seq_meta and seq_meta.get(SEQUENCE_META_KEY)):
@@ -150,38 +182,29 @@ class _NapariMDAHandler:
 
         # move the viewer step to the most recently added image
         # this seems to work better than self.viewer.dims.set_point(a, v)
-        cs = list(self.viewer.dims.current_step)
-        for a, v in enumerate(im_idx):
-            cs[a] = v
-        self.viewer.dims.current_step = tuple(cs)
 
-        self._add_stage_pos_metadata(layer_name, event, im_idx)
+        if im_idx > self._largest_idx:
+            self._largest_idx = im_idx
+            # Processing the most recent event
+            # update the viewer in the main thread
+            cs = list(self.viewer.dims.current_step)
+            for a, v in enumerate(im_idx):
+                cs[a] = v
+            self._update_viewer_dims(cs, layer_name, event)
 
+    @ensure_main_thread  # type: ignore [misc]
+    def _update_viewer_dims(
+        self, step: tuple, layer_name: str, event: ActiveMDAEvent
+    ) -> None:
+        self.viewer.dims.current_step = step
+        # update display
         layer: Image = self.viewer.layers[layer_name]
         if not layer.visible:
             layer.visible = True
-        layer.reset_contrast_limits()
-
-    def _add_stage_pos_metadata(
-        self, layer_name: str, event: MDAEvent, image_idx: tuple
-    ) -> None:
-        """Add positions info to layer metadata.
-
-        This info is used in the `_mouse_right_click` method.
-        """
-        layer = self.viewer.layers[layer_name]
-
-        try:
-            layer.metadata["positions"].append(
-                ((image_idx), event.x_pos, event.y_pos, event.z_pos)
-            )
-        except KeyError:
-            layer.metadata["positions"] = [
-                (image_idx, event.x_pos, event.y_pos, event.z_pos)
-            ]
 
     def _on_mda_finished(self, sequence: MDASequence) -> None:
-        pass
+        # Save layer and add increment to save name.
+        self._mda_running = False
 
     def _create_empty_image_layer(
         self,
