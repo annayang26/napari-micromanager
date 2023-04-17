@@ -37,12 +37,12 @@ dependencies = [
     "fonticon-materialdesignicons6",
     "napari >=0.4.13",
     "pymmcore-plus >=0.6.6",
-    "pymmcore-widgets@git+https://github.com/fdrgsp/pymmcore-widgets#egg=spim",
+    "pymmcore-widgets@git+https://github.com/fdrgsp/pymmcore-widgets@spim",
     "superqt >=0.3.1",
     "tifffile",
     "useq-schema >=0.1.5",
     "zarr",
-    "pymmcore-MDA-writers@git+https://github.com/fdrgsp/pymmcore-MDA-writers#egg=update_writer"
+    "pymmcore-MDA-writers@git+https://github.com/fdrgsp/pymmcore-MDA-writers@update_writer"
 ]
 
 # extras
@@ -72,7 +72,7 @@ source = "vcs"
 include = ["/src", "/tests"]
 
 [tool.hatch.metadata]
-allow-direct-reference = true
+allow-direct-references = true
 
 # https://github.com/charliermarsh/ruff
 [tool.ruff]
