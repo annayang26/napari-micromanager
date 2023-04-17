@@ -194,8 +194,10 @@ class _NapariMDAHandler:
             layer.visible = True
 
     def _on_mda_finished(self, sequence: MDASequence) -> None:
-        # Save layer and add increment to save name.
         self._mda_running = False
+        if self._deck:
+            self._process_frame(*self._deck.pop())
+        self._deck = Deque()
 
     def _create_empty_image_layer(
         self,
