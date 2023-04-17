@@ -8,6 +8,7 @@ from typing import (
     Any,
     Callable,
     Deque,
+    Generator,
     cast,
 )
 
@@ -144,23 +145,13 @@ class _NapariMDAHandler:
         self._largest_idx: tuple[int, ...] = (-1,)
         self._io_t = create_worker(self._watch_mda, _start_thread=True)
 
-    def _watch_mda(self) -> None:
+    def _watch_mda(self) -> Generator[None, None, None]:
         while self._mda_running:
-            with contextlib.suppress(IndexError):
+            if self._deck:
                 self._process_frame(*self._deck.pop())
-        time.sleep(0.1)
-        # Add any images earlier images we may have skipped for performance
-        while self._deck:
-            self._process_frame(*self._deck.pop())
-
-    # with a Generator, some frame are skipped...
-    # def _watch_mda(self) -> Generator[None, None, None]:
-    #     while self._mda_running:
-    #         if self._deck:
-    #             self._process_frame(*self._deck.pop())
-    #         else:
-    #             time.sleep(0.5)
-    #         yield
+            else:
+                time.sleep(0.1)
+            yield
 
     def _on_mda_frame(self, image: np.ndarray, event: MDAEvent) -> None:
         """Called on the `frameReady` event from the core."""
