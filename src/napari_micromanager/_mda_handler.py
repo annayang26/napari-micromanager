@@ -195,8 +195,10 @@ class _NapariMDAHandler:
 
     def _on_mda_finished(self, sequence: MDASequence) -> None:
         self._mda_running = False
+        # the last frame is not added so we need to add it here
         if self._deck:
             self._process_frame(*self._deck.pop())
+        # reset the _deck to be sure to start fresh next time
         self._deck = Deque()
 
     def _create_empty_image_layer(
