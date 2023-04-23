@@ -1,7 +1,7 @@
 from typing import List, Optional, Tuple, cast
 
 from pymmcore_plus import CMMCorePlus, DeviceType
-from pymmcore_widgets import StageWidget
+from pymmcore_widgets import StageWidget, KinesisRotationWidget
 from qtpy.QtCore import QMimeData, Qt
 from qtpy.QtGui import QDrag, QDragEnterEvent, QDropEvent, QMouseEvent
 from qtpy.QtWidgets import QGroupBox, QHBoxLayout, QSizePolicy, QWidget
@@ -44,7 +44,10 @@ class MMStagesWidget(QWidget):
                 continue
             bx.setLayout(QHBoxLayout())
             bx.setSizePolicy(sizepolicy)
-            bx.layout().addWidget(StageWidget(device=stage_dev))
+            if stage_dev == "KBD101_28252107":
+                bx.layout().addWidget(KinesisRotationWidget("KBD101_28252107"))
+            else:
+                bx.layout().addWidget(StageWidget(device=stage_dev))
             self.layout().addWidget(bx)
         self.resize(self.sizeHint())
 

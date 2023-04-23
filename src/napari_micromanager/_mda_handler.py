@@ -201,6 +201,12 @@ class _NapariMDAHandler:
         # reset the _deck to be sure to start fresh next time
         self._deck = Deque()
 
+        for layer in self.viewer.layers:
+            if layer.metadata.get("uid") == sequence.uid:
+                layer.data = np.squeeze(layer.data)
+                break
+
+
     def _create_empty_image_layer(
         self,
         arr: zarr.Array,
@@ -225,14 +231,22 @@ class _NapariMDAHandler:
         meta = cast("SequenceMeta", sequence.metadata.get(SEQUENCE_META_KEY))
 
         # add Z to layer scale
-        if (pix_size := self._mmc.getPixelSizeUm()) != 0:
-            scale = [1.0] * (arr.ndim - 2) + [pix_size] * 2
-            if (index := sequence.used_axes.find("z")) > -1:
-                if meta.split_channels and sequence.used_axes.find("c") < index:
-                    index -= 1
-                scale[index] = getattr(sequence.z_plan, "step", 1)
-        else:
-            scale = None
+        # if (pix_size := self._mmc.getPixelSizeUm()) != 0:
+        #     scale = [1.0] * (arr.ndim - 2) + [pix_size] * 2
+        #     if (index := sequence.used_axes.find("z")) > -1:
+        #         if meta.split_channels and sequence.used_axes.find("c") < index:
+        #             index -= 1
+        #         scale[index] = getattr(sequence.z_plan, "step", 1)
+        # else:
+        #     scale = None
+
+        # add Z to layer scale
+        pix_size = 0.406
+        scale = [1.0] * (arr.ndim - 2) + [pix_size] * 2
+        if (index := sequence.used_axes.find("z")) > -1:
+            if meta.split_channels and sequence.used_axes.find("c") < index:
+                index -= 1
+            scale[index] = getattr(sequence.z_plan, "step", 1)
 
         return self.viewer.add_image(
             arr,
