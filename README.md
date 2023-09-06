@@ -16,9 +16,30 @@ GUI interface between napari and micromanager powered by [pymmcore-plus](https:/
 
 ## Installation
 
-You can install `napari-micromanager` via [pip]:
+We recomend to use [conda] to first create a new environment:
 
-    pip install napari-micromanager
+```
+conda create -n napari-mm python=3.10
+```
+
+You can then activate the newly created envirinment:
+
+```
+conda activate napari-mm
+```
+
+And install `napari-micromanager` via [pip]:
+
+```
+pip install napari-micromanager
+```
+
+Note that before start using `napari-micromanager`, you also have to install one of the [PyQt]/[PySide] backend, for example `PyQt6`:
+
+```
+pip install PyQt6
+```
+
 
 ### Getting micromanager adapters:
 
@@ -41,22 +62,17 @@ environment variable:
 export MICROMANAGER_PATH='/path/to/Micro-Manager-...'
 ```
 
-## Contributing
-
-Contributions are very welcome.
-
 ### Launching napari with plugin
-You can launch napari and automatically load this plugin using the `launch-dev.py` script:
-
-```bash
-python launch-dev.py
-```
-
-Alternatively you can run:
+You can launch napari and automatically load this plugin using:
 
 ```bash
 napari -w napari-micromanager
 ```
+
+### Contributing
+
+Contributions are very welcome.
+
 
 ## License
 
@@ -81,3 +97,6 @@ If you encounter any problems, please [file an issue] along with a detailed desc
 [napari]: https://github.com/napari/napari
 [pip]: https://pypi.org/project/pip/
 [PyPI]: https://pypi.org/
+[conda]: https://docs.conda.io/projects/miniconda/en/latest/
+[PyQt]: https://riverbankcomputing.com/software/pyqt/
+[PySide]: https://www.qt.io/qt-for-python
