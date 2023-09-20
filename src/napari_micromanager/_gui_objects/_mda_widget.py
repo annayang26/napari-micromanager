@@ -4,6 +4,7 @@ import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
+from pymmcore_mda_writers import MiltiTiffWriter
 from pymmcore_widgets import MDAWidget
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
@@ -31,6 +32,9 @@ class MultiDWidget(MDAWidget):
         self, *, parent: QWidget | None = None, mmcore: CMMCorePlus | None = None
     ) -> None:
         super().__init__(include_run_button=True, parent=parent, mmcore=mmcore)
+
+        self._tiff_writer = MiltiTiffWriter(core=mmcore)
+
         # add save widget
         v_layout = cast(QVBoxLayout, self._central_widget.layout())
         self._save_groupbox = SaveWidget()
@@ -58,10 +62,18 @@ class MultiDWidget(MDAWidget):
         ):
             self.checkBox_split_channels.setChecked(False)
 
-    def _on_save_toggled(self) -> None:
+    def _on_save_toggled(self, checked: bool) -> None:
+        self._tiff_writer.folder_path = (
+            self._save_groupbox._directory.text() if checked else None
+        )
+        self._tiff_writer.file_name = (
+            self._save_groupbox._fname.text() if checked else ""
+        )
+
+        print(self._tiff_writer.folder_path, self._tiff_writer.file_name)
+
         if self.position_widget.value():
             self._save_groupbox._split_pos_checkbox.setEnabled(True)
-
         else:
             self._save_groupbox._split_pos_checkbox.setCheckState(
                 Qt.CheckState.Unchecked
