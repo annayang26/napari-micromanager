@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING, cast
 
 from pymmcore_mda_writers import MultiTiffWriter
 from pymmcore_widgets import MDAWidget
-from pymmcore_widgets._hcs_widget._main_wizard_widget import HCSWizard
+from pymmcore_widgets._hcs_widget._main_wizard_widget import Center, HCSWizard, WellInfo
+from pymmcore_widgets._hcs_widget._util import apply_rotation_matrix, get_well_center
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import (
     QCheckBox,
@@ -17,7 +18,7 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from useq import AxesBasedAF, MDASequence
+from useq import AxesBasedAF, GridRowsColumns, MDASequence, Position, RandomPoints
 
 from napari_micromanager._mda_meta import SEQUENCE_META_KEY, SequenceMeta
 
@@ -45,8 +46,6 @@ class HCSWidget(HCSWizard):
 
     def accept(self) -> None:
         """Override QWizard default accept method."""
-        print(self.value())
-
         well_centers = self._get_well_center_in_stage_coordinates()
         if well_centers is None:
             return
@@ -76,6 +75,64 @@ class HCSWidget(HCSWizard):
             positions.append(pos)
 
         self.valueChanged.emit(positions)
+
+    def _get_well_center_in_stage_coordinates(
+        self,
+    ) -> list[tuple[WellInfo, float, float]] | None:
+        plate, _, calibration, _ = self.value()
+        _, wells = self.plate_page.value()
+
+        if wells is None or calibration is None:
+            return None
+
+        a1_x, a1_y = (calibration.well_A1_center_x, calibration.well_A1_center_y)
+        wells_center_stage_coords = []
+        for well in wells:
+            x, y = get_well_center(plate, well, a1_x, a1_y)
+            if calibration.rotation_matrix is not None:
+                x, y = apply_rotation_matrix(
+                    calibration.rotation_matrix,
+                    calibration.well_A1_center_x,
+                    calibration.well_A1_center_y,
+                    x,
+                    y,
+                )
+            wells_center_stage_coords.append((well, x, y))
+
+        return wells_center_stage_coords
+
+    def _get_fovs_in_stage_coords(
+        self, wells_center: list[tuple[WellInfo, float, float]], _show: bool = True
+    ) -> list[Position]:
+        """Get the calibrated stage coords of each FOV of the selected wells."""
+        _, _, _, mode = self.value()
+
+        positions: list[Position] = []
+
+        for well, well_center_x, well_center_y in wells_center:
+            if isinstance(mode, Center):
+                positions.append(
+                    Position(x=well_center_x, y=well_center_y, name=f"{well.name}")
+                )
+
+            elif isinstance(mode, GridRowsColumns):
+                positions.append(
+                    Position(
+                        x=well_center_x,
+                        y=well_center_y,
+                        name=f"{well.name}",
+                        sequence=MDASequence(grid_plan=mode),
+                    )
+                )
+
+            elif isinstance(mode, RandomPoints):
+                for idx, fov in enumerate(mode):
+                    x, y = (fov.x * 1000) + well_center_x, (
+                        fov.y * 1000
+                    ) + well_center_y
+                    positions.append(Position(x=x, y=y, name=f"{well.name}_{idx:04d}"))
+
+        return positions
 
 
 class MultiDWidget(MDAWidget):
