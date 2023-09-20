@@ -174,7 +174,7 @@ class MultiDWidget(MDAWidget):
 
     def _on_hcs_clicked(self) -> None:
         if not hasattr(self, "_hcs"):
-            self._hcs = HCSWidget(position_table=self.position_widget)
+            self._hcs = HCSWidget(position_table=self.position_widget, parent=self)
             self._hcs.valueChanged.connect(lambda x: self.position_widget.set_state(x))
         self._hcs.show()
         self._hcs.raise_()
