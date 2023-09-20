@@ -70,8 +70,6 @@ class MultiDWidget(MDAWidget):
             self._save_groupbox._fname.text() if checked else ""
         )
 
-        print(self._tiff_writer.folder_path, self._tiff_writer.file_name)
-
         if self.position_widget.value():
             self._save_groupbox._split_pos_checkbox.setEnabled(True)
         else:
