@@ -22,7 +22,6 @@ class SequenceMeta:
     should_save: bool = False
     file_name: str = ""
     save_dir: str = ""
-    save_pos: bool = False
 
     def replace(self, **kwargs: Any) -> SequenceMeta:
         """Return a new SequenceMeta with the given kwargs replaced."""

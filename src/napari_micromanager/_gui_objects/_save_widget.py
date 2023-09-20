@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from qtpy.QtWidgets import (
-    QCheckBox,
     QFileDialog,
     QGridLayout,
     QGroupBox,
@@ -33,9 +32,9 @@ class SaveWidget(QGroupBox):
         # filename
         self._fname = QLineEdit("Experiment")
         # checkbox for splitting files by position
-        self._split_pos_checkbox = QCheckBox(
-            text="Save XY Positions in separate files (ImageJ compatibility)"
-        )
+        # self._split_pos_checkbox = QCheckBox(
+        #     text="Save XY Positions in separate files (ImageJ compatibility)"
+        # )
 
         grid = QGridLayout()
         self.setLayout(grid)
@@ -46,7 +45,7 @@ class SaveWidget(QGroupBox):
         grid.addWidget(self._browse_save_btn, 0, 2)
         grid.addWidget(QLabel("File Name:"), 1, 0)
         grid.addWidget(self._fname, 1, 1)
-        grid.addWidget(self._split_pos_checkbox, 2, 0, 1, 3)
+        # grid.addWidget(self._split_pos_checkbox, 2, 0, 1, 3)
 
     def _request_save_path(self) -> None:
         save_dir = QFileDialog.getExistingDirectory(self, "Select Save Directory")
@@ -61,7 +60,7 @@ class SaveWidget(QGroupBox):
         return {
             "file_name": self._fname.text(),
             "save_dir": self._directory.text(),
-            "save_pos": self._split_pos_checkbox.isChecked(),
+            # "save_pos": self._split_pos_checkbox.isChecked(),
             "should_save": self.isChecked(),
         }
 
@@ -69,4 +68,4 @@ class SaveWidget(QGroupBox):
         self.setChecked(meta.should_save)
         self._fname.setText(meta.file_name)
         self._directory.setText(meta.save_dir)
-        self._split_pos_checkbox.setChecked(meta.save_pos)
+        # self._split_pos_checkbox.setChecked(meta.save_pos)
