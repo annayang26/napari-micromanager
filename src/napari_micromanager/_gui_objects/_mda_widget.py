@@ -5,11 +5,17 @@ from typing import TYPE_CHECKING, cast
 from pymmcore_widgets.mda import MDAWidget
 from qtpy.QtWidgets import (
     QCheckBox,
+    QGridLayout,
+    QHBoxLayout,
+    QLabel,
+    QRadioButton,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
 from useq import MDASequence
 
+# from pymmcore_plus.mda.handlers import ImageSequenceWriter
 from napari_micromanager._mda_meta import SEQUENCE_META_KEY, SequenceMeta
 
 if TYPE_CHECKING:
@@ -35,6 +41,22 @@ class MultiDWidget(MDAWidget):
         # add split channel checkbox
         self.checkBox_split_channels = QCheckBox(text="Split Channels")
         ch_layout.addWidget(self.checkBox_split_channels)
+
+        # add writers
+        writers_wdg = QWidget()
+        writers_layout = QHBoxLayout(writers_wdg)
+        writers_layout.setContentsMargins(0, 10, 0, 0)
+        writers_layout.setSpacing(10)
+
+        lbl = QLabel("Save as:")
+        lbl.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self._tiff_sequence_radio = QRadioButton("TIFF Sequence")
+        self._tiff_sequence_radio.setChecked(True)
+        writers_layout.addWidget(lbl)
+        writers_layout.addWidget(self._tiff_sequence_radio)
+
+        save_layout = cast("QGridLayout", self.save_info.layout())
+        save_layout.addWidget(writers_wdg, 2, 0, 1, 2)
 
     def value(self) -> MDASequence:
         """Return the current value of the widget."""
