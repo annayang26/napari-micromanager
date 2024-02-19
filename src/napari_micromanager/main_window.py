@@ -69,8 +69,6 @@ class MainWindow(MicroManagerToolbar):
         if config is not None:
             try:
                 self._mmc.loadSystemConfiguration(config)
-                if "Groups and Presets Table" not in list(viewer.window._dock_widgets):
-                    self._show_dock_widget("Groups and Presets Table")
             except FileNotFoundError:
                 # don't crash if the user passed an invalid config
                 warn(f"Config file {config} not found. Nothing loaded.", stacklevel=2)
@@ -82,10 +80,6 @@ class MainWindow(MicroManagerToolbar):
                 layout = self._startup.layout_le.text()
                 if cfg:
                     self._mmc.loadSystemConfiguration(cfg)
-                    if "Groups and Presets Table" not in list(
-                        viewer.window._dock_widgets
-                    ):
-                        self._show_dock_widget("Groups and Presets Table")
                 if layout:
                     ...
 
