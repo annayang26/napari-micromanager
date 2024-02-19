@@ -197,8 +197,8 @@ class MicroManagerToolbar(QMainWindow):
             else:
                 self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
 
-        if "Groups and Presets Table" not in list(viewer.window._dock_widgets):
-            self._show_dock_widget("Groups and Presets Table")
+        # if "Groups and Presets Table" not in list(viewer.window._dock_widgets):
+        #     self._show_dock_widget("Groups and Presets Table")
 
         # __________________________________________________________________________
 

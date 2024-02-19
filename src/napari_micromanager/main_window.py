@@ -114,14 +114,16 @@ class StartupDialog(QDialog):
 
         cfg_lbl = QLabel("Configuration file:")
         self.cfg_le = QLineEdit()
+        self.cfg_le.setPlaceholderText("Select a configuration file.")
         self.cfg_le.setObjectName("cfg")
-        self.cfg_btn = QPushButton("Browse")
+        self.cfg_btn = QPushButton("...")
         self.cfg_btn.clicked.connect(lambda: self._on_browse_clicked(self.cfg_le))
 
         layyout_lbl = QLabel("Layout file:")
         self.layout_le = QLineEdit()
+        self.layout_le.setPlaceholderText("Select a layout file.")
         self.layout_le.setObjectName("layout")
-        self.layout_btn = QPushButton("Browse")
+        self.layout_btn = QPushButton("...")
         self.layout_btn.clicked.connect(lambda: self._on_browse_clicked(self.layout_le))
 
         layout.addWidget(cfg_lbl, 0, 0)
@@ -139,6 +141,8 @@ class StartupDialog(QDialog):
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box, 2, 0, 1, 3)
+
+        self.resize(self.sizeHint())
 
     def _on_browse_clicked(self, le: QLineEdit) -> None:
         """Open a file dialog to select a file."""
