@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import contextlib
-from typing import TYPE_CHECKING, Dict, Tuple, cast
+from functools import partial
+from typing import TYPE_CHECKING, Any, Dict, Tuple, cast
 
 from fonticon_mdi6 import MDI6
 from pymmcore_plus import CMMCorePlus
@@ -17,6 +18,7 @@ from pymmcore_widgets import (
     PropertyBrowser,
     SnapButton,
 )
+from qtpy.QtGui import QFont
 
 try:
     # this was renamed
@@ -26,15 +28,19 @@ except ImportError:
 
 from qtpy.QtCore import QEvent, QObject, QSize, Qt
 from qtpy.QtWidgets import (
+    QAction,
     QDockWidget,
+    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QMenu,
     QPushButton,
     QSizePolicy,
     QTabWidget,
     QToolBar,
+    QToolButton,
     QWidget,
 )
 from superqt.fonticon import icon
@@ -101,22 +107,86 @@ class MicroManagerToolbar(QMainWindow):
                 )
 
         self._dock_widgets: dict[str, QDockWidget] = {}
-        # add toolbar items
-        toolbar_items = [
-            ConfigToolBar(self),
+
+        # __________Menu Toolbar____________________________________________________
+        menu_toolbar = QToolBar("Main Toolbar", self)
+        menu_toolbar.setMovable(False)
+        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, menu_toolbar)
+        self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
+
+        # __________Configurations__________________________________________________
+        self._config_btn = self._create_toolbutton("Configurations")
+        menu_toolbar.addWidget(self._config_btn)
+
+        config_menu = QMenu("Configurations", self)
+        self._config_btn.setMenu(config_menu)
+
+        self.act_load_cfg = QAction("Load System Configuration", self)
+        config_menu.addAction(self.act_load_cfg)
+        self.act_load_cfg.triggered.connect(self._browse_cfg)
+
+        self.act_config_wizard = QAction("Hardware Configuration Wizard", self)
+        config_menu.addAction(self.act_config_wizard)
+
+        # __________Widgets__________________________________________________________
+
+        self._widgets_btn = self._create_toolbutton("Widgets")
+        menu_toolbar.addWidget(self._widgets_btn)
+
+        widgets_menu = QMenu("Widgets", self)
+        self._widgets_btn.setMenu(widgets_menu)
+
+        for wdg in DOCK_WIDGETS:
+            act = QAction(wdg, self)
+            act.triggered.connect(partial(self._show_dock_widget, wdg))
+            widgets_menu.addAction(act)
+
+        toolbar_items: list[QWidget] = [
             ChannelsToolBar(self),
-            ObjectivesToolBar(self),
-            None,
-            ShuttersToolBar(self),
-            SnapLiveToolBar(self),
             ExposureToolBar(self),
-            ToolsToolBar(self),
+            SnapLiveToolBar(self),
+            ShuttersToolBar(self),
+            Widgets(self),
         ]
         for item in toolbar_items:
             if item:
                 self.addToolBar(Qt.ToolBarArea.TopToolBarArea, item)
             else:
                 self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
+
+        self._show_dock_widget("Groups and Presets Table")
+
+        # __________Layout__________________________________________________________
+        self._layout_btn = self._create_toolbutton("Layout")
+        menu_toolbar.addWidget(self._layout_btn)
+
+        layout_menu = QMenu("Layout", self)
+        self._layout_btn.setMenu(layout_menu)
+
+        self.act_save_layout = QAction("Save Layout", self)
+        layout_menu.addAction(self.act_save_layout)
+
+        self.act_load_layout = QAction("Load Layout", self)
+        layout_menu.addAction(self.act_load_layout)
+
+        # __________Toolsbar_________________________________________________________
+        self._toolbar_btn = self._create_toolbutton("Toolbar")
+        menu_toolbar.addWidget(self._toolbar_btn)
+
+        toolbar_menu = QMenu("Toolbar", self)
+        self._toolbar_btn.setMenu(toolbar_menu)
+
+        for item in toolbar_items:
+            if item:
+                checked = True
+                if isinstance(item, Widgets):
+                    item.hide()
+                    checked = False
+                act = QAction(item.windowTitle(), self, checkable=True, checked=checked)
+                act.triggered.connect(partial(self._toggle_toolbar, item))
+                toolbar_menu.addAction(act)
+
+        # __________________________________________________________________________
 
         self._is_initialized = False
         self.installEventFilter(self)
@@ -157,6 +227,37 @@ class MicroManagerToolbar(QMainWindow):
             self._initialize()
 
         return False
+
+    def contextMenuEvent(self, event: Any) -> None:
+        """Remove actions from the context menu."""
+        menu = self.createPopupMenu()
+        for action in menu.actions():
+            menu.removeAction(action)
+        menu.exec_(event.globalPos())
+
+    def _toggle_toolbar(self, toolbar: QToolBar) -> None:
+        if toolbar.isVisible():
+            toolbar.hide()
+        else:
+            toolbar.show()
+
+    def _browse_cfg(self) -> None:
+        """Open file dialog to select a config file."""
+        (config, _) = QFileDialog.getOpenFileName(
+            self, "Select a Micro-Manager configuration file", "", "cfg(*.cfg)"
+        )
+        if config:
+            self._mmc.unloadAllDevices()
+            self._mmc.loadSystemConfiguration(config)
+
+    def _create_toolbutton(self, text: str) -> QToolButton:
+        tool_btn = QToolButton()
+        tool_btn.setText(text)
+        tool_btn.setFont(QFont("Arial", 14))
+        tool_btn.setStyleSheet("QToolButton::menu-indicator { image: none; }")
+        tool_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        tool_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        return tool_btn
 
     def _show_dock_widget(self, key: str = "") -> None:
         """Look up widget class in DOCK_WIDGETS and add/create or show/raise.
@@ -214,7 +315,7 @@ class MicroManagerToolbar(QMainWindow):
         # fix napari bug that makes dock widgets too large
         with contextlib.suppress(AttributeError):
             self.viewer.window._qt_window.resizeDocks(
-                [dock_wdg], [widget.sizeHint().width() + 20], Qt.Orientation.Horizontal
+                [dock_wdg], [widget.sizeHint().width()], Qt.Orientation.Horizontal
             )
         with contextlib.suppress(AttributeError):
             dock_wdg._close_btn = False
@@ -276,6 +377,7 @@ class SnapLiveToolBar(MMToolBar):
         snap_btn = SnapButton()
         snap_btn.setText("")
         snap_btn.setToolTip("Snap")
+        snap_btn.setIcon(icon(MDI6.camera_outline))
         snap_btn.setFixedSize(TOOL_SIZE, TOOL_SIZE)
         self.addSubWidget(snap_btn)
 
@@ -284,11 +386,13 @@ class SnapLiveToolBar(MMToolBar):
         live_btn.setToolTip("Live Mode")
         live_btn.button_text_off = ""
         live_btn.button_text_on = ""
+        live_btn.icon_color_on = ""
+        live_btn.icon_color_off = "magenta"
         live_btn.setFixedSize(TOOL_SIZE, TOOL_SIZE)
         self.addSubWidget(live_btn)
 
 
-class ToolsToolBar(MMToolBar):
+class Widgets(MMToolBar):
     """A QToolBar containing QPushButtons for pymmcore-widgets.
 
     e.g. Property Browser, GroupPresetTableWidget, ...
@@ -300,7 +404,7 @@ class ToolsToolBar(MMToolBar):
     """
 
     def __init__(self, parent: MicroManagerToolbar) -> None:
-        super().__init__("Tools", parent)
+        super().__init__("Widgets", parent)
 
         if not isinstance(parent, MicroManagerToolbar):
             raise TypeError("parent must be a MicroManagerToolbar instance.")
@@ -313,13 +417,14 @@ class ToolsToolBar(MMToolBar):
             btn = QPushButton()
             btn.setToolTip(key)
             btn.setFixedSize(TOOL_SIZE, TOOL_SIZE)
-            btn.setIcon(icon(btn_icon, color=(0, 255, 0)))
+            btn.setIcon(icon(btn_icon))
             btn.setIconSize(QSize(30, 30))
             btn.setWhatsThis(key)
             btn.clicked.connect(parent._show_dock_widget)
             self.addSubWidget(btn)
 
         btn = QPushButton("MDA")
+        btn.setStyleSheet("color: black;")
         btn.setToolTip("MultiDimensional Acquisition")
         btn.setFixedSize(TOOL_SIZE, TOOL_SIZE)
         btn.setWhatsThis("MDA")

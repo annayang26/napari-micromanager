@@ -49,6 +49,8 @@ class MainWindow(MicroManagerToolbar):
         # add minmax dockwidget
         if "MinMax" not in getattr(self.viewer.window, "_dock_widgets", []):
             self.viewer.window.add_dock_widget(self.minmax, name="MinMax", area="left")
+            if hasattr(self.viewer.window._dock_widgets["MinMax"], "_close_btn"):
+                self.viewer.window._dock_widgets["MinMax"]._close_btn = False
 
         # queue cleanup
         self.destroyed.connect(self._cleanup)

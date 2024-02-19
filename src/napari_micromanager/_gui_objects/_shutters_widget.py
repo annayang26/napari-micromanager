@@ -48,6 +48,8 @@ class MMShuttersWidget(QWidget):
                 s = ShuttersWidget(shutter)
             else:
                 s = ShuttersWidget(shutter, autoshutter=False)
+            s.icon_color_open = ()
+            s.icon_color_closed = ()
             s.button_text_open = shutter
             s.button_text_closed = shutter
             self.layout().addWidget(s)
