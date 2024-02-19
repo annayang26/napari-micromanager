@@ -9,7 +9,7 @@ from pymmcore_widgets import (
     CameraRoiWidget,
     ChannelGroupWidget,
     ChannelWidget,
-    ConfigurationWidget,
+    # ConfigurationWidget,
     DefaultCameraExposureWidget,
     GroupPresetTableWidget,
     LiveButton,
@@ -103,7 +103,7 @@ class MicroManagerToolbar(QMainWindow):
         self._dock_widgets: dict[str, QDockWidget] = {}
         # add toolbar items
         toolbar_items = [
-            ConfigToolBar(self),
+            # ConfigToolBar(self),
             ChannelsToolBar(self),
             ObjectivesToolBar(self),
             None,
@@ -241,11 +241,11 @@ class MMToolBar(QToolBar):
         cast("QHBoxLayout", self.frame.layout()).addWidget(wdg)
 
 
-class ConfigToolBar(MMToolBar):
-    def __init__(self, parent: QWidget) -> None:
-        super().__init__("Configuration", parent)
-        self.addSubWidget(ConfigurationWidget())
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+# class ConfigToolBar(MMToolBar):
+#     def __init__(self, parent: QWidget) -> None:
+#         super().__init__("Configuration", parent)
+#         self.addSubWidget(ConfigurationWidget())
+#         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
 
 class ObjectivesToolBar(MMToolBar):
