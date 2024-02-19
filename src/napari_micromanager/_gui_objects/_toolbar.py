@@ -148,6 +148,7 @@ class MicroManagerToolbar(QMainWindow):
 
         self.act_save_layout = QAction("Save Layout", self)
         layout_menu.addAction(self.act_save_layout)
+        self.act_save_layout.triggered.connect(self.get_layout_state)
 
         self.act_load_layout = QAction("Load Layout", self)
         layout_menu.addAction(self.act_load_layout)
@@ -271,6 +272,13 @@ class MicroManagerToolbar(QMainWindow):
         tool_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         tool_btn.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         return tool_btn
+
+    def get_layout_state(self) -> None:  # -> dict[str, Any]:
+        """Return the current state of the viewer layout."""
+        print()
+        for dk in self.viewer.window._dock_widgets:
+            wdg = self.viewer.window._dock_widgets[dk]
+            print(dk, wdg.pos(), wdg.isFloating(), wdg.isVisible(), wdg.area)
 
     def _show_dock_widget(self, key: str = "") -> None:
         """Look up widget class in DOCK_WIDGETS and add/create or show/raise.
