@@ -10,6 +10,16 @@ import napari
 import napari.layers
 import napari.viewer
 from pymmcore_plus import CMMCorePlus
+from qtpy.QtWidgets import (
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
+    QGridLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QWidget,
+)
 
 from ._core_link import CoreViewerLink
 from ._gui_objects._toolbar import MicroManagerToolbar
@@ -59,9 +69,25 @@ class MainWindow(MicroManagerToolbar):
         if config is not None:
             try:
                 self._mmc.loadSystemConfiguration(config)
+                if "Groups and Presets Table" not in list(viewer.window._dock_widgets):
+                    self._show_dock_widget("Groups and Presets Table")
             except FileNotFoundError:
                 # don't crash if the user passed an invalid config
                 warn(f"Config file {config} not found. Nothing loaded.", stacklevel=2)
+
+        else:
+            self._startup = StartupDialog(self)
+            if self._startup.exec_():
+                cfg = self._startup.cfg_le.text()
+                layout = self._startup.layout_le.text()
+                if cfg:
+                    self._mmc.loadSystemConfiguration(cfg)
+                    if "Groups and Presets Table" not in list(
+                        viewer.window._dock_widgets
+                    ):
+                        self._show_dock_widget("Groups and Presets Table")
+                if layout:
+                    ...
 
     def _cleanup(self) -> None:
         for signal, slot in self._connections:
@@ -76,3 +102,49 @@ class MainWindow(MicroManagerToolbar):
         self.minmax.update_from_layers(
             lr for lr in visible if isinstance(lr, napari.layers.Image)
         )
+
+
+class StartupDialog(QDialog):
+    """A dialog to select the MicroManager configuration and layout files."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+
+        layout = QGridLayout(self)
+
+        cfg_lbl = QLabel("Configuration file:")
+        self.cfg_le = QLineEdit()
+        self.cfg_le.setObjectName("cfg")
+        self.cfg_btn = QPushButton("Browse")
+        self.cfg_btn.clicked.connect(lambda: self._on_browse_clicked(self.cfg_le))
+
+        layyout_lbl = QLabel("Layout file:")
+        self.layout_le = QLineEdit()
+        self.layout_le.setObjectName("layout")
+        self.layout_btn = QPushButton("Browse")
+        self.layout_btn.clicked.connect(lambda: self._on_browse_clicked(self.layout_le))
+
+        layout.addWidget(cfg_lbl, 0, 0)
+        layout.addWidget(self.cfg_le, 0, 1)
+        layout.addWidget(self.cfg_btn, 0, 2)
+
+        layout.addWidget(layyout_lbl, 1, 0)
+        layout.addWidget(self.layout_le, 1, 1)
+        layout.addWidget(self.layout_btn, 1, 2)
+
+        # Create OK and Cancel buttons
+        button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box, 2, 0, 1, 3)
+
+    def _on_browse_clicked(self, le: QLineEdit) -> None:
+        """Open a file dialog to select a file."""
+        file_type = "cfg" if le.objectName() == "cfg" else "json"
+        filename, _ = QFileDialog.getOpenFileName(
+            self, "Open file", "", f"MicroManager files (*.{file_type})"
+        )
+        if filename:
+            le.setText(filename)

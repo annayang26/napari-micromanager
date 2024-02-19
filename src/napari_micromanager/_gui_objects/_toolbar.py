@@ -114,6 +114,17 @@ class MicroManagerToolbar(QMainWindow):
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, menu_toolbar)
         self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
 
+        # __________Separator_______________________________________________________
+        # NOTE: it does not work in napari, why?
+        # separator_toolbar = QToolBar("Separator", self)
+        # separator_toolbar.setMovable(False)
+        # self.addToolBar(Qt.ToolBarArea.TopToolBarArea, separator_toolbar)
+        # self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
+        # self.sep = QFrame()
+        # self.sep.setFrameShape(QFrame.Shape.HLine)
+        # self.sep.setFrameShadow(QFrame.Shadow.Plain)
+        # separator_toolbar.addWidget(self.sep)
+
         # __________Configurations__________________________________________________
         self._config_btn = self._create_toolbutton("Configurations")
         menu_toolbar.addWidget(self._config_btn)
@@ -127,34 +138,6 @@ class MicroManagerToolbar(QMainWindow):
 
         self.act_config_wizard = QAction("Hardware Configuration Wizard", self)
         config_menu.addAction(self.act_config_wizard)
-
-        # __________Widgets__________________________________________________________
-
-        self._widgets_btn = self._create_toolbutton("Widgets")
-        menu_toolbar.addWidget(self._widgets_btn)
-
-        widgets_menu = QMenu("Widgets", self)
-        self._widgets_btn.setMenu(widgets_menu)
-
-        for wdg in DOCK_WIDGETS:
-            act = QAction(wdg, self)
-            act.triggered.connect(partial(self._show_dock_widget, wdg))
-            widgets_menu.addAction(act)
-
-        toolbar_items: list[QWidget] = [
-            ChannelsToolBar(self),
-            ExposureToolBar(self),
-            SnapLiveToolBar(self),
-            ShuttersToolBar(self),
-            Widgets(self),
-        ]
-        for item in toolbar_items:
-            if item:
-                self.addToolBar(Qt.ToolBarArea.TopToolBarArea, item)
-            else:
-                self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
-
-        self._show_dock_widget("Groups and Presets Table")
 
         # __________Layout__________________________________________________________
         self._layout_btn = self._create_toolbutton("Layout")
@@ -176,6 +159,14 @@ class MicroManagerToolbar(QMainWindow):
         toolbar_menu = QMenu("Toolbar", self)
         self._toolbar_btn.setMenu(toolbar_menu)
 
+        toolbar_items: list[QWidget] = [
+            ChannelsToolBar(self),
+            ExposureToolBar(self),
+            SnapLiveToolBar(self),
+            ShuttersToolBar(self),
+            Widgets(self),
+        ]
+
         for item in toolbar_items:
             if item:
                 checked = True
@@ -185,6 +176,28 @@ class MicroManagerToolbar(QMainWindow):
                 act = QAction(item.windowTitle(), self, checkable=True, checked=checked)
                 act.triggered.connect(partial(self._toggle_toolbar, item))
                 toolbar_menu.addAction(act)
+
+        # __________Widgets__________________________________________________________
+
+        self._widgets_btn = self._create_toolbutton("Widgets")
+        menu_toolbar.addWidget(self._widgets_btn)
+
+        widgets_menu = QMenu("Widgets", self)
+        self._widgets_btn.setMenu(widgets_menu)
+
+        for wdg in DOCK_WIDGETS:
+            act = QAction(wdg, self)
+            act.triggered.connect(partial(self._show_dock_widget, wdg))
+            widgets_menu.addAction(act)
+
+        for item in toolbar_items:
+            if item:
+                self.addToolBar(Qt.ToolBarArea.TopToolBarArea, item)
+            else:
+                self.addToolBarBreak(Qt.ToolBarArea.TopToolBarArea)
+
+        # if "Groups and Presets Table" not in list(viewer.window._dock_widgets):
+        #     self._show_dock_widget("Groups and Presets Table")
 
         # __________________________________________________________________________
 
