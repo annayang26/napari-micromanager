@@ -75,6 +75,11 @@ class MainWindow(MicroManagerToolbar):
 
         else:
             self._startup = StartupDialog(self)
+            # make sure it is shown in the center of the screen
+            self._startup.move(
+                self.viewer.window.qt_viewer.geometry().center()
+                - self._startup.rect().center()
+            )
             if self._startup.exec_():
                 cfg = self._startup.cfg_le.text()
                 layout = self._startup.layout_le.text()
@@ -103,6 +108,7 @@ class StartupDialog(QDialog):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self.setWindowTitle("Configuration and Layout")
 
         layout = QGridLayout(self)
 
