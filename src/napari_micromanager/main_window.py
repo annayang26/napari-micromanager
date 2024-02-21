@@ -40,13 +40,18 @@ class MainWindow(MicroManagerToolbar):
     """The main napari-micromanager widget that gets added to napari."""
 
     def __init__(
-        self, viewer: napari.viewer.Viewer, config: str | Path | None = None
+        self,
+        viewer: napari.viewer.Viewer,
+        config: str | Path | None = None,
+        layout: str | Path | None = None,
     ) -> None:
         super().__init__(viewer)
 
+        # temporary toolbar to test saving layout_________________________________
         save_layout_toolbar = QToolBar("Save Layout")
         save_layout_toolbar.addAction("Save Layout", self._save_layout)
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, save_layout_toolbar)
+        # ________________________________________________________________________
 
         # get global CMMCorePlus instance
         self._mmc = CMMCorePlus.instance()
@@ -66,15 +71,12 @@ class MainWindow(MicroManagerToolbar):
         if "MinMax" not in getattr(self.viewer.window, "_dock_widgets", []):
             self.viewer.window.add_dock_widget(self.minmax, name="MinMax", area="left")
 
-        # load layout
-        self._load_layout()
-
-        # start storing the layout state
-        self.get_layout_state()
-
         # queue cleanup
         self.destroyed.connect(self._cleanup)
         atexit.register(self._cleanup)
+
+        # load provided layout or the default one stored in the package
+        self._load_layout(layout)
 
         if config is not None:
             try:
@@ -192,12 +194,14 @@ class MainWindow(MicroManagerToolbar):
         with open(layout, "w") as f:
             json.dump(states, f)
 
-    def _load_layout(self) -> None:
+    def _load_layout(self, layout_path: str | Path | None = None) -> None:
         """Load the layout state from the last time the viewer was closed."""
         import json
 
+        if isinstance(layout_path, str):
+            layout_path = Path(layout_path)
         # get layout.json filepath
-        layout = Path(__file__).parent / "layout.json"
+        layout = layout_path or Path(__file__).parent / "layout.json"
         # if the file doesn't exist, return
         if not layout.exists():
             return

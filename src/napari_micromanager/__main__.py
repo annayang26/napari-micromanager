@@ -10,7 +10,7 @@ from typing import Sequence
 def main(args: Sequence[str] | None = None) -> None:
     """Create a napari viewer and add the MicroManager plugin to it."""
     if args is None:
-        args = sys.argv
+        args = sys.argv[1:]
 
     parser = argparse.ArgumentParser(description="Enter string")
     parser.add_argument(
@@ -19,6 +19,14 @@ def main(args: Sequence[str] | None = None) -> None:
         type=str,
         default=None,
         help="Config file to load",
+        nargs="?",
+    )
+    parser.add_argument(
+        "-l",
+        "--layout",
+        type=str,
+        default=None,
+        help="Layout json file to load",
         nargs="?",
     )
     parsed_args = parser.parse_args(args)
