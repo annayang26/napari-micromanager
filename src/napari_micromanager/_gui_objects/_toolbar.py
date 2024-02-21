@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import contextlib
-from typing import TYPE_CHECKING, Dict, Tuple, cast
+from typing import TYPE_CHECKING, Dict, NamedTuple, Tuple, cast
 
 from fonticon_mdi6 import MDI6
 from pymmcore_plus import CMMCorePlus
@@ -24,7 +24,7 @@ try:
 except ImportError:
     from pymmcore_widgets import PixelSizeWidget as ObjectivesPixelConfigurationWidget
 
-from qtpy.QtCore import QEvent, QObject, QSize, Qt
+from qtpy.QtCore import QEvent, QObject, QPoint, QSize, Qt
 from qtpy.QtWidgets import (
     QDockWidget,
     QFrame,
@@ -51,6 +51,16 @@ if TYPE_CHECKING:
 TOOL_SIZE = 35
 
 
+class WidgetState(NamedTuple):
+    """A simple state object for storing widget state."""
+
+    name: str
+    position: QPoint
+    floating: bool
+    visible: bool
+    dock_area: str
+
+
 # Dict for QObject and its QPushButton icon
 DOCK_WIDGETS: Dict[str, Tuple[type[QWidget], str | None]] = {  # noqa: U006
     "Device Property Browser": (PropertyBrowser, MDI6.table_large),
@@ -71,6 +81,8 @@ class MicroManagerToolbar(QMainWindow):
 
         self._mmc = CMMCorePlus.instance()
         self.viewer: napari.viewer.Viewer = getattr(viewer, "__wrapped__", viewer)
+
+        self._widget_state: dict[str, WidgetState] = {}
 
         # add variables to the napari console
         if console := getattr(self.viewer.window._qt_viewer, "console", None):
@@ -200,6 +212,51 @@ class MicroManagerToolbar(QMainWindow):
                 tabify = False
             dock_wdg = self._add_dock_widget(wdg, key, floating=floating, tabify=tabify)
             self._dock_widgets[key] = dock_wdg
+
+            # Connect to the dockLocationChanged signal
+            dock_wdg.dockLocationChanged.connect(self.on_dock_location_changed)
+            # Connect to the topLevelChanged signal
+            dock_wdg.topLevelChanged.connect(self.on_top_level_changed)
+            # Connect to the visibilityChanged signal
+            dock_wdg.visibilityChanged.connect(self.on_visibility_changed)
+
+            self.get_layout_state()
+
+    def on_dock_location_changed(self, area: Qt.DockWidgetArea) -> None:
+        # This method will be called whenever the dock widget's location changes.
+        # You can add your own logic here.
+        print(f"Dock location changed to {area}")
+        self.get_layout_state()
+
+    def on_top_level_changed(self, top_level: bool) -> None:
+        # This method will be called whenever the dock widget is docked or undocked.
+        # You can add your own logic here.
+        if top_level:
+            print("Dock widget undocked")
+        else:
+            print("Dock widget docked")
+        self.get_layout_state()
+
+    def on_visibility_changed(self, visible: bool) -> None:
+        # This method will be called whenever the dock widget is shown or hidden.
+        # You can add your own logic here.
+        if visible:
+            print("Dock widget shown")
+        else:
+            print("Dock widget hidden")
+        self.get_layout_state()
+
+    def get_layout_state(self) -> None:  # -> dict[str, Any]:
+        """Return the current state of the viewer layout."""
+        for dock_wdg in self.viewer.window._dock_widgets:
+            wdg = self.viewer.window._dock_widgets[dock_wdg]
+            self._widget_state[dock_wdg] = WidgetState(
+                wdg.name, wdg.pos(), wdg.isFloating(), wdg.isVisible(), wdg.area
+            )
+        from rich import print
+
+        print()
+        print(self._widget_state)
 
     def _add_dock_widget(
         self, widget: QWidget, name: str, floating: bool = False, tabify: bool = False
