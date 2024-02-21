@@ -232,10 +232,14 @@ class MainWindow(MicroManagerToolbar):
         """Load the layout state from the last time the viewer was closed."""
         import json
 
-        if isinstance(layout_path, str):
-            layout_path = Path(layout_path)
         # get layout.json filepath
-        layout = layout_path or Path(__file__).parent / "layout.json"
+        if not layout_path:
+            layout = Path(__file__).parent / "layout.json"
+        elif isinstance(layout_path, str):
+            layout = Path(layout_path)
+        else:
+            layout = layout_path
+
         # if the file doesn't exist, return
         if not layout.exists():
             return
