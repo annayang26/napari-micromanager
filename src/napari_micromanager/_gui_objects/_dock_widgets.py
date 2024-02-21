@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, NamedTuple, Tuple
+from typing import TYPE_CHECKING, Dict, NamedTuple, Tuple
 
 from fonticon_mdi6 import MDI6
 from pymmcore_widgets import (
@@ -39,12 +39,7 @@ DOCK_WIDGETS: Dict[str, Tuple[type[QWidget], str | None]] = {  # noqa: U006
 class WidgetState(NamedTuple):
     """A simple state object for storing widget state."""
 
-    widget_key: str
-    position: tuple[int, int]
     floating: bool
     visible: bool
-    tabbed: bool
-    dock_area: int
-
-    def asdict(self) -> dict[str, Any]:
-        return self._asdict()
+    tabify: bool
+    geometry: tuple[int, int, int, int]

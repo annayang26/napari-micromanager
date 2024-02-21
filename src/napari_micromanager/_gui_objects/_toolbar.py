@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from pymmcore_plus import CMMCorePlus
@@ -11,6 +12,7 @@ from pymmcore_widgets import (
     DefaultCameraExposureWidget,
     LiveButton,
     ObjectivesWidget,
+    PropertyBrowser,
     SnapButton,
 )
 
@@ -54,6 +56,14 @@ ALLOWED_AREAS = (
     # | Qt.DockWidgetArea.BottomDockWidgetArea
 )
 
+DOCK_AREA_NAMES = {
+    1: "left",  # "Qt.LeftDockWidgetArea"
+    2: "right",  # "Qt.RightDockWidgetArea"
+    4: "top",  # "Qt.TopDockWidgetArea"
+    8: "bottom",  # Qt.BottomDockWidgetArea"
+    # 0: "Qt.NoDockWidgetArea"
+}
+
 
 class MicroManagerToolbar(QMainWindow):
     """Create a QToolBar for the Main Window."""
@@ -64,7 +74,7 @@ class MicroManagerToolbar(QMainWindow):
         self._mmc = CMMCorePlus.instance()
         self.viewer: napari.viewer.Viewer = getattr(viewer, "__wrapped__", viewer)
 
-        self._widget_state: dict[str, WidgetState] = {}
+        self._widget_states: dict[str, WidgetState] = {}
 
         # add variables to the napari console
         if console := getattr(self.viewer.window._qt_viewer, "console", None):
@@ -95,8 +105,10 @@ class MicroManagerToolbar(QMainWindow):
                 )
 
         self._dock_widgets: dict[str, QDockWidget] = {}
+
         # add toolbar items
         toolbar_items = [
+            SaveLayout(self),  # temporary for testing
             ConfigToolBar(self),
             ChannelsToolBar(self),
             ObjectivesToolBar(self),
@@ -187,66 +199,115 @@ class MicroManagerToolbar(QMainWindow):
                 ) from e
             wdg = wdg_cls(parent=self, mmcore=self._mmc)
 
-            # if isinstance(wdg, PropertyBrowser):
-            #     wdg.setSizePolicy(
-            #         QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
-            #     )
-            #     wdg._prop_table.setVerticalScrollBarPolicy(
-            #         Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-            #     )
-            #     floating = True
-            #     tabify = False
+            if isinstance(wdg, PropertyBrowser):
+                wdg.setSizePolicy(
+                    QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+                )
+                wdg._prop_table.setVerticalScrollBarPolicy(
+                    Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+                )
+                floating = True
+                tabify = False
 
             wdg = ScrollableWidget(self, title=key, widget=wdg)
-            wdg.valueChanged.connect(self._get_layout_state)
-
             dock_wdg = self._add_dock_widget(
                 wdg, key, floating=floating, tabify=tabify, area=area
             )
-            dock_wdg.visibilityChanged.connect(self._get_layout_state)
-
-            # self._connect_dock_wdg(dock_wdg)
-
             self._dock_widgets[key] = dock_wdg
 
-            self._get_layout_state()
-
-    # def _connect_dock_wdg(self, dock_wdg: QDockWidget) -> None:
-    #     # Connect to the dockLocationChanged signal
-    #     dock_wdg.dockLocationChanged.connect(self._get_layout_state)
-    #     # Connect to the topLevelChanged signal
-    #     dock_wdg.topLevelChanged.connect(self._get_layout_state)
-    #     # Connect to the visibilityChanged signal
-    #     dock_wdg.visibilityChanged.connect(self._get_layout_state)
-
-    # def _disconnect_dock_wdg(self, dock_wdg: QDockWidget) -> None:
-    # Disconnect from the dockLocationChanged signal
-    # dock_wdg.dockLocationChanged.disconnect(self._get_layout_state)
-    # Disconnect from the topLevelChanged signal
-    # dock_wdg.topLevelChanged.disconnect(self._get_layout_state)
-    # # Disconnect from the visibilityChanged signal
-    # dock_wdg.visibilityChanged.disconnect(self._get_layout_state)
-
-    def _get_layout_state(
+    def get_layout_state(
         self,
-    ) -> None:  # -> dict[str, Any]:
-        """Return the current state of the viewer layout."""
+    ) -> dict[str, dict[str, WidgetState]]:
+        """Return the current state of the viewer layout.
+
+        It loops through all the dock widgets in napari's main window and stores
+        their state in a dict per area.
+
+        Within each area, the widgets are ordered from top to bottom. Note that if the
+        widgets are tabified, the one in the bacground will be the first in the list
+        and their x and y geometry coordinates are negative.
+
+        For example:
+        {
+            'right': {
+                'dw1': WidgetState(floating=False, visible=True, geometry=(1,2,3,4)),
+                'dw2': WidgetState(floating=False, visible=True, geometry=(3,4,5,6)),
+            },
+            'left': {
+                # dw3 is tabified with dw4 and is behind it
+                'dw3': WidgetState(floating=False, visible=True, geometry=(-7,-6,3,2))
+                'dw4': WidgetState(floating=False, visible=True, geometry=(8,9,3,7))
+                # dw5 is not tabified, so it is below dw4
+                'dw5': WidgetState(floating=False, visible=True, geometry=(9,10,3,1))
+            }
+        }
+        """
+        _widget_states: dict[str, dict[str, WidgetState]] = {}
+        last_widget_geometry: dict[str, tuple[int, int]] = {}
         with contextlib.suppress(AttributeError):
-            for dock_wdg in self.viewer.window._dock_widgets:
-                wdg = self.viewer.window._dock_widgets[dock_wdg]
-                self._widget_state[dock_wdg] = WidgetState(
-                    wdg.name,
-                    (wdg.pos().x(), wdg.pos().y()),
-                    wdg.isFloating(),
-                    wdg.isVisible(),
-                    True,
-                    self.viewer.window._qt_window.dockWidgetArea(wdg),
+            for dock_wdg in self.viewer.window._qt_window.findChildren(QDockWidget):
+                wdg_name = dock_wdg.objectName()
+                area = self.viewer.window._qt_window.dockWidgetArea(dock_wdg)
+                area_name = DOCK_AREA_NAMES[area]
+                if area_name not in _widget_states:
+                    _widget_states[area_name] = {}
+
+                # Check if the last widget's x and y were negative or positive
+                tabify = False
+                if area_name in last_widget_geometry:
+                    last_x, last_y = last_widget_geometry[area_name]
+                    # if the previous x and y were negative, it means that the last
+                    # widget was tabified with the current one
+                    if last_x < 0 and last_y < 0:
+                        tabify = True
+                    # otherwise, if the previous x and y were positive, it means that
+                    # this new widget is not tabified
+                    elif last_x >= 0 and last_y >= 0:
+                        tabify = False
+
+                _widget_states[area_name][wdg_name] = WidgetState(
+                    floating=dock_wdg.isFloating(),
+                    visible=dock_wdg.isVisible(),
+                    tabify=tabify,
+                    geometry=(
+                        dock_wdg.geometry().x(),
+                        dock_wdg.geometry().y(),
+                        dock_wdg.geometry().width(),
+                        dock_wdg.geometry().height(),
+                    ),
                 )
+
+                # Update last_widget_geometry
+                last_widget_geometry[area_name] = (
+                    dock_wdg.geometry().x(),
+                    dock_wdg.geometry().y(),
+                )
+
+        return _widget_states
+
+    def _save_layout(self) -> None:
+        """Save the layout state to a json file."""
+        import json
+
+        wdg_states = self.get_layout_state()
 
         from rich import print
 
         print()
-        print(self._widget_state)
+        print(wdg_states)
+
+        # WidgetState as dict
+        states = {
+            dock_area: {
+                widget_name: wdg_state._asdict()
+                for widget_name, wdg_state in widgets.items()
+            }
+            for dock_area, widgets in wdg_states.items()
+        }
+
+        layout = Path(__file__).parent.parent / "layout.json"
+        with open(layout, "w") as f:
+            json.dump(states, f)
 
     def _add_dock_widget(
         self,
@@ -292,9 +353,9 @@ class ScrollableWidget(QWidget):
         # resize the dock widget to the size hint of the widget
         self.resize(widget.minimumSizeHint())
 
-    def moveEvent(self, event: QEvent) -> None:
-        self.valueChanged.emit()
-        super().moveEvent(event)
+    # def moveEvent(self, event: QEvent) -> None:
+    #     self.valueChanged.emit()
+    #     super().moveEvent(event)
 
 
 # -------------- Toolbars --------------------
@@ -314,6 +375,15 @@ class MMToolBar(QToolBar):
 
     def addSubWidget(self, wdg: QWidget) -> None:
         cast("QHBoxLayout", self.frame.layout()).addWidget(wdg)
+
+
+class SaveLayout(MMToolBar):
+    def __init__(self, parent: MicroManagerToolbar) -> None:
+        super().__init__("Save Layout", parent)
+        self._save_layout_btn = QPushButton("Save Layout")
+        self.addSubWidget(self._save_layout_btn)
+        self._save_layout_btn.clicked.connect(parent._save_layout)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
 
 
 class ConfigToolBar(MMToolBar):

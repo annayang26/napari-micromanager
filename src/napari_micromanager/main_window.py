@@ -21,13 +21,7 @@ if TYPE_CHECKING:
     from pymmcore_plus.core.events._protocol import PSignalInstance
 
 
-DOCK_AREA_NAMES = {
-    1: "left",  # "Qt.LeftDockWidgetArea"
-    2: "right",  # "Qt.RightDockWidgetArea"
-    4: "top",  # "Qt.TopDockWidgetArea"
-    8: "bottom",  # Qt.BottomDockWidgetArea"
-    # 0: "Qt.NoDockWidgetArea"
-}
+DOCK_AREA_NAMES = ["left", "right", "top", "bottom"]
 
 # this is very verbose
 logging.getLogger("napari.loader").setLevel(logging.WARNING)
@@ -63,11 +57,10 @@ class MainWindow(MicroManagerToolbar):
         self._load_layout()
 
         # start storing the layout state
-        self._get_layout_state()
+        self.get_layout_state()
 
         # queue cleanup
         self.destroyed.connect(self._cleanup)
-        atexit.register(self._save_layout)
         atexit.register(self._cleanup)
 
         if config is not None:
@@ -91,20 +84,9 @@ class MainWindow(MicroManagerToolbar):
             lr for lr in visible if isinstance(lr, napari.layers.Image)
         )
 
-    def _save_layout(self) -> None:
-        """Save the layout state to a json file."""
-        import json
-
-        state = [self._widget_state[key].asdict() for key in self._widget_state]
-        layout = Path(__file__).parent / "layout.json"
-        with open(layout, "w") as f:
-            json.dump(state, f)
-
     def _load_layout(self) -> None:
         """Load the layout state from the last time the viewer was closed."""
         import json
-
-        from rich import print
 
         # get layout.json filepath
         layout = Path(__file__).parent / "layout.json"
@@ -112,19 +94,31 @@ class MainWindow(MicroManagerToolbar):
         if not layout.exists():
             return
         # open the json file
-        with layout.open("r") as f:
-            state_list = json.load(f)
-            print(state_list)
+        try:
+            with layout.open("r") as f:
+                state_list = json.load(f)
 
-            if not state_list:
-                return
+                if not state_list:
+                    return
 
-            # TODO: also add "Main Window (napari-micromanager)" and "MinMax"
-            for state in state_list:
-                ws = WidgetState(**state)
-                if ws.widget_key in DOCK_WIDGETS and ws.visible:
-                    area = DOCK_AREA_NAMES[ws.dock_area]
-                    self._show_dock_widget(ws.widget_key, ws.floating, ws.tabbed, area)
-                    wdg = self._dock_widgets[ws.widget_key]
-                    if ws.floating:
-                        wdg.move(*ws.position)
+                # TODO: also add "Main Window (napari-micromanager)" and "MinMax"
+                for area_name in DOCK_AREA_NAMES:
+                    if area_name not in state_list:
+                        continue
+                    for wdg_key in state_list[area_name]:
+                        wdg_state = WidgetState(
+                            *state_list[area_name][wdg_key].values()
+                        )
+                        # for now this will reload only our widgets, not the napari ones
+                        if wdg_key in DOCK_WIDGETS and wdg_state.visible:
+                            self._show_dock_widget(
+                                wdg_key,
+                                wdg_state.floating,
+                                wdg_state.tabify,
+                                area_name,
+                            )
+                            wdg = self._dock_widgets[wdg_key]
+                            wdg.setGeometry(*wdg_state.geometry)
+
+        except json.JSONDecodeError:
+            warn(f"Could not load layout from {layout}.", stacklevel=2)
