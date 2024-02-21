@@ -74,8 +74,6 @@ class MicroManagerToolbar(QMainWindow):
         self._mmc = CMMCorePlus.instance()
         self.viewer: napari.viewer.Viewer = getattr(viewer, "__wrapped__", viewer)
 
-        self._widget_states: dict[str, WidgetState] = {}
-
         # add variables to the napari console
         if console := getattr(self.viewer.window._qt_viewer, "console", None):
             from useq import MDAEvent, MDASequence
@@ -224,8 +222,9 @@ class MicroManagerToolbar(QMainWindow):
         their state in a dict per area.
 
         Within each area, the widgets are ordered from top to bottom. Note that if the
-        widgets are tabified, the one in the bacground will be the first in the list
-        and their x and y geometry coordinates are negative.
+        widgets are tabified, the one in the background will be the first in the list
+        and their x and y geometry coordinates are negative. Using this information, we
+        can discriminate between tabified and non-tabified widgets.
 
         For example:
         {
