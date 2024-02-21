@@ -21,6 +21,14 @@ def main(args: Sequence[str] | None = None) -> None:
         help="Config file to load",
         nargs="?",
     )
+    parser.add_argument(
+        "-l",
+        "--layout",
+        type=str,
+        default=None,
+        help="Layout json file to load",
+        nargs="?",
+    )
     parsed_args = parser.parse_args(args)
 
     import napari

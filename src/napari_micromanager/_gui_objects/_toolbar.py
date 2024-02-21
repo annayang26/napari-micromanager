@@ -1,17 +1,14 @@
 from __future__ import annotations
 
 import contextlib
-from typing import TYPE_CHECKING, Dict, Tuple, cast
+from typing import TYPE_CHECKING, cast
 
-from fonticon_mdi6 import MDI6
 from pymmcore_plus import CMMCorePlus
 from pymmcore_widgets import (
-    CameraRoiWidget,
     ChannelGroupWidget,
     ChannelWidget,
     # ConfigurationWidget,
     DefaultCameraExposureWidget,
-    GroupPresetTableWidget,
     LiveButton,
     ObjectivesWidget,
     PropertyBrowser,
@@ -22,9 +19,11 @@ try:
     # this was renamed
     from pymmcore_widgets import ObjectivesPixelConfigurationWidget
 except ImportError:
-    from pymmcore_widgets import PixelSizeWidget as ObjectivesPixelConfigurationWidget
+    from pymmcore_widgets import (
+        PixelSizeWidget as ObjectivesPixelConfigurationWidget,  # noqa: F401
+    )
 
-from qtpy.QtCore import QEvent, QObject, QSize, Qt
+from qtpy.QtCore import QEvent, QObject, QSize, Qt, Signal
 from qtpy.QtWidgets import (
     QDockWidget,
     QFrame,
@@ -32,6 +31,7 @@ from qtpy.QtWidgets import (
     QLabel,
     QMainWindow,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QTabWidget,
     QToolBar,
@@ -39,28 +39,14 @@ from qtpy.QtWidgets import (
 )
 from superqt.fonticon import icon
 
-from ._illumination_widget import IlluminationWidget
-from ._mda_widget import MultiDWidget
+from ._dock_widgets import DOCK_WIDGETS
 from ._min_max_widget import MinMax
 from ._shutters_widget import MMShuttersWidget
-from ._stages_widget import MMStagesWidget
 
 if TYPE_CHECKING:
     import napari.viewer
 
 TOOL_SIZE = 35
-
-
-# Dict for QObject and its QPushButton icon
-DOCK_WIDGETS: Dict[str, Tuple[type[QWidget], str | None]] = {  # noqa: U006
-    "Device Property Browser": (PropertyBrowser, MDI6.table_large),
-    "Groups and Presets Table": (GroupPresetTableWidget, MDI6.table_large_plus),
-    "Illumination Control": (IlluminationWidget, MDI6.lightbulb_on),
-    "Stages Control": (MMStagesWidget, MDI6.arrow_all),
-    "Camera ROI": (CameraRoiWidget, MDI6.crop),
-    "Pixel Size Table": (ObjectivesPixelConfigurationWidget, MDI6.ruler),
-    "MDA": (MultiDWidget, None),
-}
 
 
 class MicroManagerToolbar(QMainWindow):
@@ -101,6 +87,7 @@ class MicroManagerToolbar(QMainWindow):
                 )
 
         self._dock_widgets: dict[str, QDockWidget] = {}
+
         # add toolbar items
         toolbar_items = [
             # ConfigToolBar(self),
@@ -158,14 +145,18 @@ class MicroManagerToolbar(QMainWindow):
 
         return False
 
-    def _show_dock_widget(self, key: str = "") -> None:
+    def _show_dock_widget(
+        self,
+        key: str = "",
+        floating: bool = False,
+        tabify: bool = True,
+        area: str = "right",
+    ) -> None:
         """Look up widget class in DOCK_WIDGETS and add/create or show/raise.
 
         `key` must be a key in the DOCK_WIDGETS dict or a `str` stored in
         the `whatsThis` property of a `sender` `QPushButton`.
         """
-        floating = False
-        tabify = True
         if not key:
             # using QPushButton.whatsThis() property to get the key.
             btn = cast(QPushButton, self.sender())
@@ -198,17 +189,26 @@ class MicroManagerToolbar(QMainWindow):
                 )
                 floating = True
                 tabify = False
-            dock_wdg = self._add_dock_widget(wdg, key, floating=floating, tabify=tabify)
+
+            wdg = ScrollableWidget(self, title=key, widget=wdg)
+            dock_wdg = self._add_dock_widget(
+                wdg, key, floating=floating, tabify=tabify, area=area
+            )
             self._dock_widgets[key] = dock_wdg
 
     def _add_dock_widget(
-        self, widget: QWidget, name: str, floating: bool = False, tabify: bool = False
+        self,
+        widget: QWidget,
+        name: str,
+        floating: bool,
+        tabify: bool,
+        area: str,
     ) -> QDockWidget:
         """Add a docked widget using napari's add_dock_widget."""
         dock_wdg = self.viewer.window.add_dock_widget(
             widget,
             name=name,
-            area="right",
+            area=area,
             tabify=tabify,
         )
         # fix napari bug that makes dock widgets too large
@@ -220,6 +220,25 @@ class MicroManagerToolbar(QMainWindow):
             dock_wdg._close_btn = False
         dock_wdg.setFloating(floating)
         return dock_wdg
+
+
+class ScrollableWidget(QWidget):
+    valueChanged = Signal()
+
+    """A QWidget with a QScrollArea."""
+
+    def __init__(self, parent: QWidget | None = None, *, title: str, widget: QWidget):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        # create the scroll area and add the widget to it
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        layout = QHBoxLayout(self)
+        layout.addWidget(self.scroll_area)
+        # set the widget to the scroll area
+        self.scroll_area.setWidget(widget)
+        # resize the dock widget to the size hint of the widget
+        self.resize(widget.minimumSizeHint())
 
 
 # -------------- Toolbars --------------------
