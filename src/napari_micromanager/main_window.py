@@ -75,15 +75,15 @@ class MainWindow(MicroManagerToolbar):
         self.destroyed.connect(self._cleanup)
         atexit.register(self._cleanup)
 
-        # load provided layout or the default one stored in the package
-        self._load_layout(layout)
-
         if config is not None:
             try:
                 self._mmc.loadSystemConfiguration(config)
             except FileNotFoundError:
                 # don't crash if the user passed an invalid config
                 warn(f"Config file {config} not found. Nothing loaded.", stacklevel=2)
+
+        # load provided layout or the default one stored in the package
+        self._load_layout(layout)
 
     def _cleanup(self) -> None:
         for signal, slot in self._connections:
