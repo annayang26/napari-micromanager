@@ -36,7 +36,7 @@ def main(args: Sequence[str] | None = None) -> None:
     from napari_micromanager.main_window import MainWindow
 
     viewer = napari.Viewer()
-    win = MainWindow(viewer, config=parsed_args.config)
+    win = MainWindow(viewer, config=parsed_args.config, layout=parsed_args.layout)
     dw = viewer.window.add_dock_widget(win, name="MicroManager", area="top")
     if hasattr(dw, "_close_btn"):
         dw._close_btn = False
