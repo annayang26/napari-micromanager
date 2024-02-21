@@ -1,0 +1,35 @@
+[
+    {
+        "widget_key": "Stages Control",
+        "position": [
+            1114,
+            120
+        ],
+        "floating": false,
+        "visible": true,
+        "tabbed": true,
+        "dock_area": 2
+    },
+    {
+        "widget_key": "Illumination Control",
+        "position": [
+            1114,
+            545
+        ],
+        "floating": false,
+        "visible": true,
+        "tabbed": false,
+        "dock_area": 2
+    },
+    {
+        "widget_key": "Groups and Presets Table",
+        "position": [
+            0,
+            905
+        ],
+        "floating": true,
+        "visible": true,
+        "tabbed": false,
+        "dock_area": 1
+    }
+]

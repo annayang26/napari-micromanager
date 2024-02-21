@@ -1,20 +1,16 @@
 from __future__ import annotations
 
 import contextlib
-from typing import TYPE_CHECKING, Dict, NamedTuple, Tuple, cast
+from typing import TYPE_CHECKING, cast
 
-from fonticon_mdi6 import MDI6
 from pymmcore_plus import CMMCorePlus
 from pymmcore_widgets import (
-    CameraRoiWidget,
     ChannelGroupWidget,
     ChannelWidget,
     ConfigurationWidget,
     DefaultCameraExposureWidget,
-    GroupPresetTableWidget,
     LiveButton,
     ObjectivesWidget,
-    PropertyBrowser,
     SnapButton,
 )
 
@@ -22,9 +18,11 @@ try:
     # this was renamed
     from pymmcore_widgets import ObjectivesPixelConfigurationWidget
 except ImportError:
-    from pymmcore_widgets import PixelSizeWidget as ObjectivesPixelConfigurationWidget
+    from pymmcore_widgets import (
+        PixelSizeWidget as ObjectivesPixelConfigurationWidget,  # noqa: F401
+    )
 
-from qtpy.QtCore import QEvent, QObject, QPoint, QSize, Qt
+from qtpy.QtCore import QEvent, QObject, QSize, Qt, Signal
 from qtpy.QtWidgets import (
     QDockWidget,
     QFrame,
@@ -32,6 +30,7 @@ from qtpy.QtWidgets import (
     QLabel,
     QMainWindow,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QTabWidget,
     QToolBar,
@@ -39,11 +38,9 @@ from qtpy.QtWidgets import (
 )
 from superqt.fonticon import icon
 
-from ._illumination_widget import IlluminationWidget
-from ._mda_widget import MultiDWidget
+from ._dock_widgets import DOCK_WIDGETS, WidgetState
 from ._min_max_widget import MinMax
 from ._shutters_widget import MMShuttersWidget
-from ._stages_widget import MMStagesWidget
 
 if TYPE_CHECKING:
     import napari.viewer
@@ -51,26 +48,11 @@ if TYPE_CHECKING:
 TOOL_SIZE = 35
 
 
-class WidgetState(NamedTuple):
-    """A simple state object for storing widget state."""
-
-    name: str
-    position: QPoint
-    floating: bool
-    visible: bool
-    dock_area: str
-
-
-# Dict for QObject and its QPushButton icon
-DOCK_WIDGETS: Dict[str, Tuple[type[QWidget], str | None]] = {  # noqa: U006
-    "Device Property Browser": (PropertyBrowser, MDI6.table_large),
-    "Groups and Presets Table": (GroupPresetTableWidget, MDI6.table_large_plus),
-    "Illumination Control": (IlluminationWidget, MDI6.lightbulb_on),
-    "Stages Control": (MMStagesWidget, MDI6.arrow_all),
-    "Camera ROI": (CameraRoiWidget, MDI6.crop),
-    "Pixel Size Table": (ObjectivesPixelConfigurationWidget, MDI6.ruler),
-    "MDA": (MultiDWidget, None),
-}
+ALLOWED_AREAS = (
+    Qt.DockWidgetArea.LeftDockWidgetArea
+    | Qt.DockWidgetArea.RightDockWidgetArea
+    # | Qt.DockWidgetArea.BottomDockWidgetArea
+)
 
 
 class MicroManagerToolbar(QMainWindow):
@@ -170,14 +152,18 @@ class MicroManagerToolbar(QMainWindow):
 
         return False
 
-    def _show_dock_widget(self, key: str = "") -> None:
+    def _show_dock_widget(
+        self,
+        key: str = "",
+        floating: bool = False,
+        tabify: bool = True,
+        area: str = "right",
+    ) -> None:
         """Look up widget class in DOCK_WIDGETS and add/create or show/raise.
 
         `key` must be a key in the DOCK_WIDGETS dict or a `str` stored in
         the `whatsThis` property of a `sender` `QPushButton`.
         """
-        floating = False
-        tabify = True
         if not key:
             # using QPushButton.whatsThis() property to get the key.
             btn = cast(QPushButton, self.sender())
@@ -201,71 +187,80 @@ class MicroManagerToolbar(QMainWindow):
                 ) from e
             wdg = wdg_cls(parent=self, mmcore=self._mmc)
 
-            if isinstance(wdg, PropertyBrowser):
-                wdg.setSizePolicy(
-                    QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
-                )
-                wdg._prop_table.setVerticalScrollBarPolicy(
-                    Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-                )
-                floating = True
-                tabify = False
-            dock_wdg = self._add_dock_widget(wdg, key, floating=floating, tabify=tabify)
+            # if isinstance(wdg, PropertyBrowser):
+            #     wdg.setSizePolicy(
+            #         QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+            #     )
+            #     wdg._prop_table.setVerticalScrollBarPolicy(
+            #         Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+            #     )
+            #     floating = True
+            #     tabify = False
+
+            wdg = ScrollableWidget(self, title=key, widget=wdg)
+            wdg.valueChanged.connect(self._get_layout_state)
+
+            dock_wdg = self._add_dock_widget(
+                wdg, key, floating=floating, tabify=tabify, area=area
+            )
+            dock_wdg.visibilityChanged.connect(self._get_layout_state)
+
+            # self._connect_dock_wdg(dock_wdg)
+
             self._dock_widgets[key] = dock_wdg
 
-            # Connect to the dockLocationChanged signal
-            dock_wdg.dockLocationChanged.connect(self.on_dock_location_changed)
-            # Connect to the topLevelChanged signal
-            dock_wdg.topLevelChanged.connect(self.on_top_level_changed)
-            # Connect to the visibilityChanged signal
-            dock_wdg.visibilityChanged.connect(self.on_visibility_changed)
+            self._get_layout_state()
 
-            self.get_layout_state()
+    # def _connect_dock_wdg(self, dock_wdg: QDockWidget) -> None:
+    #     # Connect to the dockLocationChanged signal
+    #     dock_wdg.dockLocationChanged.connect(self._get_layout_state)
+    #     # Connect to the topLevelChanged signal
+    #     dock_wdg.topLevelChanged.connect(self._get_layout_state)
+    #     # Connect to the visibilityChanged signal
+    #     dock_wdg.visibilityChanged.connect(self._get_layout_state)
 
-    def on_dock_location_changed(self, area: Qt.DockWidgetArea) -> None:
-        # This method will be called whenever the dock widget's location changes.
-        # You can add your own logic here.
-        print(f"Dock location changed to {area}")
-        self.get_layout_state()
+    # def _disconnect_dock_wdg(self, dock_wdg: QDockWidget) -> None:
+    # Disconnect from the dockLocationChanged signal
+    # dock_wdg.dockLocationChanged.disconnect(self._get_layout_state)
+    # Disconnect from the topLevelChanged signal
+    # dock_wdg.topLevelChanged.disconnect(self._get_layout_state)
+    # # Disconnect from the visibilityChanged signal
+    # dock_wdg.visibilityChanged.disconnect(self._get_layout_state)
 
-    def on_top_level_changed(self, top_level: bool) -> None:
-        # This method will be called whenever the dock widget is docked or undocked.
-        # You can add your own logic here.
-        if top_level:
-            print("Dock widget undocked")
-        else:
-            print("Dock widget docked")
-        self.get_layout_state()
-
-    def on_visibility_changed(self, visible: bool) -> None:
-        # This method will be called whenever the dock widget is shown or hidden.
-        # You can add your own logic here.
-        if visible:
-            print("Dock widget shown")
-        else:
-            print("Dock widget hidden")
-        self.get_layout_state()
-
-    def get_layout_state(self) -> None:  # -> dict[str, Any]:
+    def _get_layout_state(
+        self,
+    ) -> None:  # -> dict[str, Any]:
         """Return the current state of the viewer layout."""
-        for dock_wdg in self.viewer.window._dock_widgets:
-            wdg = self.viewer.window._dock_widgets[dock_wdg]
-            self._widget_state[dock_wdg] = WidgetState(
-                wdg.name, wdg.pos(), wdg.isFloating(), wdg.isVisible(), wdg.area
-            )
+        with contextlib.suppress(AttributeError):
+            for dock_wdg in self.viewer.window._dock_widgets:
+                wdg = self.viewer.window._dock_widgets[dock_wdg]
+                self._widget_state[dock_wdg] = WidgetState(
+                    wdg.name,
+                    (wdg.pos().x(), wdg.pos().y()),
+                    wdg.isFloating(),
+                    wdg.isVisible(),
+                    True,
+                    self.viewer.window._qt_window.dockWidgetArea(wdg),
+                )
+
         from rich import print
 
         print()
         print(self._widget_state)
 
     def _add_dock_widget(
-        self, widget: QWidget, name: str, floating: bool = False, tabify: bool = False
+        self,
+        widget: QWidget,
+        name: str,
+        floating: bool,
+        tabify: bool,
+        area: str,
     ) -> QDockWidget:
         """Add a docked widget using napari's add_dock_widget."""
         dock_wdg = self.viewer.window.add_dock_widget(
             widget,
             name=name,
-            area="right",
+            area=area,
             tabify=tabify,
         )
         # fix napari bug that makes dock widgets too large
@@ -277,6 +272,29 @@ class MicroManagerToolbar(QMainWindow):
             dock_wdg._close_btn = False
         dock_wdg.setFloating(floating)
         return dock_wdg
+
+
+class ScrollableWidget(QWidget):
+    valueChanged = Signal()
+
+    """A QWidget with a QScrollArea."""
+
+    def __init__(self, parent: QWidget | None = None, *, title: str, widget: QWidget):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        # create the scroll area and add the widget to it
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        layout = QHBoxLayout(self)
+        layout.addWidget(self.scroll_area)
+        # set the widget to the scroll area
+        self.scroll_area.setWidget(widget)
+        # resize the dock widget to the size hint of the widget
+        self.resize(widget.minimumSizeHint())
+
+    def moveEvent(self, event: QEvent) -> None:
+        self.valueChanged.emit()
+        super().moveEvent(event)
 
 
 # -------------- Toolbars --------------------
