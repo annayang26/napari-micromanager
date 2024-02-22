@@ -4,7 +4,7 @@ import atexit
 import contextlib
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, cast
 from warnings import warn
 
 import napari
@@ -271,58 +271,71 @@ class MainWindow(MicroManagerToolbar):
         # open the json file
         try:
             with layout.open("r") as f:
-                state_list = json.load(f)
+                states = json.load(f)
 
-                if not state_list:
+                if not states:
                     return
 
                 for area_name in DOCK_AREAS.values():
-                    if area_name not in state_list:
+
+                    if area_name not in states:
                         continue
-                    for idx, wdg_key in enumerate(state_list[area_name]):
-                        wdg_state = WidgetState(
-                            *state_list[area_name][wdg_key].values()
-                        )
-                        # this will reload only our widgets, not the napari ones
+                    states = cast(dict[str, dict[str, dict]], states)
+                    for idx, wdg_key in enumerate(states[area_name]):
+                        wdg_state = WidgetState(*states[area_name][wdg_key].values())
+                        # this will reload pymmcore widgets
                         if wdg_key in DOCK_WIDGETS and wdg_state.visible:
-                            self._show_dock_widget(
-                                wdg_key,
-                                wdg_state.floating,
-                                wdg_state.tabify,
-                                area_name,
-                            )
-                            if wdg_state.floating:
-                                wdg = self._dock_widgets[wdg_key]
-                                wdg.setGeometry(*wdg_state.geometry)
-
+                            self._update_pymmcore_widget(wdg_key, wdg_state, area_name)
+                        # this will reload the napari widgets
                         elif wdg_key in self._dock_widgets:
-                            if (
-                                getattr(self.viewer.window, "_qt_window", None)
-                            ) is None:
-                                continue
-
-                            wdg = self._dock_widgets[wdg_key]
-
-                            # undock the widget to change its area
-                            self.viewer.window._qt_window.removeDockWidget(wdg)
-                            self.viewer.window._qt_window.addDockWidget(
-                                DOCK_AREAS[area_name], wdg
+                            self._update_napari_widget(
+                                idx, states, wdg_key, wdg_state, area_name
                             )
-                            # if is tabified, tabify it with the previous widget
-                            if wdg_state.tabify and idx > 0:
-                                if previous_key := list(state_list[area_name].keys())[
-                                    idx - 1
-                                ]:
-                                    self.viewer.window._qt_window.tabifyDockWidget(
-                                        self._dock_widgets[previous_key], wdg
-                                    )
-
-                            wdg.setFloating(wdg_state.floating)
-                            wdg.setGeometry(*wdg_state.geometry)
-                            wdg.setVisible(wdg_state.visible)
 
         except json.JSONDecodeError:
             warn(f"Could not load layout from {layout}.", stacklevel=2)
+
+    def _update_pymmcore_widget(
+        self, wdg_key: str, wdg_state: WidgetState, area_name: str
+    ) -> None:
+        """Update the state of the pymmcore widgets."""
+        self._show_dock_widget(
+            wdg_key,
+            wdg_state.floating,
+            wdg_state.tabify,
+            area_name,
+        )
+        if wdg_state.floating:
+            wdg = self._dock_widgets[wdg_key]
+            wdg.setGeometry(*wdg_state.geometry)
+
+    def _update_napari_widget(
+        self,
+        idx: int,
+        states: dict[str, dict[str, dict]],
+        wdg_key: str,
+        wdg_state: WidgetState,
+        area_name: str,
+    ) -> None:
+        """Update the state of the napari widgets."""
+        if (getattr(self.viewer.window, "_qt_window", None)) is None:
+            return
+
+        wdg = self._dock_widgets[wdg_key]
+
+        # undock the widget to change its area
+        self.viewer.window._qt_window.removeDockWidget(wdg)
+        self.viewer.window._qt_window.addDockWidget(DOCK_AREAS[area_name], wdg)
+        # if is tabified, tabify it with the previous widget
+        if wdg_state.tabify and idx > 0:
+            if previous_key := list(states[area_name].keys())[idx - 1]:
+                self.viewer.window._qt_window.tabifyDockWidget(
+                    self._dock_widgets[previous_key], wdg
+                )
+
+        wdg.setFloating(wdg_state.floating)
+        wdg.setGeometry(*wdg_state.geometry)
+        wdg.setVisible(wdg_state.visible)
 
 
 class StartupDialog(QDialog):
