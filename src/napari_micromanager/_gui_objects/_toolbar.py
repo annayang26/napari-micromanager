@@ -73,6 +73,9 @@ class MicroManagerToolbar(QMainWindow):
         # min max widget
         self.minmax = MinMax(parent=self)
 
+        # to store all dock widgets in a dict
+        self._dock_widgets: dict[str, QDockWidget] = {}
+
         if (win := getattr(self.viewer.window, "_qt_window", None)) is not None:
             # make the tabs of tabbed dockwidgets apprearing on top (North)
             areas = [
@@ -85,8 +88,6 @@ class MicroManagerToolbar(QMainWindow):
                 cast(QMainWindow, win).setTabPosition(
                     area, QTabWidget.TabPosition.North
                 )
-
-        self._dock_widgets: dict[str, QDockWidget] = {}
 
         # add toolbar items
         toolbar_items = [
