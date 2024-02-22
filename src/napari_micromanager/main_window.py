@@ -285,17 +285,19 @@ class MainWindow(MicroManagerToolbar):
                         wdg_state = WidgetState(*states[area_name][wdg_key].values())
                         # this will reload pymmcore widgets
                         if wdg_key in DOCK_WIDGETS and wdg_state.visible:
-                            self._update_pymmcore_widget(wdg_key, wdg_state, area_name)
+                            self._update_pymmcore_widget_state(
+                                wdg_key, wdg_state, area_name
+                            )
                         # this will reload the napari widgets
                         elif wdg_key in self._dock_widgets:
-                            self._update_napari_widget(
+                            self._update_napari_widget_state(
                                 idx, states, wdg_key, wdg_state, area_name
                             )
 
         except json.JSONDecodeError:
             warn(f"Could not load layout from {layout}.", stacklevel=2)
 
-    def _update_pymmcore_widget(
+    def _update_pymmcore_widget_state(
         self, wdg_key: str, wdg_state: WidgetState, area_name: str
     ) -> None:
         """Update the state of the pymmcore widgets."""
@@ -309,7 +311,7 @@ class MainWindow(MicroManagerToolbar):
             wdg = self._dock_widgets[wdg_key]
             wdg.setGeometry(*wdg_state.geometry)
 
-    def _update_napari_widget(
+    def _update_napari_widget_state(
         self,
         idx: int,
         states: dict[str, dict[str, dict]],
