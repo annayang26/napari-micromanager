@@ -50,7 +50,6 @@ QT_DOCK_AREAS = {
     "bottom": Qt.DockWidgetArea.BottomDockWidgetArea,
 }
 DEFAULT_LAYOUT = Path(__file__).parent / "layouts" / "default_layout.json"
-TEST_LAYOUT = Path(__file__).parent / "layouts" / "test_layout.json"
 
 # this is very verbose
 logging.getLogger("napari.loader").setLevel(logging.WARNING)
@@ -71,6 +70,9 @@ class MainWindow(MicroManagerToolbar):
         save_layout_toolbar = QToolBar("Save Layout")
         save_layout_toolbar.addAction("Save Layout", self._save_layout)
         self.addToolBar(Qt.ToolBarArea.TopToolBarArea, save_layout_toolbar)
+        load_layout_toolbar = QToolBar("Load Layout")
+        load_layout_toolbar.addAction("Load Layout", self._load_layout)
+        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, load_layout_toolbar)
         # ________________________________________________________________________
 
         # get global CMMCorePlus instance
@@ -108,24 +110,12 @@ class MainWindow(MicroManagerToolbar):
         if not config or not layout:
             self._startup = StartupDialog(self, config=not config, layout=not layout)
             # make sure it is shown in the center of the viewer and resize it
-            self._startup.move(
-                self.viewer.window.qt_viewer.geometry().center()
-                - self._startup.geometry().center()
-            )
-            self._startup.resize(
-                int(self.viewer.window.qt_viewer.geometry().width() / 2),
-                self._startup.sizeHint().height(),
-            )
+            self._center_startup_dialog()
             # if the user pressed OK
             if self._startup.exec_():
-                config = (
-                    self._startup.cfg_combo.currentText() if config is None else config
-                )
-                layout = (
-                    self._startup.layout_combo.currentText()
-                    if layout is None
-                    else layout
-                )
+                cfg, lay = self._startup.value()
+                config = cfg if config is None else config
+                layout = lay if layout is None else layout
 
         if config is not None:
             try:
@@ -149,6 +139,17 @@ class MainWindow(MicroManagerToolbar):
         visible = (x for x in self.viewer.layers.selection if x.visible)
         self.minmax.update_from_layers(
             lr for lr in visible if isinstance(lr, napari.layers.Image)
+        )
+
+    def _center_startup_dialog(self) -> None:
+        """Center the startup dialog in the viewer window."""
+        self._startup.move(
+            self.viewer.window.qt_viewer.geometry().center()
+            - self._startup.geometry().center()
+        )
+        self._startup.resize(
+            int(self.viewer.window.qt_viewer.geometry().width() / 2),
+            self._startup.sizeHint().height(),
         )
 
     def get_layout_state(
@@ -246,17 +247,23 @@ class MainWindow(MicroManagerToolbar):
             for dock_area, widgets in wdg_states.items()
         }
 
-        layout = TEST_LAYOUT
-        with open(layout, "w") as f:
-            json.dump(states, f)
+        layout_path, _ = QFileDialog.getSaveFileName(
+            self, "Save layout file", "", "jSON (*.json)"
+        )
+        if layout_path:
+            with open(layout_path, "w") as f:
+                json.dump(states, f)
 
     def _load_layout(self, layout_path: str | Path | None = None) -> None:
         """Load the layout state from the last time the viewer was closed."""
         import json
 
-        # get layout.json filepath
+        # open a file dialog if the layout path is not provided
         if not layout_path:
-            layout = DEFAULT_LAYOUT
+            layout, _ = QFileDialog.getOpenFileName(
+                self, "Open layout file", "", "jSON (*.json)"
+            )
+            layout = Path(layout) if layout else DEFAULT_LAYOUT
         elif isinstance(layout_path, str):
             layout = Path(layout_path)
         else:
@@ -331,8 +338,8 @@ class StartupDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Configuration and Layout")
 
-        # find .cfg files in every mm directory
-        cfg_files = self._get_micromanager_cfg_files()
+        self._config = config
+        self._layout = layout
 
         wdg_layout = QGridLayout(self)
 
@@ -343,6 +350,11 @@ class StartupDialog(QDialog):
             QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLength
         )
         self.cfg_combo.setObjectName("cfg")
+        # find .cfg files in every mm directory
+        cfg_files = self._get_micromanager_cfg_files()
+        # TODO: once we have the database of configs, we can populate the combo box
+        # with the stored configs too. remember to check their existance before adding
+        # them
         self.cfg_combo.addItems([str(f) for f in cfg_files])
         self.cfg_btn = QPushButton("...")
         self.cfg_btn.setSizePolicy(FIXED)
@@ -355,22 +367,23 @@ class StartupDialog(QDialog):
             QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLength
         )
         self.layout_combo.setObjectName("layout")
-        # TODO: remove test layout
-        self.layout_combo.addItems([str(DEFAULT_LAYOUT), str(TEST_LAYOUT)])
+        # TODO: once we have the database of layouts, we can populate the combo box
+        # with the stored layouts too. remember to check their existance before adding
+        # them
+        self.layout_combo.addItems([str(DEFAULT_LAYOUT)])
         self.layout_btn = QPushButton("...")
         self.layout_btn.setSizePolicy(FIXED)
         self.layout_btn.clicked.connect(
             lambda: self._on_browse_clicked(self.layout_combo)
         )
 
-        if config:
-            wdg_layout.addWidget(cfg_lbl, 0, 0)
-            wdg_layout.addWidget(self.cfg_combo, 0, 1)
-            wdg_layout.addWidget(self.cfg_btn, 0, 2)
-        if layout:
-            wdg_layout.addWidget(layout_lbl, 1, 0)
-            wdg_layout.addWidget(self.layout_combo, 1, 1)
-            wdg_layout.addWidget(self.layout_btn, 1, 2)
+        wdg_layout.addWidget(cfg_lbl, 0, 0)
+        wdg_layout.addWidget(self.cfg_combo, 0, 1)
+        wdg_layout.addWidget(self.cfg_btn, 0, 2)
+
+        wdg_layout.addWidget(layout_lbl, 1, 0)
+        wdg_layout.addWidget(self.layout_combo, 1, 1)
+        wdg_layout.addWidget(self.layout_btn, 1, 2)
 
         # Create OK and Cancel buttons
         button_box = QDialogButtonBox(
@@ -381,6 +394,18 @@ class StartupDialog(QDialog):
         wdg_layout.addWidget(button_box, 2, 0, 1, 3)
 
         self.resize(self.sizeHint())
+
+        # hide the cfg widgets if config is provided
+        if config:
+            cfg_lbl.hide()
+            self.cfg_combo.hide()
+            self.cfg_btn.hide()
+
+        # hide the layout widgets if layout is provided
+        if layout:
+            layout_lbl.hide()
+            self.layout_combo.hide()
+            self.layout_btn.hide()
 
     def _get_micromanager_cfg_files(self) -> list[Path]:
         from pymmcore_plus import find_micromanager
@@ -401,3 +426,9 @@ class StartupDialog(QDialog):
         if filename:
             combo.addItem(filename)
             combo.setCurrentText(filename)
+            # TODO: keep a database of the created configes ands layouts with their
+            # paths so we can update the comboboxes with the new files.
+
+    def value(self) -> tuple[str | None, str | None]:
+        """Return the selected configuration and layout files."""
+        return self.cfg_combo.currentText(), self.layout_combo.currentText()
