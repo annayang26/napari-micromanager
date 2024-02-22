@@ -224,7 +224,6 @@ class MainWindow(MicroManagerToolbar):
 
     def _save_layout(self) -> None:
         """Save the layout state to a json file."""
-        # TODO: add a dialog to select the file path
         import json
 
         wdg_states = self.get_layout_state()
@@ -251,7 +250,7 @@ class MainWindow(MicroManagerToolbar):
                 json.dump(states, f)
 
     def _load_layout(self, layout_path: str | Path | None = None) -> None:
-        """Load the layout state from the last time the viewer was closed."""
+        """Load the layout from a json file."""
         import json
 
         # open a file dialog if the layout path is not provided
