@@ -40,10 +40,6 @@ DOCK_AREAS = {
     2: "right",  # "Qt.DockWidgetArea.RightDockWidgetArea"
     4: "top",  # "Qt.DockWidgetArea.TopDockWidgetArea"
     8: "bottom",  # Qt.DockWidgetArea.BottomDockWidgetArea"
-    # 0: "Qt.NoDockWidgetArea"
-}
-DOCK_AREA_NAMES = list(DOCK_AREAS.values())
-QT_DOCK_AREAS = {
     "left": Qt.DockWidgetArea.LeftDockWidgetArea,
     "right": Qt.DockWidgetArea.RightDockWidgetArea,
     "top": Qt.DockWidgetArea.TopDockWidgetArea,
@@ -280,7 +276,7 @@ class MainWindow(MicroManagerToolbar):
                 if not state_list:
                     return
 
-                for area_name in DOCK_AREA_NAMES:
+                for area_name in DOCK_AREAS.values():
                     if area_name not in state_list:
                         continue
                     for idx, wdg_key in enumerate(state_list[area_name]):
@@ -310,7 +306,7 @@ class MainWindow(MicroManagerToolbar):
                             # undock the widget to change its area
                             self.viewer.window._qt_window.removeDockWidget(wdg)
                             self.viewer.window._qt_window.addDockWidget(
-                                QT_DOCK_AREAS[area_name], wdg
+                                DOCK_AREAS[area_name], wdg
                             )
                             # if is tabified, tabify it with the previous widget
                             if wdg_state.tabify and idx > 0:
@@ -396,13 +392,13 @@ class StartupDialog(QDialog):
         self.resize(self.sizeHint())
 
         # hide the cfg widgets if config is provided
-        if config:
+        if not config:
             cfg_lbl.hide()
             self.cfg_combo.hide()
             self.cfg_btn.hide()
 
         # hide the layout widgets if layout is provided
-        if layout:
+        if not layout:
             layout_lbl.hide()
             self.layout_combo.hide()
             self.layout_btn.hide()
