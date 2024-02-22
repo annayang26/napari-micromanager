@@ -24,13 +24,21 @@ if TYPE_CHECKING:
 
 
 DOCK_AREAS = {
-    1: "left",  # "Qt.LeftDockWidgetArea"
-    2: "right",  # "Qt.RightDockWidgetArea"
-    4: "top",  # "Qt.TopDockWidgetArea"
-    8: "bottom",  # Qt.BottomDockWidgetArea"
+    1: "left",  # "Qt.DockWidgetArea.LeftDockWidgetArea"
+    2: "right",  # "Qt.DockWidgetArea.RightDockWidgetArea"
+    4: "top",  # "Qt.DockWidgetArea.TopDockWidgetArea"
+    8: "bottom",  # Qt.DockWidgetArea.BottomDockWidgetArea"
     # 0: "Qt.NoDockWidgetArea"
 }
 DOCK_AREA_NAMES = list(DOCK_AREAS.values())
+QT_DOCK_AREAS = {
+    "left": Qt.DockWidgetArea.LeftDockWidgetArea,
+    "right": Qt.DockWidgetArea.RightDockWidgetArea,
+    "top": Qt.DockWidgetArea.TopDockWidgetArea,
+    "bottom": Qt.DockWidgetArea.BottomDockWidgetArea,
+}
+DEFAULT_LAYOUT = Path(__file__).parent / "layouts" / "default_layout.json"
+TEST_LAYOUT = Path(__file__).parent / "layouts" / "test_layout.json"
 
 # this is very verbose
 logging.getLogger("napari.loader").setLevel(logging.WARNING)
@@ -70,6 +78,11 @@ class MainWindow(MicroManagerToolbar):
         # add minmax dockwidget
         if "MinMax" not in getattr(self.viewer.window, "_dock_widgets", []):
             self.viewer.window.add_dock_widget(self.minmax, name="MinMax", area="left")
+
+        # add alredy present napari dockwidgets to internal '_dock_widgets'
+        if (win := getattr(self.viewer.window, "_qt_window", None)) is not None:
+            for dock_wdg in win.findChildren(QDockWidget):
+                self._dock_widgets[dock_wdg.objectName()] = dock_wdg
 
         # queue cleanup
         self.destroyed.connect(self._cleanup)
@@ -127,6 +140,9 @@ class MainWindow(MicroManagerToolbar):
             }
         }
         """
+        if (getattr(self.viewer.window, "_qt_window", None)) is None:
+            return {}
+
         _widget_states: dict[str, dict[str, WidgetState]] = {}
         last_widget_geometry: dict[str, tuple[int, int]] = {}
         with contextlib.suppress(AttributeError):
@@ -190,7 +206,8 @@ class MainWindow(MicroManagerToolbar):
             for dock_area, widgets in wdg_states.items()
         }
 
-        layout = Path(__file__).parent / "layout.json"
+        # layout = Path(__file__).parent / "layouts" / "layout.json"
+        layout = TEST_LAYOUT
         with open(layout, "w") as f:
             json.dump(states, f)
 
@@ -201,7 +218,10 @@ class MainWindow(MicroManagerToolbar):
         if isinstance(layout_path, str):
             layout_path = Path(layout_path)
         # get layout.json filepath
-        layout = layout_path or Path(__file__).parent / "layout.json"
+
+        # TO BE CHANGED, THIS IS ONLY FOR TESTING
+        # layout = layout_path or DEFAULT_LAYOUT
+        layout = layout_path or TEST_LAYOUT
         # if the file doesn't exist, return
         if not layout.exists():
             return
@@ -213,15 +233,14 @@ class MainWindow(MicroManagerToolbar):
                 if not state_list:
                     return
 
-                # TODO: also add "Main Window (napari-micromanager)" and "MinMax"
                 for area_name in DOCK_AREA_NAMES:
                     if area_name not in state_list:
                         continue
-                    for wdg_key in state_list[area_name]:
+                    for idx, wdg_key in enumerate(state_list[area_name]):
                         wdg_state = WidgetState(
                             *state_list[area_name][wdg_key].values()
                         )
-                        # for now this will reload only our widgets, not the napari ones
+                        # this will reload only our widgets, not the napari ones
                         if wdg_key in DOCK_WIDGETS and wdg_state.visible:
                             self._show_dock_widget(
                                 wdg_key,
@@ -229,8 +248,35 @@ class MainWindow(MicroManagerToolbar):
                                 wdg_state.tabify,
                                 area_name,
                             )
+                            if wdg_state.floating:
+                                wdg = self._dock_widgets[wdg_key]
+                                wdg.setGeometry(*wdg_state.geometry)
+
+                        elif wdg_key in self._dock_widgets:
+                            if (
+                                getattr(self.viewer.window, "_qt_window", None)
+                            ) is None:
+                                continue
+
                             wdg = self._dock_widgets[wdg_key]
+
+                            # undock the widget to change its area
+                            self.viewer.window._qt_window.removeDockWidget(wdg)
+                            self.viewer.window._qt_window.addDockWidget(
+                                QT_DOCK_AREAS[area_name], wdg
+                            )
+                            # if is tabified, tabify it with the previous widget
+                            if wdg_state.tabify and idx > 0:
+                                if previous_key := list(state_list[area_name].keys())[
+                                    idx - 1
+                                ]:
+                                    self.viewer.window._qt_window.tabifyDockWidget(
+                                        self._dock_widgets[previous_key], wdg
+                                    )
+
+                            wdg.setFloating(wdg_state.floating)
                             wdg.setGeometry(*wdg_state.geometry)
+                            wdg.setVisible(wdg_state.visible)
 
         except json.JSONDecodeError:
             warn(f"Could not load layout from {layout}.", stacklevel=2)

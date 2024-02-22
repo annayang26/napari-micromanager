@@ -1,0 +1,76 @@
+{
+    "left": {
+        "layer list": {
+            "floating": false,
+            "visible": true,
+            "tabify": false,
+            "geometry": [
+                0,
+                507,
+                303,
+                396
+            ]
+        },
+        "layer controls": {
+            "floating": false,
+            "visible": true,
+            "tabify": false,
+            "geometry": [
+                0,
+                120,
+                303,
+                383
+            ]
+        },
+        "MinMax": {
+            "floating": false,
+            "visible": true,
+            "tabify": false,
+            "geometry": [
+                0,
+                907,
+                303,
+                115
+            ]
+        }
+    },
+    "bottom": {
+        "console": {
+            "floating": false,
+            "visible": false,
+            "tabify": false,
+            "geometry": [
+                0,
+                0,
+                640,
+                480
+            ]
+        }
+    },
+    "right": {
+        "MDA": {
+            "floating": false,
+            "visible": false,
+            "tabify": false,
+            "geometry": [
+                1031,
+                120,
+                697,
+                902
+            ]
+        }
+    },
+    "top": {
+        "Main Window (napari-micromanager)": {
+            "floating": false,
+            "visible": true,
+            "tabify": false,
+            "geometry": [
+                0,
+                0,
+                1728,
+                116
+            ]
+        }
+    }
+}
