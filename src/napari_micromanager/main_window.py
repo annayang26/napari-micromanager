@@ -48,7 +48,7 @@ DOCK_AREAS = {
     Qt.DockWidgetArea.LeftDockWidgetArea: "left",
     Qt.DockWidgetArea.RightDockWidgetArea: "right",
     Qt.DockWidgetArea.TopDockWidgetArea: "top",
-    Qt.DockWidgetArea.BottomDockWidgetArea: "bottom"
+    Qt.DockWidgetArea.BottomDockWidgetArea: "bottom",
 }
 DEFAULT_LAYOUT = Path(__file__).parent / "layouts" / "default_layout.json"
 LAYOUTS_PATHES = Path(__file__).parent / "layouts" / "layout_paths.json"
@@ -100,7 +100,7 @@ class MainWindow(MicroManagerToolbar):
             if hasattr(self.viewer.window._dock_widgets["MinMax"], "_close_btn"):
                 self.viewer.window._dock_widgets["MinMax"]._close_btn = False
 
-        # add alredy present napari dockwidgets to internal '_dock_widgets'
+        # add alredy present napari dockwidgets to the internal '_dock_widgets'
         if (win := getattr(self.viewer.window, "_qt_window", None)) is not None:
             for dock_wdg in win.findChildren(QDockWidget):
                 self._dock_widgets[dock_wdg.objectName()] = dock_wdg
@@ -195,9 +195,6 @@ class MainWindow(MicroManagerToolbar):
             for dock_wdg in self.viewer.window._qt_window.findChildren(QDockWidget):
                 wdg_name = dock_wdg.objectName()
                 area = self.viewer.window._qt_window.dockWidgetArea(dock_wdg)
-                print()
-                print('____________')
-                print(area)
                 area_name = DOCK_AREAS[area]
                 if area_name not in _widget_states:
                     _widget_states[area_name] = {}
@@ -296,35 +293,42 @@ class MainWindow(MicroManagerToolbar):
                     states = cast(dict[str, dict[str, dict]], states)
                     for idx, wdg_key in enumerate(states[area_name]):
                         wdg_state = WidgetState(*states[area_name][wdg_key].values())
-                        # this will reload pymmcore widgets
-                        if wdg_key in DOCK_WIDGETS and wdg_state.visible:
-                            self._update_pymmcore_widget_state(
-                                wdg_key, wdg_state, area_name
-                            )
-                        # this will reload the napari widgets
+                        # this will load pymmcore widgets that are not yet in napari
+                        if (
+                            wdg_key in DOCK_WIDGETS
+                            and wdg_key not in self._dock_widgets
+                        ):
+                            self._load_new_widget_state(wdg_key, wdg_state, area_name)
+                        # this will reload the napari widgets and the pymmcore widgets
+                        # that have been already added to napari
                         elif wdg_key in self._dock_widgets:
-                            self._update_napari_widget_state(
+                            self._update_widget_state(
                                 idx, states, wdg_key, wdg_state, area_name
                             )
 
         except json.JSONDecodeError:
             warn(f"Could not load layout from {layout}.", stacklevel=2)
 
-    def _update_pymmcore_widget_state(
+    def _load_new_widget_state(
         self, wdg_key: str, wdg_state: WidgetState, area_name: str
     ) -> None:
-        """Update the state of the pymmcore widgets."""
+        """Load the state of the new pymmcore widgets that are not yet in napari.
+
+        Here we create the pymmcore widgets and add them to the napari window for the
+        first time.
+        """
         self._show_dock_widget(
             wdg_key,
             wdg_state.floating,
             wdg_state.tabify,
             area_name,
         )
+        wdg = self._dock_widgets[wdg_key]
         if wdg_state.floating:
-            wdg = self._dock_widgets[wdg_key]
             wdg.setGeometry(*wdg_state.geometry)
+        wdg.setVisible(wdg_state.visible)
 
-    def _update_napari_widget_state(
+    def _update_widget_state(
         self,
         idx: int,
         states: dict[str, dict[str, dict]],
@@ -332,7 +336,12 @@ class MainWindow(MicroManagerToolbar):
         wdg_state: WidgetState,
         area_name: str,
     ) -> None:
-        """Update the state of the napari widgets."""
+        """Update the state of the widgets that are already in napari.
+
+        Here we update the state of the widgets that are already in napari, for example
+        the 'layer control', 'layer list' plus any pymmcore widgets that have been added
+        to napari).
+        """
         if (getattr(self.viewer.window, "_qt_window", None)) is None:
             return
 
@@ -347,7 +356,6 @@ class MainWindow(MicroManagerToolbar):
                 self.viewer.window._qt_window.tabifyDockWidget(
                     self._dock_widgets[previous_key], wdg
                 )
-
         wdg.setFloating(wdg_state.floating)
         wdg.setGeometry(*wdg_state.geometry)
         wdg.setVisible(wdg_state.visible)
