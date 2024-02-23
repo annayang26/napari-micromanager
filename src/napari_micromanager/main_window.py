@@ -46,6 +46,8 @@ DOCK_AREAS = {
     "bottom": Qt.DockWidgetArea.BottomDockWidgetArea,
 }
 DEFAULT_LAYOUT = Path(__file__).parent / "layouts" / "default_layout.json"
+LAYOUTS_PATHES = Path(__file__).parent / "layouts" / "layout_paths.json"
+CONFIGS_PATHES = Path(__file__).parent / "configs" / "config_paths.json"
 
 # this is very verbose
 logging.getLogger("napari.loader").setLevel(logging.WARNING)
@@ -121,7 +123,8 @@ class MainWindow(MicroManagerToolbar):
                 warn(f"Config file {config} not found. Nothing loaded.", stacklevel=2)
 
         # load provided layout or the default one stored in the package
-        self._load_layout(layout)
+        if layout is not None:
+            self._load_layout(layout)
 
     def _cleanup(self) -> None:
         for signal, slot in self._connections:
@@ -258,15 +261,16 @@ class MainWindow(MicroManagerToolbar):
             layout, _ = QFileDialog.getOpenFileName(
                 self, "Open layout file", "", "jSON (*.json)"
             )
-            layout = Path(layout) if layout else DEFAULT_LAYOUT
+            layout = Path(layout) if layout else None
         elif isinstance(layout_path, str):
             layout = Path(layout_path)
         else:
             layout = layout_path
 
         # if the file doesn't exist, return
-        if not layout.exists():
+        if layout is None or not layout.exists():
             return
+
         # open the json file
         try:
             with layout.open("r") as f:
@@ -362,10 +366,10 @@ class StartupDialog(QDialog):
         self.cfg_combo.setObjectName("cfg")
         # find .cfg files in every mm directory
         cfg_files = self._get_micromanager_cfg_files()
-        # TODO: once we have the database of configs, we can populate the combo box
-        # with the stored configs too. remember to check their existance before adding
-        # them
-        self.cfg_combo.addItems([str(f) for f in cfg_files])
+        cfg_paths = self._get_paths_list(CONFIGS_PATHES) + [
+            str(cfg) for cfg in cfg_files
+        ]
+        self.cfg_combo.addItems(cfg_paths)
         self.cfg_btn = QPushButton("...")
         self.cfg_btn.setSizePolicy(FIXED)
         self.cfg_btn.clicked.connect(lambda: self._on_browse_clicked(self.cfg_combo))
@@ -377,10 +381,7 @@ class StartupDialog(QDialog):
             QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLength
         )
         self.layout_combo.setObjectName("layout")
-        # TODO: once we have the database of layouts, we can populate the combo box
-        # with the stored layouts too. remember to check their existance before adding
-        # them
-        self.layout_combo.addItems([str(DEFAULT_LAYOUT)])
+        self.layout_combo.addItems(self._get_paths_list(LAYOUTS_PATHES))
         self.layout_btn = QPushButton("...")
         self.layout_btn.setSizePolicy(FIXED)
         self.layout_btn.clicked.connect(
@@ -430,14 +431,61 @@ class StartupDialog(QDialog):
     def _on_browse_clicked(self, combo: QComboBox) -> None:
         """Open a file dialog to select a file."""
         file_type = "cfg" if combo.objectName() == "cfg" else "json"
-        filename, _ = QFileDialog.getOpenFileName(
+        path, _ = QFileDialog.getOpenFileName(
             self, "Open file", "", f"MicroManager files (*.{file_type})"
         )
-        if filename:
-            combo.addItem(filename)
-            combo.setCurrentText(filename)
-            # TODO: keep a database of the created configes ands layouts with their
-            # paths so we can update the comboboxes with the new files.
+        if path:
+            combo.addItem(path)
+            combo.setCurrentText(path)
+            paths = CONFIGS_PATHES if file_type == "cfg" else LAYOUTS_PATHES
+            self._update_json(paths, path)
+
+    def _get_paths_list(self, paths: Path) -> list[str]:
+        """Return the list of paths from the json file."""
+        import json
+
+        try:
+            with open(paths) as f:
+                data = json.load(f)
+                # remove any paths that don't exist
+                removed = False
+                for path in data.get("paths", []):
+                    if not Path(path).exists():
+                        data["paths"].remove(path)
+                        removed = True
+                if removed:
+                    # Write the data back to the file if a path was removed
+                    with open(paths, "w") as f:
+                        json.dump(data, f)
+
+        except json.JSONDecodeError:
+            return []
+
+        return cast(list[str], data.get("paths", []))
+
+    def _update_json(self, paths: Path, path: str) -> None:
+        """Uopdate the json file with the new path."""
+        import json
+
+        # if there is no file, create it
+        if not paths.exists():
+            with open(paths, "w") as f:
+                json.dump({"paths": []}, f)
+
+        # Read the existing data
+        try:
+            with open(paths) as f:
+                data = json.load(f)
+        # if an error occurs, create an empty dictionary
+        except json.JSONDecodeError:
+            data = {"paths": []}
+
+        # Append the new path
+        data["paths"].append(path)
+
+        # Write the data back to the file
+        with open(paths, "w") as f:
+            json.dump(data, f)
 
     def value(self) -> tuple[str | None, str | None]:
         """Return the selected configuration and layout files."""
