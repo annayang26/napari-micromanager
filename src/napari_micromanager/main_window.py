@@ -45,6 +45,10 @@ DOCK_AREAS = {
     "right": Qt.DockWidgetArea.RightDockWidgetArea,
     "top": Qt.DockWidgetArea.TopDockWidgetArea,
     "bottom": Qt.DockWidgetArea.BottomDockWidgetArea,
+    Qt.DockWidgetArea.LeftDockWidgetArea: "left",
+    Qt.DockWidgetArea.RightDockWidgetArea: "right",
+    Qt.DockWidgetArea.TopDockWidgetArea: "top",
+    Qt.DockWidgetArea.BottomDockWidgetArea: "bottom"
 }
 DEFAULT_LAYOUT = Path(__file__).parent / "layouts" / "default_layout.json"
 LAYOUTS_PATHES = Path(__file__).parent / "layouts" / "layout_paths.json"
@@ -191,6 +195,9 @@ class MainWindow(MicroManagerToolbar):
             for dock_wdg in self.viewer.window._qt_window.findChildren(QDockWidget):
                 wdg_name = dock_wdg.objectName()
                 area = self.viewer.window._qt_window.dockWidgetArea(dock_wdg)
+                print()
+                print('____________')
+                print(area)
                 area_name = DOCK_AREAS[area]
                 if area_name not in _widget_states:
                     _widget_states[area_name] = {}
@@ -364,7 +371,7 @@ class StartupDialog(QDialog):
         cfg_lbl.setSizePolicy(FIXED)
         self.cfg_combo = QComboBox()
         self.cfg_combo.setSizeAdjustPolicy(
-            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLength
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
         )
         self.cfg_combo.setObjectName("cfg")
         # find .cfg files in every mm directory
@@ -381,7 +388,7 @@ class StartupDialog(QDialog):
         layout_lbl.setSizePolicy(FIXED)
         self.layout_combo = QComboBox()
         self.layout_combo.setSizeAdjustPolicy(
-            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLength
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
         )
         self.layout_combo.setObjectName("layout")
         self.layout_combo.addItems(self._get_paths_list(LAYOUTS_PATHES))
