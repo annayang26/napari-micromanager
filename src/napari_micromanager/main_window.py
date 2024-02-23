@@ -21,6 +21,7 @@ from qtpy.QtWidgets import (
     QFileDialog,
     QGridLayout,
     QLabel,
+    QMenuBar,
     QPushButton,
     QSizePolicy,
     QWidget,
@@ -64,9 +65,9 @@ class MainWindow(MicroManagerToolbar):
     ) -> None:
         super().__init__(viewer)
 
-        # Menu Bar (TEMPORARY ?)
-        if (win := getattr(self.viewer.window, "_qt_window", None)) is not None:
-            menubar = win._qt_window.menuBar()
+        # Micro-Manager MenuBar (TEMPORARY?)
+        if (win := getattr(viewer.window, "_qt_window", None)) is not None:
+            menubar = cast(QMenuBar, win.menuBar())
             mm_menu = menubar.addMenu("Micro-Manager")
             self.act_save_layout = QAction("Save Layout", self)
             self.act_save_layout.triggered.connect(self._save_layout)
