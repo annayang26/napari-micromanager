@@ -456,10 +456,10 @@ class StartupDialog(QDialog):
                     if not Path(path).exists():
                         data["paths"].remove(path)
                         removed = True
-                if removed:
-                    # Write the data back to the file if a path was removed
-                    with open(paths, "w") as f:
-                        json.dump(data, f)
+            if removed:
+                # Write the data back to the file if a path was removed
+                with open(paths, "w") as f:
+                    json.dump(data, f)
 
         except json.JSONDecodeError:
             return []
