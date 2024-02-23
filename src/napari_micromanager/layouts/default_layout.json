@@ -1,16 +1,5 @@
 {
     "left": {
-        "layer list": {
-            "floating": false,
-            "visible": true,
-            "tabify": false,
-            "geometry": [
-                0,
-                507,
-                303,
-                396
-            ]
-        },
         "layer controls": {
             "floating": false,
             "visible": true,
@@ -20,6 +9,17 @@
                 120,
                 303,
                 383
+            ]
+        },
+        "layer list": {
+            "floating": false,
+            "visible": true,
+            "tabify": false,
+            "geometry": [
+                0,
+                507,
+                303,
+                396
             ]
         },
         "MinMax": {

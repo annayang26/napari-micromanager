@@ -13,6 +13,7 @@ import napari.viewer
 from pymmcore_plus import CMMCorePlus
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
+    QAction,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -22,7 +23,6 @@ from qtpy.QtWidgets import (
     QLabel,
     QPushButton,
     QSizePolicy,
-    QToolBar,
     QWidget,
 )
 
@@ -64,14 +64,16 @@ class MainWindow(MicroManagerToolbar):
     ) -> None:
         super().__init__(viewer)
 
-        # temporary toolbar to test saving layout_________________________________
-        save_layout_toolbar = QToolBar("Save Layout")
-        save_layout_toolbar.addAction("Save Layout", self._save_layout)
-        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, save_layout_toolbar)
-        load_layout_toolbar = QToolBar("Load Layout")
-        load_layout_toolbar.addAction("Load Layout", self._load_layout)
-        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, load_layout_toolbar)
-        # ________________________________________________________________________
+        # Menu Bar (TEMPORARY ?)
+        if (win := getattr(self.viewer.window, "_qt_window", None)) is not None:
+            menubar = win._qt_window.menuBar()
+            mm_menu = menubar.addMenu("Micro-Manager")
+            self.act_save_layout = QAction("Save Layout", self)
+            self.act_save_layout.triggered.connect(self._save_layout)
+            mm_menu.addAction(self.act_save_layout)
+            self.act_load_layout = QAction("Load Layout", self)
+            self.act_load_layout.triggered.connect(self._load_layout)
+            mm_menu.addAction(self.act_load_layout)
 
         # get global CMMCorePlus instance
         self._mmc = CMMCorePlus.instance()
@@ -115,7 +117,7 @@ class MainWindow(MicroManagerToolbar):
                 config = cfg if config is None else config
                 layout = lay if layout is None else layout
 
-        if config is not None:
+        if config:
             try:
                 self._mmc.loadSystemConfiguration(config)
             except FileNotFoundError:
@@ -123,7 +125,7 @@ class MainWindow(MicroManagerToolbar):
                 warn(f"Config file {config} not found. Nothing loaded.", stacklevel=2)
 
         # load provided layout or the default one stored in the package
-        if layout is not None:
+        if layout:
             self._load_layout(layout)
 
     def _cleanup(self) -> None:
