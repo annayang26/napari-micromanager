@@ -226,92 +226,75 @@ class MainWindow(MicroManagerToolbar):
         """Load the layout from a json file."""
         import json
 
-        # open a file dialog if the layout path is not provided
-        if not layout_path:
-            layout, _ = QFileDialog.getOpenFileName(
-                self, "Open layout file", "", "jSON (*.json)"
-            )
-            layout = Path(layout) if layout else None
-        elif isinstance(layout_path, str):
-            layout = Path(layout_path)
-        else:
-            layout = layout_path
+        layout = self._get_layout_path(layout_path)
 
-        # if the file doesn't exist, return
         if layout is None or not layout.exists():
             return
 
-        # open the json file
         try:
             with layout.open("r") as f:
                 states = json.load(f)
 
-                if not states:
-                    return
+            if not states:
+                return
 
-                # list of widgets that have been tabified with another widget
-                # TODO: fix and also include "Main Window (napari-micromanager)"
-
-                for area in states:
-                    states_per_area = [
-                        WidgetState(*wdg_state.values()) for wdg_state in states[area]
-                    ]
-                    # sorted by geometry.y() to select the topmost widget. We will
-                    # skip the widgets that have negative geometry, as they will be
-                    # tabified with the other widgets
-                    states_per_area = sorted(
-                        states_per_area, key=lambda g: g.geometry[1]
-                    )
-
-                    for wdg_state in states_per_area:
-
-                        # skip widgets that will be tabbed
-                        if wdg_state.geometry[0] < 0 or wdg_state.geometry[1] < 0:
-                            continue
-
-                        # TODO: fix and also include "Main Window (napari-micromanager)"
-                        if wdg_state.name == "Main Window (napari-micromanager)":
-                            continue
-
-                        # this will load the pymmcore widgets that are not yet in napari
-                        if (
-                            wdg_state.name in DOCK_WIDGETS
-                            and wdg_state.name not in self._dock_widgets
-                        ):
-                            self._load_widget_state(wdg_state)
-
-                        # this will reload the napari widgets and the pymmcore widgets
-                        # that have been already added to napari
-                        else:
-                            self._update_widget_state(wdg_state)
-
-                        # if tabified, tabify it with the widgets in 'tabify_with'
-                        if not wdg_state.tabify_with:
-                            continue
-
-                        # tabify it with the other widgets
-                        for wdg_name in wdg_state.tabify_with:
-                            # if it is not have been added to napari yet
-                            if (
-                                wdg_name in DOCK_WIDGETS
-                                and wdg_name not in self._dock_widgets
-                            ):
-                                self._show_dock_widget(
-                                    wdg_name, wdg_state.floating, True, area
-                                )
-                            # if it has been added to napari before
-                            else:
-                                tabify_with = self._dock_widgets[wdg_state.name]
-                                current = self._dock_widgets[wdg_name]
-                                self.viewer.window._qt_window.removeDockWidget(current)
-                                self.viewer.window._qt_window.tabifyDockWidget(
-                                    tabify_with, current
-                                )
-                                current.setVisible(True)
-                                tabify_with = current
+            self._process_widgets_states(states)
 
         except json.JSONDecodeError:
             warn(f"Could not load layout from {layout}.", stacklevel=2)
+
+    def _get_layout_path(self, layout_path: str | Path | None = None) -> Path | None:
+        """Get the layout path, either from the argument or from a file dialog."""
+        if not layout_path:
+            layout, _ = QFileDialog.getOpenFileName(
+                self, "Open layout file", "", "jSON (*.json)"
+            )
+            return Path(layout) if layout else None
+
+        elif isinstance(layout_path, str):
+            return Path(layout_path)
+
+        else:
+            return layout_path
+
+    def _process_widgets_states(self, states: dict) -> None:
+        """Process the widgets states loaded from the layout file."""
+        for area in states:
+            # convert to WidgetState
+            widget_states_per_area = [
+                WidgetState(*wdg_state.values()) for wdg_state in states[area]
+            ]
+            # sorted by geometry.y() to select the topmost widget. We will
+            # skip the widgets that have negative geometry, as they will be
+            # tabified with the other widgets
+            widget_states_per_area = sorted(
+                widget_states_per_area, key=lambda g: g.geometry[1]
+            )
+
+            for wdg_state in widget_states_per_area:
+
+                # skip widgets that will be tabbed
+                if wdg_state.geometry[0] < 0 or wdg_state.geometry[1] < 0:
+                    continue
+
+                # TODO: fix and also include "Main Window (napari-micromanager)"
+                if wdg_state.name == "Main Window (napari-micromanager)":
+                    continue
+
+                self._process_widget_state(wdg_state, area)
+
+    def _process_widget_state(self, wdg_state: WidgetState, area: str) -> None:
+        """Process a single widget state."""
+        # this will load the pymmcore widgets that are not yet in napari
+        if wdg_state.name in DOCK_WIDGETS and wdg_state.name not in self._dock_widgets:
+            self._load_widget_state(wdg_state)
+        # this will reload the napari widgets and the pymmcore widgets that have been
+        # already added to napari
+        else:
+            self._update_widget_state(wdg_state)
+        # if tabified, tabify it with the widgets in 'tabify_with'
+        if wdg_state.tabify_with:
+            self._tabify_widgets(wdg_state, area)
 
     def _load_widget_state(self, wdg_state: WidgetState) -> None:
         """Load the state of the new pymmcore widgets that are not yet in napari.
@@ -320,15 +303,12 @@ class MainWindow(MicroManagerToolbar):
         first time.
         """
         self._show_dock_widget(
-            wdg_state.name,
-            wdg_state.floating,
-            False,
-            wdg_state.area,
+            wdg_state.name, wdg_state.floating, False, wdg_state.area
         )
         wdg = self._dock_widgets[wdg_state.name]
+        wdg.setVisible(wdg_state.visible)
         if wdg_state.floating:
             wdg.setGeometry(*wdg_state.geometry)
-        wdg.setVisible(wdg_state.visible)
 
     def _update_widget_state(self, wdg_state: WidgetState) -> None:
         """Update the state of the widgets that are already in napari.
@@ -348,6 +328,25 @@ class MainWindow(MicroManagerToolbar):
         wdg.setFloating(wdg_state.floating)
         wdg.setGeometry(*wdg_state.geometry)
         wdg.setVisible(wdg_state.visible)
+
+    def _tabify_widgets(self, wdg_state: WidgetState, area: str) -> None:
+        """Tabify a widget with other widgets based on its state."""
+        for wdg_name in wdg_state.tabify_with:
+            # if it is not have been added to napari yet
+            if wdg_name in DOCK_WIDGETS and wdg_name not in self._dock_widgets:
+                self._show_dock_widget(wdg_name, wdg_state.floating, True, area)
+            # if it has been added to napari before
+            else:
+                self._tabify_existing_widgets(wdg_state, wdg_name)
+
+    def _tabify_existing_widgets(self, wdg_state: WidgetState, wdg_name: str) -> None:
+        """Tabify an existing widget with another widget."""
+        tabify_with = self._dock_widgets[wdg_state.name]
+        current_wdg = self._dock_widgets[wdg_name]
+        self.viewer.window._qt_window.removeDockWidget(current_wdg)
+        self.viewer.window._qt_window.tabifyDockWidget(tabify_with, current_wdg)
+        current_wdg.setVisible(True)
+        tabify_with = current_wdg
 
 
 class StartupDialog(QDialog):
