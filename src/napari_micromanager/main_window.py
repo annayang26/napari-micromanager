@@ -165,7 +165,7 @@ class MainWindow(MicroManagerToolbar):
         """Return the current state of the viewer layout.
 
         It loops through all the dock widgets in napari's main window and stores
-        their state in a dict per area.
+        their state in a list of WidgetState objects.
         """
         if (getattr(self.viewer.window, "_qt_window", None)) is None:
             return []
