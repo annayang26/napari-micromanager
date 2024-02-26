@@ -24,6 +24,7 @@ from qtpy.QtWidgets import (
     QMenuBar,
     QPushButton,
     QSizePolicy,
+    QToolBar,
     QWidget,
 )
 from rich import print
@@ -70,16 +71,8 @@ class MainWindow(MicroManagerToolbar):
     ) -> None:
         super().__init__(viewer)
 
-        # Micro-Manager MenuBar (TEMPORARY?)
-        if (win := getattr(viewer.window, "_qt_window", None)) is not None:
-            menubar = cast(QMenuBar, win.menuBar())
-            mm_menu = menubar.addMenu("Micro-Manager")
-            self.act_save_layout = QAction("Save Layout", self)
-            self.act_save_layout.triggered.connect(self._save_layout)
-            mm_menu.addAction(self.act_save_layout)
-            self.act_load_layout = QAction("Load Layout", self)
-            self.act_load_layout.triggered.connect(self._load_layout)
-            mm_menu.addAction(self.act_load_layout)
+        # Micro-Manager MenuBar
+        self._add_menu()
 
         # get global CMMCorePlus instance
         self._mmc = CMMCorePlus.instance()
@@ -133,6 +126,51 @@ class MainWindow(MicroManagerToolbar):
         # load provided layout or the default one stored in the package
         if layout:
             self._load_layout(layout)
+
+    def _add_menu(self) -> None:
+        if (win := getattr(self.viewer.window, "_qt_window", None)) is None:
+            return
+
+        menubar = cast(QMenuBar, win.menuBar())
+
+        # main Micro-Manager menu
+        mm_menu = menubar.addMenu("Micro-Manager")
+
+        # Configurations Sub-Menu
+        configurations_menu = mm_menu.addMenu("System Configurations")
+        self.act_save_configuration = QAction("Save Configuration", self)
+        configurations_menu.addAction(self.act_save_configuration)
+        self.act_load_configuration = QAction("Load Configuration", self)
+        configurations_menu.addAction(self.act_load_configuration)
+        self.act_cfg_wizard = QAction("Hardware Configuration Wizard", self)
+        configurations_menu.addAction(self.act_cfg_wizard)
+
+        # Layout Sub-Menu
+        layout_menu = mm_menu.addMenu("Layout")
+        self.act_save_layout = QAction("Save Layout", self)
+        self.act_save_layout.triggered.connect(self._save_layout)
+        layout_menu.addAction(self.act_save_layout)
+        self.act_load_layout = QAction("Load Layout", self)
+        self.act_load_layout.triggered.connect(self._load_layout)
+        layout_menu.addAction(self.act_load_layout)
+
+        # Widgets Sub-Menu
+        widgets_menu = mm_menu.addMenu("Widgets")
+        for widget in DOCK_WIDGETS:
+            widget_action = QAction(widget, self)
+            widget_action.triggered.connect(
+                lambda _, widget=widget: self._show_dock_widget(widget)
+            )
+            widgets_menu.addAction(widget_action)
+
+        # Toolbar Sub-Menu
+        toolbar_menu = mm_menu.addMenu("Toolbar")
+        for toolbar in self.findChildren(QToolBar):
+            toolbar_action = QAction(toolbar.windowTitle(), self)
+            toolbar_action.triggered.connect(
+                lambda _, toolbar=toolbar: toolbar.setVisible(not toolbar.isVisible())
+            )
+            toolbar_menu.addAction(toolbar_action)
 
     def _cleanup(self) -> None:
         for signal, slot in self._connections:

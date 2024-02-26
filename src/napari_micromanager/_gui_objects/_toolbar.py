@@ -94,10 +94,10 @@ class MicroManagerToolbar(QMainWindow):
             # ConfigToolBar(self),
             ChannelsToolBar(self),
             ObjectivesToolBar(self),
-            None,
-            ShuttersToolBar(self),
+            # None,
             SnapLiveToolBar(self),
             ExposureToolBar(self),
+            ShuttersToolBar(self),
             ToolsToolBar(self),
         ]
         for item in toolbar_items:
@@ -320,7 +320,7 @@ class ToolsToolBar(MMToolBar):
     """
 
     def __init__(self, parent: MicroManagerToolbar) -> None:
-        super().__init__("Tools", parent)
+        super().__init__("Widgets", parent)
 
         if not isinstance(parent, MicroManagerToolbar):
             raise TypeError("parent must be a MicroManagerToolbar instance.")
