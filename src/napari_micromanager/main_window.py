@@ -476,7 +476,7 @@ class StartupDialog(QDialog):
         # if there is no file, create it
         if not paths.exists():
             with open(paths, "w") as f:
-                json.dump({"paths": []}, f)
+                json.dump({"paths": [""]}, f)
 
         # Read the existing data
         try:
@@ -484,7 +484,7 @@ class StartupDialog(QDialog):
                 data = json.load(f)
         # if an error occurs, create an empty dictionary
         except json.JSONDecodeError:
-            data = {"paths": []}
+            data = {"paths": [""]}
 
         # Append the new path
         data["paths"].append(path)
