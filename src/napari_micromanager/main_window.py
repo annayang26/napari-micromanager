@@ -166,6 +166,9 @@ class MainWindow(MicroManagerToolbar):
 
         It loops through all the dock widgets in napari's main window and stores
         their state in a list of WidgetState objects.
+
+        The list is sorted by the area of the widgets, so that the widgets in the same
+        area are close grouped together.
         """
         if (getattr(self.viewer.window, "_qt_window", None)) is None:
             return []
