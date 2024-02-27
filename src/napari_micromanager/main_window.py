@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, cast
 from warnings import warn
-
+import json
 import napari
 import napari.layers
 import napari.viewer
@@ -52,8 +52,8 @@ DOCK_AREAS = {
     Qt.DockWidgetArea.BottomDockWidgetArea: "bottom",
 }
 DEFAULT_LAYOUT = Path(__file__).parent / "layouts" / "default_layout.json"
-LAYOUTS_PATHES = Path(__file__).parent / "layouts" / "layout_paths.json"
-CONFIGS_PATHES = Path(__file__).parent / "configs" / "config_paths.json"
+LAYOUTS_PATHS = Path(__file__).parent / "layouts" / "layout_paths.json"
+CONFIGS_PATHS = Path(__file__).parent / "configs" / "config_paths.json"
 
 # this is very verbose
 logging.getLogger("napari.loader").setLevel(logging.WARNING)
@@ -203,8 +203,6 @@ class MainWindow(MicroManagerToolbar):
 
     def _save_layout(self) -> None:
         """Save the layout state to a json file."""
-        import json
-
         wdg_states = self.get_layout_state()
 
         print()
@@ -227,8 +225,6 @@ class MainWindow(MicroManagerToolbar):
 
     def _load_layout(self, layout_path: str | Path | None = None) -> None:
         """Load the layout from a json file."""
-        import json
-
         layout = self._get_layout_path(layout_path)
 
         if layout is None or not layout.exists():
@@ -373,11 +369,9 @@ class StartupDialog(QDialog):
             QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
         )
         self.cfg_combo.setObjectName("cfg")
-        # find .cfg files in every mm directory
-        cfg_files = self._get_micromanager_cfg_files()
-        cfg_paths = self._get_paths_list(CONFIGS_PATHES) + [
-            str(cfg) for cfg in cfg_files
-        ]
+        self._add_cfg_from_micromanager_folder()  # writes to CONFIGS_PATHS
+        cfg_paths = self._get_paths_list(CONFIGS_PATHS)
+        
         self.cfg_combo.addItems(cfg_paths)
         self.cfg_btn = QPushButton("...")
         self.cfg_btn.setSizePolicy(FIXED)
@@ -390,7 +384,7 @@ class StartupDialog(QDialog):
             QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
         )
         self.layout_combo.setObjectName("layout")
-        self.layout_combo.addItems(self._get_paths_list(LAYOUTS_PATHES))
+        self.layout_combo.addItems(self._get_paths_list(LAYOUTS_PATHS))
         self.layout_btn = QPushButton("...")
         self.layout_btn.setSizePolicy(FIXED)
         self.layout_btn.clicked.connect(
@@ -436,6 +430,23 @@ class StartupDialog(QDialog):
             cfg_files.extend(Path(mm_dir).glob("*.cfg"))
 
         return cfg_files
+    
+    def _add_cfg_from_micromanager_folder(self) -> None:
+    
+        cfg_files = self._get_micromanager_cfg_files()
+
+        if not cfg_files:
+            return
+        
+        with open(CONFIGS_PATHS) as f:
+            data = json.load(f)
+            paths = cast(list, data.get("paths", [""]))
+            for cfg in reversed(cfg_files):
+                if str(cfg) not in paths:
+                    paths.insert(0, str(cfg))
+
+            with open(CONFIGS_PATHS, "w") as f:
+                json.dump(data, f)
 
     def _on_browse_clicked(self, combo: QComboBox) -> None:
         """Open a file dialog to select a file."""
@@ -444,15 +455,13 @@ class StartupDialog(QDialog):
             self, "Open file", "", f"MicroManager files (*.{file_type})"
         )
         if path:
-            combo.addItem(path)
+            combo.insertItem(0, path)
             combo.setCurrentText(path)
-            paths = CONFIGS_PATHES if file_type == "cfg" else LAYOUTS_PATHES
+            paths = CONFIGS_PATHS if file_type == "cfg" else LAYOUTS_PATHS
             self._update_json(paths, path)
 
     def _get_paths_list(self, paths: Path) -> list[str]:
         """Return the list of paths from the json file."""
-        import json
-
         try:
             with open(paths) as f:
                 data = json.load(f)
@@ -470,12 +479,10 @@ class StartupDialog(QDialog):
         except json.JSONDecodeError:
             return []
 
-        return cast(list[str], data.get("paths", []))
+        return cast(list[str], data.get("paths", [""]))
 
     def _update_json(self, paths: Path, path: str) -> None:
         """Uopdate the json file with the new path."""
-        import json
-
         # if there is no file, create it
         if not paths.exists():
             with open(paths, "w") as f:
@@ -490,7 +497,7 @@ class StartupDialog(QDialog):
             data = {"paths": [""]}
 
         # Append the new path
-        data["paths"].append(path)
+        data["paths"].insert(0, path)
 
         # Write the data back to the file
         with open(paths, "w") as f:
