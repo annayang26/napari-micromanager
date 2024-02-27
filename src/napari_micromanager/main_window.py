@@ -52,7 +52,6 @@ DOCK_AREAS = {
     Qt.DockWidgetArea.TopDockWidgetArea: "top",
     Qt.DockWidgetArea.BottomDockWidgetArea: "bottom",
 }
-DEFAULT_LAYOUT = Path(__file__).parent / "layouts" / "default_layout.json"
 LAYOUTS_PATHS = Path(__file__).parent / "layouts" / "layout_paths.json"
 CONFIGS_PATHS = Path(__file__).parent / "configs" / "config_paths.json"
 
