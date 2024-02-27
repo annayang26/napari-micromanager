@@ -39,7 +39,9 @@ DOCK_WIDGETS: Dict[str, Tuple[type[QWidget], str | None]] = {  # noqa: U006
 class WidgetState(NamedTuple):
     """A simple state object for storing widget state."""
 
+    name: str
+    area: str
     floating: bool
     visible: bool
-    tabify: bool
+    tabify_with: list[str]
     geometry: tuple[int, int, int, int]

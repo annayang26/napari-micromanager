@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import atexit
 import contextlib
+import json
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Callable, cast
 from warnings import warn
 
 import napari
@@ -12,7 +13,7 @@ import napari.layers
 import napari.viewer
 from pymmcore_plus import CMMCorePlus
 from qtpy.QtCore import Qt
-from qtpy.QtWidgets import QDockWidget, QToolBar
+from qtpy.QtWidgets import QAction, QDockWidget, QFileDialog, QMenuBar
 
 from ._core_link import CoreViewerLink
 from ._gui_objects._dock_widgets import DOCK_WIDGETS, WidgetState
@@ -28,17 +29,15 @@ DOCK_AREAS = {
     2: "right",  # "Qt.DockWidgetArea.RightDockWidgetArea"
     4: "top",  # "Qt.DockWidgetArea.TopDockWidgetArea"
     8: "bottom",  # Qt.DockWidgetArea.BottomDockWidgetArea"
-    # 0: "Qt.NoDockWidgetArea"
-}
-DOCK_AREA_NAMES = list(DOCK_AREAS.values())
-QT_DOCK_AREAS = {
     "left": Qt.DockWidgetArea.LeftDockWidgetArea,
     "right": Qt.DockWidgetArea.RightDockWidgetArea,
     "top": Qt.DockWidgetArea.TopDockWidgetArea,
     "bottom": Qt.DockWidgetArea.BottomDockWidgetArea,
+    Qt.DockWidgetArea.LeftDockWidgetArea: "left",
+    Qt.DockWidgetArea.RightDockWidgetArea: "right",
+    Qt.DockWidgetArea.TopDockWidgetArea: "top",
+    Qt.DockWidgetArea.BottomDockWidgetArea: "bottom",
 }
-DEFAULT_LAYOUT = Path(__file__).parent / "layouts" / "default_layout.json"
-TEST_LAYOUT = Path(__file__).parent / "layouts" / "test_layout.json"
 
 # this is very verbose
 logging.getLogger("napari.loader").setLevel(logging.WARNING)
@@ -56,9 +55,15 @@ class MainWindow(MicroManagerToolbar):
         super().__init__(viewer)
 
         # temporary toolbar to test saving layout_________________________________
-        save_layout_toolbar = QToolBar("Save Layout")
-        save_layout_toolbar.addAction("Save Layout", self._save_layout)
-        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, save_layout_toolbar)
+        if (win := getattr(viewer.window, "_qt_window", None)) is not None:
+            menubar = cast(QMenuBar, win.menuBar())
+            mm_menu = menubar.addMenu("Micro-Manager")
+            self.act_save_layout = QAction("Save Layout", self)
+            self.act_save_layout.triggered.connect(self._save_layout)
+            mm_menu.addAction(self.act_save_layout)
+            self.act_load_layout = QAction("Load Layout", self)
+            self.act_load_layout.triggered.connect(self._load_layout)
+            mm_menu.addAction(self.act_load_layout)
         # ________________________________________________________________________
 
         # get global CMMCorePlus instance
@@ -96,7 +101,8 @@ class MainWindow(MicroManagerToolbar):
                 warn(f"Config file {config} not found. Nothing loaded.", stacklevel=2)
 
         # load provided layout or the default one stored in the package
-        self._load_layout(layout)
+        if layout is not None:
+            self._load_layout(layout)
 
     def _cleanup(self) -> None:
         for signal, slot in self._connections:
@@ -114,169 +120,188 @@ class MainWindow(MicroManagerToolbar):
 
     def get_layout_state(
         self,
-    ) -> dict[str, dict[str, WidgetState]]:
+    ) -> list[WidgetState]:
         """Return the current state of the viewer layout.
 
         It loops through all the dock widgets in napari's main window and stores
-        their state in a dict per area.
+        their state in a list of WidgetState objects.
 
-        Within each area, the widgets are ordered from top to bottom. Note that if the
-        widgets are tabified, the one in the background will be the first in the list
-        and their x and y geometry coordinates are negative. Using this information, we
-        can discriminate between tabified and non-tabified widgets.
-
-        For example:
-        {
-            'right': {
-                'dw1': WidgetState(floating=False, visible=True, geometry=(1,2,3,4)),
-                'dw2': WidgetState(floating=False, visible=True, geometry=(3,4,5,6)),
-            },
-            'left': {
-                # dw3 is tabified with dw4 and is behind it
-                'dw3': WidgetState(floating=False, visible=True, geometry=(-7,-6,3,2))
-                'dw4': WidgetState(floating=False, visible=True, geometry=(8,9,3,7))
-                # dw5 is not tabified, so it is below dw4
-                'dw5': WidgetState(floating=False, visible=True, geometry=(9,10,3,1))
-            }
-        }
+        The list is sorted by the area of the widgets, so that the widgets in the same
+        area are close grouped together.
         """
         if (getattr(self.viewer.window, "_qt_window", None)) is None:
-            return {}
+            return []
 
-        _widget_states: dict[str, dict[str, WidgetState]] = {}
-        last_widget_geometry: dict[str, tuple[int, int]] = {}
+        wdg_states: list[WidgetState] = []
         with contextlib.suppress(AttributeError):
-            for dock_wdg in self.viewer.window._qt_window.findChildren(QDockWidget):
+            main_win = self.viewer.window._qt_window
+            for dock_wdg in main_win.findChildren(QDockWidget):
                 wdg_name = dock_wdg.objectName()
-                area = self.viewer.window._qt_window.dockWidgetArea(dock_wdg)
+                area = main_win.dockWidgetArea(dock_wdg)
                 area_name = DOCK_AREAS[area]
-                if area_name not in _widget_states:
-                    _widget_states[area_name] = {}
-
-                # Check if the last widget's x and y were negative or positive
-                tabify = False
-                if area_name in last_widget_geometry:
-                    last_x, last_y = last_widget_geometry[area_name]
-                    # if the previous x and y were negative, it means that the last
-                    # widget was tabified with the current one
-                    if last_x < 0 and last_y < 0:
-                        tabify = True
-                    # otherwise, if the previous x and y were positive, it means that
-                    # this new widget is not tabified
-                    elif last_x >= 0 and last_y >= 0:
-                        tabify = False
-
-                _widget_states[area_name][wdg_name] = WidgetState(
-                    floating=dock_wdg.isFloating(),
-                    visible=dock_wdg.isVisible(),
-                    tabify=tabify,
-                    geometry=(
-                        dock_wdg.geometry().x(),
-                        dock_wdg.geometry().y(),
-                        dock_wdg.geometry().width(),
-                        dock_wdg.geometry().height(),
-                    ),
+                wdg_states.append(
+                    WidgetState(
+                        name=wdg_name,
+                        area=area_name,
+                        floating=dock_wdg.isFloating(),
+                        visible=dock_wdg.isVisible(),
+                        tabify_with=[
+                            wdg.objectName()
+                            for wdg in main_win.tabifiedDockWidgets(dock_wdg)
+                        ],
+                        geometry=(
+                            dock_wdg.geometry().x(),
+                            dock_wdg.geometry().y(),
+                            dock_wdg.geometry().width(),
+                            dock_wdg.geometry().height(),
+                        ),
+                    )
                 )
 
-                # Update last_widget_geometry
-                last_widget_geometry[area_name] = (
-                    dock_wdg.geometry().x(),
-                    dock_wdg.geometry().y(),
-                )
-
-        return _widget_states
+        return sorted(wdg_states, key=lambda x: x.area)
 
     def _save_layout(self) -> None:
         """Save the layout state to a json file."""
-        import json
-
         wdg_states = self.get_layout_state()
-
-        from rich import print
 
         print()
         print(wdg_states)
 
-        # WidgetState as dict
-        states = {
-            dock_area: {
-                widget_name: wdg_state._asdict()
-                for widget_name, wdg_state in widgets.items()
-            }
-            for dock_area, widgets in wdg_states.items()
-        }
+        # store the state of the widgets in a dictionary per area
+        states: dict[str, list[dict]] = {}
+        for wdg_state in wdg_states:
+            area = wdg_state.area
+            if area not in states:
+                states[area] = []
+            states[area].append(wdg_state._asdict())
 
-        # layout = Path(__file__).parent / "layouts" / "layout.json"
-        layout = TEST_LAYOUT
-        with open(layout, "w") as f:
-            json.dump(states, f)
+        layout_path, _ = QFileDialog.getSaveFileName(
+            self, "Save layout file", "", "jSON (*.json)"
+        )
+        if layout_path:
+            with open(layout_path, "w") as f:
+                json.dump(states, f)
 
     def _load_layout(self, layout_path: str | Path | None = None) -> None:
-        """Load the layout state from the last time the viewer was closed."""
-        import json
+        """Load the layout from a json file."""
+        layout = self._get_layout_path(layout_path)
 
-        if isinstance(layout_path, str):
-            layout_path = Path(layout_path)
-        # get layout.json filepath
-
-        # TO BE CHANGED, THIS IS ONLY FOR TESTING
-        # layout = layout_path or DEFAULT_LAYOUT
-        layout = layout_path or TEST_LAYOUT
-        # if the file doesn't exist, return
-        if not layout.exists():
+        if layout is None or not layout.exists():
             return
-        # open the json file
+
         try:
             with layout.open("r") as f:
-                state_list = json.load(f)
+                states = json.load(f)
 
-                if not state_list:
-                    return
+            if not states:
+                return
 
-                for area_name in DOCK_AREA_NAMES:
-                    if area_name not in state_list:
-                        continue
-                    for idx, wdg_key in enumerate(state_list[area_name]):
-                        wdg_state = WidgetState(
-                            *state_list[area_name][wdg_key].values()
-                        )
-                        # this will reload only our widgets, not the napari ones
-                        if wdg_key in DOCK_WIDGETS and wdg_state.visible:
-                            self._show_dock_widget(
-                                wdg_key,
-                                wdg_state.floating,
-                                wdg_state.tabify,
-                                area_name,
-                            )
-                            if wdg_state.floating:
-                                wdg = self._dock_widgets[wdg_key]
-                                wdg.setGeometry(*wdg_state.geometry)
-
-                        elif wdg_key in self._dock_widgets:
-                            if (
-                                getattr(self.viewer.window, "_qt_window", None)
-                            ) is None:
-                                continue
-
-                            wdg = self._dock_widgets[wdg_key]
-
-                            # undock the widget to change its area
-                            self.viewer.window._qt_window.removeDockWidget(wdg)
-                            self.viewer.window._qt_window.addDockWidget(
-                                QT_DOCK_AREAS[area_name], wdg
-                            )
-                            # if is tabified, tabify it with the previous widget
-                            if wdg_state.tabify and idx > 0:
-                                if previous_key := list(state_list[area_name].keys())[
-                                    idx - 1
-                                ]:
-                                    self.viewer.window._qt_window.tabifyDockWidget(
-                                        self._dock_widgets[previous_key], wdg
-                                    )
-
-                            wdg.setFloating(wdg_state.floating)
-                            wdg.setGeometry(*wdg_state.geometry)
-                            wdg.setVisible(wdg_state.visible)
+            self._process_widgets_states(states)
 
         except json.JSONDecodeError:
             warn(f"Could not load layout from {layout}.", stacklevel=2)
+
+    def _get_layout_path(self, layout_path: str | Path | None = None) -> Path | None:
+        """Get the layout path, either from the argument or from a file dialog."""
+        if not layout_path:
+            layout, _ = QFileDialog.getOpenFileName(
+                self, "Open layout file", "", "jSON (*.json)"
+            )
+            return Path(layout) if layout else None
+
+        elif isinstance(layout_path, str):
+            return Path(layout_path)
+
+        else:
+            return layout_path
+
+    def _process_widgets_states(self, states: dict) -> None:
+        """Process the widgets states loaded from the layout file."""
+        for area in states:
+            # convert to WidgetState
+            widget_states_per_area = [
+                WidgetState(*wdg_state.values()) for wdg_state in states[area]
+            ]
+            # sorted by geometry.y() to select the topmost widget. We will
+            # skip the widgets that have negative geometry, as they will be
+            # tabified with the other widgets
+            widget_states_per_area = sorted(
+                widget_states_per_area, key=lambda g: g.geometry[1]
+            )
+
+            for wdg_state in widget_states_per_area:
+
+                # skip widgets that will be tabbed
+                if wdg_state.geometry[0] < 0 or wdg_state.geometry[1] < 0:
+                    continue
+
+                # TODO: fix and also include "Main Window (napari-micromanager)"
+                if wdg_state.name == "Main Window (napari-micromanager)":
+                    continue
+
+                self._process_widget_state(wdg_state, area)
+
+    def _process_widget_state(self, wdg_state: WidgetState, area: str) -> None:
+        """Process a single widget state."""
+        # this will load the pymmcore widgets that are not yet in napari
+        if wdg_state.name in DOCK_WIDGETS and wdg_state.name not in self._dock_widgets:
+            self._load_widget_state(wdg_state)
+        # this will reload the napari widgets and the pymmcore widgets that have been
+        # already added to napari
+        else:
+            self._update_widget_state(wdg_state)
+        # if tabified, tabify it with the widgets in 'tabify_with'
+        if wdg_state.tabify_with:
+            self._tabify_widgets(wdg_state, area)
+
+    def _load_widget_state(self, wdg_state: WidgetState) -> None:
+        """Load the state of the new pymmcore widgets that are not yet in napari.
+
+        Here we create the pymmcore widgets and add them to the napari window for the
+        first time.
+        """
+        self._show_dock_widget(
+            wdg_state.name, wdg_state.floating, False, wdg_state.area
+        )
+        wdg = self._dock_widgets[wdg_state.name]
+        wdg.setVisible(wdg_state.visible)
+        if wdg_state.floating:
+            wdg.setGeometry(*wdg_state.geometry)
+
+    def _update_widget_state(self, wdg_state: WidgetState) -> None:
+        """Update the state of the widgets that are already in napari.
+
+        Here we update the state of the widgets that are already in napari, for example
+        the 'layer control', 'layer list' plus any pymmcore widgets that have been added
+        to napari).
+        """
+        if (getattr(self.viewer.window, "_qt_window", None)) is None:
+            return
+
+        wdg = self._dock_widgets[wdg_state.name]
+
+        # undock the widget to change its area
+        self.viewer.window._qt_window.removeDockWidget(wdg)
+        self.viewer.window._qt_window.addDockWidget(DOCK_AREAS[wdg_state.area], wdg)
+        wdg.setFloating(wdg_state.floating)
+        wdg.setGeometry(*wdg_state.geometry)
+        wdg.setVisible(wdg_state.visible)
+
+    def _tabify_widgets(self, wdg_state: WidgetState, area: str) -> None:
+        """Tabify a widget with other widgets based on its state."""
+        for wdg_name in wdg_state.tabify_with:
+            # if it is not have been added to napari yet
+            if wdg_name in DOCK_WIDGETS and wdg_name not in self._dock_widgets:
+                self._show_dock_widget(wdg_name, wdg_state.floating, True, area)
+            # if it has been added to napari before
+            else:
+                self._tabify_existing_widgets(wdg_state, wdg_name)
+
+    def _tabify_existing_widgets(self, wdg_state: WidgetState, wdg_name: str) -> None:
+        """Tabify an existing widget with another widget."""
+        tabify_with = self._dock_widgets[wdg_state.name]
+        current_wdg = self._dock_widgets[wdg_name]
+        self.viewer.window._qt_window.removeDockWidget(current_wdg)
+        self.viewer.window._qt_window.tabifyDockWidget(tabify_with, current_wdg)
+        current_wdg.setVisible(True)
+        tabify_with = current_wdg
