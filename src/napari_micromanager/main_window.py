@@ -55,15 +55,7 @@ class MainWindow(MicroManagerToolbar):
         super().__init__(viewer)
 
         # temporary toolbar to test saving layout_________________________________
-        if (win := getattr(viewer.window, "_qt_window", None)) is not None:
-            menubar = cast(QMenuBar, win.menuBar())
-            mm_menu = menubar.addMenu("Micro-Manager")
-            self.act_save_layout = QAction("Save Layout", self)
-            self.act_save_layout.triggered.connect(self._save_layout)
-            mm_menu.addAction(self.act_save_layout)
-            self.act_load_layout = QAction("Load Layout", self)
-            self.act_load_layout.triggered.connect(self._load_layout)
-            mm_menu.addAction(self.act_load_layout)
+        self._add_menu()
         # ________________________________________________________________________
 
         # get global CMMCorePlus instance
@@ -103,6 +95,25 @@ class MainWindow(MicroManagerToolbar):
         # load provided layout or the default one stored in the package
         if layout is not None:
             self._load_layout(layout)
+
+    def _add_menu(self) -> None:
+        if (win := getattr(self.viewer.window, "_qt_window", None)) is None:
+            return
+
+        menubar = cast(QMenuBar, win.menuBar())
+
+        # main Micro-Manager menu
+        mm_menu = menubar.addMenu("Micro-Manager")
+
+        # Layout Sub-Menu
+        layout_menu = mm_menu.addMenu("Layout")
+        self.act_save_layout = QAction("Save Layout", self)
+        self.act_save_layout.triggered.connect(self._save_layout)
+        layout_menu.addAction(self.act_save_layout)
+        self.act_load_layout = QAction("Load Layout", self)
+        self.act_load_layout.triggered.connect(self._load_layout)
+        layout_menu.addAction(self.act_load_layout)
+
 
     def _cleanup(self) -> None:
         for signal, slot in self._connections:
