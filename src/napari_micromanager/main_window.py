@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import atexit
 import contextlib
+import json
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, cast
 from warnings import warn
-import json
+
 import napari
 import napari.layers
 import napari.viewer
@@ -371,7 +372,7 @@ class StartupDialog(QDialog):
         self.cfg_combo.setObjectName("cfg")
         self._add_cfg_from_micromanager_folder()  # writes to CONFIGS_PATHS
         cfg_paths = self._get_paths_list(CONFIGS_PATHS)
-        
+
         self.cfg_combo.addItems(cfg_paths)
         self.cfg_btn = QPushButton("...")
         self.cfg_btn.setSizePolicy(FIXED)
@@ -421,7 +422,26 @@ class StartupDialog(QDialog):
             self.layout_combo.hide()
             self.layout_btn.hide()
 
+    def _add_cfg_from_micromanager_folder(self) -> None:
+        """Add the configuration files from the MicroManager folder to CONFIGS_PATHS."""
+        cfg_files = self._get_micromanager_cfg_files()
+
+        if not cfg_files:
+            return
+
+        with open(CONFIGS_PATHS) as f:
+            data = json.load(f)
+            paths = cast(list, data.get("paths", [""]))
+            for cfg in reversed(cfg_files):
+                if str(cfg) not in paths:
+                    # using insert so we leave the empty string at the end
+                    paths.insert(0, str(cfg))
+
+            with open(CONFIGS_PATHS, "w") as f:
+                json.dump(data, f)
+
     def _get_micromanager_cfg_files(self) -> list[Path]:
+        """Return all the .cfg files in the MicroManager folders."""
         from pymmcore_plus import find_micromanager
 
         mm: list = find_micromanager(False)
@@ -430,23 +450,6 @@ class StartupDialog(QDialog):
             cfg_files.extend(Path(mm_dir).glob("*.cfg"))
 
         return cfg_files
-    
-    def _add_cfg_from_micromanager_folder(self) -> None:
-    
-        cfg_files = self._get_micromanager_cfg_files()
-
-        if not cfg_files:
-            return
-        
-        with open(CONFIGS_PATHS) as f:
-            data = json.load(f)
-            paths = cast(list, data.get("paths", [""]))
-            for cfg in reversed(cfg_files):
-                if str(cfg) not in paths:
-                    paths.insert(0, str(cfg))
-
-            with open(CONFIGS_PATHS, "w") as f:
-                json.dump(data, f)
 
     def _on_browse_clicked(self, combo: QComboBox) -> None:
         """Open a file dialog to select a file."""
@@ -455,6 +458,7 @@ class StartupDialog(QDialog):
             self, "Open file", "", f"MicroManager files (*.{file_type})"
         )
         if path:
+            # using insert so we leave the empty string at the end
             combo.insertItem(0, path)
             combo.setCurrentText(path)
             paths = CONFIGS_PATHS if file_type == "cfg" else LAYOUTS_PATHS
@@ -496,7 +500,7 @@ class StartupDialog(QDialog):
         except json.JSONDecodeError:
             data = {"paths": [""]}
 
-        # Append the new path
+        # Append the new path. using insert so we leave the empty string at the end
         data["paths"].insert(0, path)
 
         # Write the data back to the file
