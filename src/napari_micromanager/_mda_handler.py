@@ -74,9 +74,10 @@ class _MDAHandler(OMEZarrWriter):
 
         self._fname = self._get_file_name_from_metadata(sequence.metadata)
 
-        # create the arrays and layers
-        for pos, sizes in enumerate(self.position_sizes):
-            fname = f"{self._fname}_{POS_PREFIX}{pos}"
+        # create the arrays and layers. inverting order so the firt layer in the napari
+        # list is the first position
+        for pos, sizes in enumerate(reversed(self.position_sizes)):
+            fname = f"{self._fname}_{POS_PREFIX}{len(self.position_sizes) - 1 - pos}"
             self._create_arrays_and_layers(fname, sizes)
             self._largest_idx[fname] = (-1,)
 
