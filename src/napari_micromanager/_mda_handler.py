@@ -12,10 +12,12 @@ from napari.layers import Image
 from numpy import ndarray
 from pymmcore_plus import CMMCorePlus
 from pymmcore_plus.mda.handlers import OMEZarrWriter
+from pymmcore_widgets.useq_widgets._mda_sequence import PYMMCW_METADATA_KEY
 from superqt.utils import create_worker, ensure_main_thread
 from useq import MDAEvent, MDASequence
 
 POS_PREFIX = "p"
+EXP = "experiment"
 
 
 class _MDAHandler(OMEZarrWriter):
@@ -47,6 +49,7 @@ class _MDAHandler(OMEZarrWriter):
 
         self._deck: deque[tuple[np.ndarray, MDAEvent, dict]] = deque()
         self._largest_idx: dict[str, tuple[int, ...]] = {}
+        self._fname: str = ""
         self._mda_running: bool = False
 
         self._mmc.mda.events.sequenceStarted.connect(self.sequenceStarted)
@@ -65,19 +68,22 @@ class _MDAHandler(OMEZarrWriter):
         self._mmc.mda.events.sequenceFinished.disconnect(self.sequenceFinished)
         self._mmc.mda.events.frameReady.disconnect(self.frameReady)
 
-    def sequenceStarted(self, seq: MDASequence) -> None:
+    def sequenceStarted(self, sequence: MDASequence) -> None:
         self._group.clear()
         self.position_arrays.clear()
 
-        super().sequenceStarted(seq)
+        super().sequenceStarted(sequence)
 
         self._mmc.mda.toggle_pause()
         print("___________PAUSED___________")
 
+        self._fname = self._get_file_name_from_metadata(sequence.metadata)
+
         # create the arrays and layers
         for pos, sizes in enumerate(self.position_sizes):
-            self._create_arrays_and_layers(pos, sizes)
-            self._largest_idx[f"{POS_PREFIX}{pos}"] = (-1,)
+            fname = f"{self._fname}_{POS_PREFIX}{pos}"
+            self._create_arrays_and_layers(fname, sizes)
+            self._largest_idx[fname] = (-1,)
 
         self._deck = deque()
         self._mda_running = True
@@ -91,34 +97,39 @@ class _MDAHandler(OMEZarrWriter):
         self._mmc.mda.toggle_pause()
         print("___________UNPAUSED___________")
 
-    def _create_arrays_and_layers(self, pos_idx: int, sizes: dict[str, int]) -> None:
+    def _create_arrays_and_layers(self, fname: str, sizes: dict[str, int]) -> None:
         _dtype = np.dtype(f"u{self._mmc.getBytesPerPixel()}")
         x, y = (self._mmc.getImageWidth(), self._mmc.getImageHeight())
 
         sz = sizes.copy()
         sz["y"], sz["x"] = x, y
         _dtype = np.dtype(f"u{self._mmc.getBytesPerPixel()}")
-        key = f"{POS_PREFIX}{pos_idx}"
         # create the new array
-        self.position_arrays[key] = self.new_array(key, _dtype, sz)
+        self.position_arrays[fname] = self.new_array(fname, _dtype, sz)
         # get the scale for the layer
-        scale = self._get_scale(key)
+        scale = self._get_scale(fname)
         # add the new array to the viewer
         self.viewer.add_image(
-            self.position_arrays[key],
-            name=key,
+            self.position_arrays[fname],
+            name=fname,
             blending="opaque",
             visible=False,
             scale=scale,
         )
 
-    def _get_scale(self, key: str) -> list[float]:
+    def _get_file_name_from_metadata(self, metadata: dict) -> str:
+        """Get the file name from the MDASequence metadata."""
+        meta = metadata.get(PYMMCW_METADATA_KEY)
+        fname = "" if meta is None else meta.get("save_name", "")
+        return fname or EXP
+
+    def _get_scale(self, fname: str) -> list[float]:
         """Get the scale for the layer."""
         if self.current_sequence is None:
             raise ValueError("Not a MDA sequence.")
 
         # add Z to layer scale
-        arr = self.position_arrays[key]
+        arr = self.position_arrays[fname]
         if (pix_size := self._mmc.getPixelSizeUm()) != 0:
             scale = [1.0] * (arr.ndim - 2) + [pix_size] * 2
             if (index := self.current_sequence.used_axes.find("z")) > -1:
@@ -148,19 +159,20 @@ class _MDAHandler(OMEZarrWriter):
 
         p_index = event.index.get("p", 0)
         key = f"{POS_PREFIX}{p_index}"
+        fname = f"{self._fname}_{key}"
 
-        ary = self.position_arrays[key]
+        ary = self.position_arrays[fname]
         pos_sizes = self.position_sizes[p_index]
 
         index = tuple(event.index[k] for k in pos_sizes)
         self.write_frame(ary, index, frame)
-        self.store_frame_metadata(key, event, meta)
+        self.store_frame_metadata(fname, event, meta)
 
-        if index > self._largest_idx[key]:
-            self._largest_idx[key] = index
-            return index, self.viewer.layers[key]
+        if index > self._largest_idx[fname]:
+            self._largest_idx[fname] = index
+            return index, self.viewer.layers[fname]
 
-        return None, self.viewer.layers[key]
+        return None, self.viewer.layers[fname]
 
     @ensure_main_thread  # type: ignore [misc]
     def _update_viewer(self, args: tuple[tuple[int, ...] | None, Image]) -> None:
@@ -179,7 +191,7 @@ class _MDAHandler(OMEZarrWriter):
                 cs[a] = v
             self.viewer.dims.current_step = cs
 
-    def sequenceFinished(self, seq: MDASequence) -> None:
+    def sequenceFinished(self, sequence: MDASequence) -> None:
         self._mda_running = False
         self.finalize_metadata()
 
@@ -189,6 +201,7 @@ class _MDAHandler(OMEZarrWriter):
 
         self.frame_metadatas.clear()
         self.current_sequence = None
+        self._fname = ""
 
         print()
         print("_________________")
