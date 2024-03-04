@@ -1,13 +1,11 @@
 import contextlib
-import os
-import tempfile
 import time
 from collections import deque
-from typing import Any, Generator, MutableMapping
+from typing import Any, Generator
 
 import napari.viewer
 import numpy as np
-from fsspec import FSMap
+import zarr
 from napari.layers import Image
 from numpy import ndarray
 from pymmcore_plus import CMMCorePlus
@@ -15,6 +13,7 @@ from pymmcore_plus.mda.handlers import OMEZarrWriter
 from pymmcore_widgets.useq_widgets._mda_sequence import PYMMCW_METADATA_KEY
 from superqt.utils import create_worker, ensure_main_thread
 from useq import MDAEvent, MDASequence
+from zarr.storage import TempStore
 
 POS_PREFIX = "p"
 EXP = "experiment"
@@ -24,28 +23,19 @@ class _MDAHandler(OMEZarrWriter):
     def __init__(
         self,
         viewer: napari.viewer.Viewer,
-        store: MutableMapping | str | os.PathLike | FSMap | None = None,
         *,
-        overwrite: bool = True,
         mmcore: CMMCorePlus | None = None,
         **kwargs: Any,
     ) -> None:
 
-        self.tmp: tempfile.TemporaryDirectory | None = None
-        if store is None:
-            self.tmp = tempfile.TemporaryDirectory()
-            store = self.tmp.name
-
-        super().__init__(store=store, overwrite=overwrite, **kwargs)
-
-        print()
-        print("_________________")
-        print(store)
-        print("_________________")
+        super().__init__(None, **kwargs)
 
         self.viewer = viewer
 
         self._mmc = mmcore or CMMCorePlus.instance()
+
+        self._store: TempStore | None = None
+        self._group: zarr.Group | None = None
 
         self._deck: deque[tuple[np.ndarray, MDAEvent, dict]] = deque()
         self._largest_idx: dict[str, tuple[int, ...]] = {}
@@ -59,9 +49,6 @@ class _MDAHandler(OMEZarrWriter):
     def _cleanup(self) -> None:
         with contextlib.suppress(TypeError, RuntimeError):
             self._disconnect()
-        if self.tmp is not None:
-            with contextlib.suppress(NotADirectoryError):
-                self.tmp.cleanup()
 
     def _disconnect(self) -> None:
         self._mmc.mda.events.sequenceStarted.disconnect(self.sequenceStarted)
@@ -69,7 +56,15 @@ class _MDAHandler(OMEZarrWriter):
         self._mmc.mda.events.frameReady.disconnect(self.frameReady)
 
     def sequenceStarted(self, sequence: MDASequence) -> None:
-        self._group.clear()
+        if self._store is not None:
+            self._store.clear()
+
+        self._store = TempStore(suffix=".zarr", prefix="pymmcore_zarr_")
+        self._group = zarr.group(self._store, overwrite=True)
+
+        print("___________STARTED___________")
+        print(self._store.path)
+
         self.position_arrays.clear()
 
         super().sequenceStarted(sequence)
