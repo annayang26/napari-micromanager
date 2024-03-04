@@ -33,7 +33,9 @@ class _MDAHandler(OMEZarrWriter):
 
         self.tmp: tempfile.TemporaryDirectory | None = None
         if store is None:
-            self.tmp = tempfile.TemporaryDirectory()
+            self.tmp = tempfile.TemporaryDirectory(
+                prefix="napari_micromanager_", suffix=".zarr"
+            )
             store = self.tmp.name
 
         super().__init__(store=store, overwrite=overwrite, **kwargs)
