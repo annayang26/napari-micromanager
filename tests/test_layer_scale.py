@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from napari_micromanager._mda_handler import _NapariMDAHandler
+from napari_micromanager._mda_handler_old import _NapariMDAHandler
 from napari_micromanager._mda_meta import SEQUENCE_META_KEY, SequenceMeta
 
 if TYPE_CHECKING:
