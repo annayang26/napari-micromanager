@@ -28,7 +28,7 @@ class SegmentNeurons:
         meta = sequence.metadata.get("pymmcore_wigets")
         if meta is not None:
             self._fname = meta.get("save_name", "")
-            self._path = meta.get("path_name", "") ### TODO: Need to double check
+            self._path = meta.get("save_dir", "") ### TODO: Need to double check
 
     def _on_frame_ready(self, image: np.ndarray, event: useq.MDAEvent) -> None:
         print("FRAME READY", event.index)
@@ -67,9 +67,10 @@ class SegmentNeurons:
         """Segment the image."""
         print("     SEGMENTING IMAGE", image.shape)
         # print(self._mmc.getPixelSizeUm())
-        if self._fname and model is not None:
+        print(f"FILENAME: {self._fname}, the model initiated: {self._model_unet}")
+        if model is not None:
             img_norm = np.max(image, axis=0) / np.max(image)
-            img_predict = self.model_unet.predict(img_norm[np.newaxis, :, :])[0, :, :]
+            img_predict = self._model_unet.predict(img_norm[np.newaxis, :])[0, :, :] #somthing about this is not working
 
             # if np.max(img_predict) > 0.3:
             #     # the prediction layer shows the prediction of the NN
@@ -108,6 +109,8 @@ class SegmentNeurons:
 
     def _save_img(self, pred_img: np.ndarray):
         im_pred = Image.fromarray(np.uint8(pred_img*255), mode='L')
+        if len(self._fname) == 0:
+            self._fname = "test"
         pred_path = Path.joinpath(self._path, self._fname, '_Prediction.png')
         im_pred.save(pred_path)
 
