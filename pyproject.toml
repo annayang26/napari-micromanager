@@ -37,23 +37,25 @@ dynamic = ["version"]
 dependencies = [
     "fonticon-materialdesignicons6",
     "napari >=0.4.13",
-    "pymmcore-plus >=0.9.0",
-    "pymmcore-widgets >=0.5.3",
+    "pymmcore-widgets@git+https://github.com/fdrgsp/pymmcore-widgets.git@calcium",
+    "pymmcore-plus@git+https://github.com/fdrgsp/pymmcore-plus.git@arduino_led_stimulation",
     "superqt >=0.5.1",
     "tifffile",
     "useq-schema >=0.4.1",
     "zarr",
+    "pyfirmata2"
 ]
 
 # extras
 # https://peps.python.org/pep-0621/#dependencies-optional-dependencies
 [project.optional-dependencies]
-testing = ["pytest", "pytest-cov", "pytest-qt"]
+test = ["pytest", "pytest-cov", "pytest-qt"]
 pyqt5 = ["PyQt5"]
 pyqt6 = ["PyQt6"]
 pyside2 = ["PySide2"]
 pyside6 = ["PySide6"]
 dev = ["isort", "mda-simulator", "mypy", "pre-commit", "ruff"]
+docs = ["mkdocs-material", "mkdocstrings-python"]
 
 [project.urls]
 Source = "https://github.com/pymmcore-plus/napari-micromanager"
@@ -72,6 +74,9 @@ source = "vcs"
 
 [tool.hatch.build.targets.sdist]
 include = ["/src", "/tests"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 # https://beta.ruff.rs/docs/rules/
 [tool.ruff]
@@ -120,6 +125,7 @@ filterwarnings = [
     "ignore:`np.bool8` is a deprecated alias::skimage",
     "ignore:Jupyter is migrating its paths to use standard platformdirs:",
     "ignore:\\nPyarrow will become a required dependency",
+    "ignore::DeprecationWarning:docstring_parser",                            # via magicgui, in py312
 ]
 
 # https://mypy.readthedocs.io/en/stable/config_file.html
