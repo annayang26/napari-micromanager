@@ -77,9 +77,6 @@ class SegmentNeurons:
             img_predict = model.predict(img_norm[None, :, :])[:, :]
 
             # if np.max(img_predict) > 0.3:
-            #     # the prediction layer shows the prediction of the NN
-            #     self.prediction_layer = self.viewer.add_image(img_predict, name='Prediction')
-
             #     # use Otsu's method to find the cooridnates of the cell bodies
             #     th = filters.threshold_otsu(img_predict)
             #     img_predict_th = img_predict > th
@@ -107,35 +104,59 @@ class SegmentNeurons:
 
         # return labels, label_layer, roi_dict
         # save the prediction
-        self._save_img(img_predict, exp_name)
+        self._save_img(img_predict, exp_name, "_PREDICTION.png")
         print("     Prediction Image saved!")
 
-    def _normalize_img(self, img):
+    def _normalize_img(self, img: np.ndarray) -> np.ndarray:
         '''
+        normalize the raw image with max/min normalization method
+
+        parameter: 
+        --------------
+        img: ndarray (n, n). the first frame of the raw recording
+
+        return:
+        --------------
+        img_norm: ndarray (n, n). normalized frame 
         '''
         g_max = np.max(img)
         g_min = np.min(img)
         img_norm = (img - g_min)/(g_max - g_min)
         return img_norm
 
-    def _save_img(self, pred_img: np.ndarray, exp_name):
-        pred_img = pred_img.reshape((pred_img.shape[1], pred_img.shape[2]))
-        im_pred = Image.fromarray(np.uint8(pred_img*255), mode='L')
-        exp_name += ("_Pos" + str(self._current_pos) + "_PREDICTION.png")
+    def _save_img(self, img: np.ndarray, exp_name: str, filename: str) -> None:
+        '''
+        save the image
+        
+        parameters:
+        ---------------
+        pred_img: np.ndarray. the img to be saved
+        exp_name: str. the name of the experiment
+        filename: str. filename of the file to be saved 
+        '''
+        save_img = img.reshape((img.shape[1], img.shape[2]))
+        im_save = Image.fromarray(np.uint8(save_img*255), mode='L')
+        exp_name += ("_Pos" + str(self._current_pos) + filename)
         pred_path = Path(self._path).joinpath(exp_name)
-        im_pred.save(pred_path)
+        im_save.save(pred_path)
     
     def _change_position(self):
+        '''
+        to change the position number 
+        '''
         self._current_pos += 1
 
     def _clear(self):
+        '''
+        clear the global variable for the next recording
+        '''
         self._path: str = ""
         self._exp_name: str = ""
         self._model_size = 0
         self._model_unet = None
 
-        self._current_pos = 0
-        self._total_pos = 0
+        self._current_pos: int = 0
+        self._total_pos: int = 0
 
     def _segmentation_finished(self) -> None:
         print("     SEGMENTATION FINISHED")
