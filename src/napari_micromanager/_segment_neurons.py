@@ -1,9 +1,9 @@
-import os.path
+import random
 from pathlib import Path
 
 import numpy as np
 import useq
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from pymmcore_plus import CMMCorePlus
 from scipy import ndimage as ndi
 from skimage import feature, filters, morphology, segmentation
@@ -91,6 +91,14 @@ class SegmentNeurons:
             img_predict = model.predict(img_norm[None, :, :])[:, :]
             return img_predict
         print("Model failed to load")
+
+    def _save_pred_img(self, img: np.ndarray, exp_name: str, filename: str) -> None:
+        """Save the image."""
+        save_img = img.reshape((img.shape[-2], img.shape[-1]))
+        im_save = Image.fromarray(np.uint8(save_img*255), mode='L')
+        exp_name += ("_Pos" + str(self._current_pos) + filename)
+        pred_path = Path(self._path).joinpath(exp_name)
+        im_save.save(pred_path)
 
     def _normalize_img(self, img: np.ndarray) -> np.ndarray:
         """Normalize the raw image with max/min normalization method."""
@@ -187,27 +195,20 @@ class SegmentNeurons:
                 small_roi.append(r)
         return area, small_roi
 
-    def _save_pred_img(self, img: np.ndarray, exp_name: str, filename: str) -> None:
-        """Save the image."""
-        save_img = img.reshape((img.shape[-2], img.shape[-1]))
-        im_save = Image.fromarray(np.uint8(save_img*255), mode='L')
-        exp_name += ("_Pos" + str(self._current_pos) + filename)
-        pred_path = Path(self._path).joinpath(exp_name)
-        im_save.save(pred_path)
-
     def _save_label_img(
             self, img: np.ndarray, roi_dict: dict,
             exp_name: str, filename: str
-            ) -> None:
+            ) -> dict:
         """Save the label image."""
         label_array = np.stack((img,) * 4, axis=-1).astype(float)
         for i in range(1, np.max(img) + 1):
-            # TODO: fgure this out!
-            color = layer.get_color(i)
-            color = (color[0], color[1], color[2], color[3])
-            self.colors.append(color)
+            color_list = {}
+            color = (random.randint(0, 255),  # noqa: S311
+                     random.randint(0, 255),  # noqa: S311
+                     random.randint(0, 255))  # noqa: S311
+            color_list[i] = color
             i_coords = np.asarray(label_array == [i, i, i, i]).nonzero()
-            label_array[(i_coords[0], i_coords[1])] = self.colors[i - 1]
+            label_array[(i_coords[0], i_coords[1])] = color_list[i - 1]
 
         im = Image.fromarray((label_array*255).astype(np.uint8))
         bk_im = Image.new(im.mode, im.size, "black")
@@ -216,6 +217,28 @@ class SegmentNeurons:
         exp_name += ("_Pos" + str(self._current_pos))
         save_path = Path(self._path).joinpath(exp_name)
         bk_im_num.save(save_path + filename)
+
+        return color_list
+
+    def add_num_to_img(self, img: np.ndarray, roi_dict: dict):
+        """Add labels to ROIs."""
+        # the centers of each ROI
+        roi_centers = {}
+
+        for roi_number, roi_coords in roi_dict.items():
+            center = np.mean(roi_coords, axis=0)
+            roi_centers[roi_number] = (int(center[1]), int(center[0]))
+
+        img_w_num = img.copy()
+        for r in roi_dict:
+            draw = ImageDraw.Draw(img_w_num)
+            font = ImageFont.truetype('segoeui.ttf', 12)
+            pos = roi_centers[r]
+            bbox = draw.textbbox(pos, str(r), font=font)
+            draw.rectangle(bbox, fill="grey")
+            draw.text(pos, str(r), font=font, fill="white")
+
+        return img_w_num
 
     def _change_position(self):
         """To change the position number."""
