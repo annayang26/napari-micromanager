@@ -334,3 +334,9 @@ class ArduinoEngine(MDAEngine):
                             return _nope(f"'{dev}-{prop}' {max_len=} < {cur_length=}")
 
         return (True, "") if return_reason else True
+
+    def teardown_sequence(self, sequence: MDASequence) -> None:
+        """Perform any teardown required after the sequence has been executed."""
+        # close the current shutter at the end of the sequence
+        if self._mmc.getShutterDevice():
+            self._mmc.setShutterOpen(False)
