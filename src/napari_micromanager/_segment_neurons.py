@@ -78,10 +78,14 @@ class SegmentNeurons:
         self._save_pred_img(img_predict, exp_name, "_PREDICTION.png")
 
         # label the cells
+        # NOTE: will cause lag and skip FOVs
         minsize = 100
         background_label = 0
         labels, roi_dict = self._segment(img_predict, minsize, background_label)
-        self._save_label_img(labels, exp_name, "_Seg.png")
+        if roi_dict:
+            self._save_label_img(labels, roi_dict, exp_name, "_Seg.png")
+        else:
+            print("no cells detected!")
 
     def _predict_px(self, image: np.ndarray, model):
         """Predict the cells."""
@@ -107,6 +111,16 @@ class SegmentNeurons:
         img_norm = (img - g_min)/(g_max - g_min)
         return img_norm
 
+    def _label_cells(self, img_pred: np.ndarray, exp_name: str):
+        # label the cells
+        minsize = 100
+        background_label = 0
+        labels, roi_dict = self._segment(img_pred, minsize, background_label)
+        if roi_dict:
+            self._save_label_img(labels, roi_dict, exp_name, "_Seg.png")
+        else:
+            print("no cells detected!")
+
     def _segment(
             self, img_predict: np.ndarray, minsize: int, background_label: int
             ) -> tuple[np.ndarray, dict]:
@@ -117,13 +131,14 @@ class SegmentNeurons:
             img_predict_th = img_predict > th
             img_predict_remove_holes_th = morphology.remove_small_holes(
                 img_predict_th, area_threshold=minsize * 0.3)
+
             img_predict_filtered_th = morphology.remove_small_objects(
                 img_predict_remove_holes_th, min_size=minsize)
-            distance = ndi.distance_transform_edt(img_predict_filtered_th)
+            distance = ndi.distance_transform_edt(img_predict_filtered_th) # not zero
             local_max = feature.peak_local_max(distance,
                                                 min_distance=10,
                                                 footprint=np.ones((15, 15)),
-                                                labels=img_predict_filtered_th)
+                                                labels=img_predict_filtered_th) # zero?
 
             # create masks over the predicted cell bodies and add a segmentation layer
             local_max_mask = np.zeros_like(img_predict_filtered_th, dtype=bool)
@@ -131,9 +146,10 @@ class SegmentNeurons:
             markers = morphology.label(local_max_mask)
             labels = segmentation.watershed(-distance, markers,
                                             mask=img_predict_filtered_th)
+
             labels, roi_dict = self.getROIpos(labels, background_label)
+            # print(f"---------inside segment: roi is {roi_dict}----------------")
         else:
-            # TODO: should send signal to the MDA and go for another FOV
             labels, roi_dict = None, None
 
         return labels, roi_dict
@@ -143,6 +159,7 @@ class SegmentNeurons:
         """Get the positions of the labels without the background labels."""
         # sort the labels and filter the unique ones
         u_labels = np.unique(labels)
+        # print(f"============================{u_labels}")
 
         # create a dict for the labels
         roi_dict = {}
@@ -150,7 +167,6 @@ class SegmentNeurons:
             roi_dict[u.item()] = []
 
         labels = np.squeeze(labels)
-        print(labels.shape)
         # record the coordinates for each label
         for x in range(labels.shape[0]):
             for y in range(labels.shape[1]):
@@ -183,6 +199,8 @@ class SegmentNeurons:
         for r in roi_dict:
             roi_coords = np.array(roi_dict[r]).T.tolist()
             labels[tuple(roi_coords)] = r
+
+        print(f"---------inside getRoiPOS: roi is {roi_dict}----------------")
         return labels, roi_dict
 
     def get_ROI_area(self, roi_dict: dict, threshold: float) -> tuple[dict, list[int]]:
@@ -268,6 +286,9 @@ TODO list (03/06):
         - the way to normalize the image (from divided by a global 
             max to min-max normalization)
         - the shape of the prediction image
-    3. the output wanted after segmentation. just image? roi_dict? 
+    3. the output wanted after segmentation. just image? roi_dict?
+
+    03/26:
+    - label cells are not working well. likely with the segment() and the watershed function
 
 '''
