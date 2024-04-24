@@ -107,14 +107,10 @@ class ArduinoEngine(MDAEngine):
             self._mmc.enableContinuousFocus(True)
 
         # # open the shutter for x sec before starting the acquisition
-        # if event.index.get("t", None) == 0 and self._mmc.getCurrentConfig("Channels") == "GCaMP6":
-
-        #     print()
-        #     print('_________SHUTTER OPEN')
-
-        #     self._mmc.setShutterOpen(True)
-        #     time.sleep(5)
-        #     print('_________SHUTTER CLOSED')
+        print(event.index.get("t", None), self._mmc.getCurrentConfig("Channels"))
+        if event.index.get("t", None) == 0 and self._mmc.getCurrentConfig("Channels") == "GCaMP6":
+            self._mmc.setShutterOpen(True)
+            time.sleep(1)
 
         # execute stimulation if the event if it is in the sequence metadata
         # if self._arduino_board is not None and self._arduino_led_pin is not None:
