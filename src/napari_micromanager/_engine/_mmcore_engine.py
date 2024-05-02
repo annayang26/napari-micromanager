@@ -107,7 +107,7 @@ class ArduinoEngine(MDAEngine):
             self._mmc.enableContinuousFocus(True)
 
         # # open the shutter for x sec before starting the acquisition
-        print(event.index.get("t", None), self._mmc.getCurrentConfig("Channels"))
+        # print(event.index.get("t", None), self._mmc.getCurrentConfig("Channels"))
         if event.index.get("t", None) == 0 and self._mmc.getCurrentConfig("Channels") == "GCaMP6":
             self._mmc.setShutterOpen(True)
             time.sleep(1)

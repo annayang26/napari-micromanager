@@ -20,9 +20,8 @@ class AnalyzeNeurons:
         self._deck: deque[np.ndarray] = deque()
 
         self._mmc.mda.events.sequenceStarted.connect(self._on_sequence_started)
-        # self._mmc.mda.events.frameReady.connect(self._on_frame_ready)
-        # self._mmc.mda.events.frameReady.connect(self._on_frame_ready)
-        self._mmc.mda.events.sequenceFinished.connect(self._on_frame_ready)
+        self._mmc.mda.events.frameReady.connect(self._on_frame_ready)
+        self._mmc.mda.events.sequenceFinished.connect(self._on_sequence_finished)
 
         self._roi_dict: dict = None
         self._roi_signal: dict = None
@@ -48,21 +47,20 @@ class AnalyzeNeurons:
         )
 
     def _watch_sequence(self) -> Generator[np.ndarray, None, None]:
-        print("WATCHING SEQUENCE")
+        print("WATCHING SEQUENCE IN ANALYZE NEURONS")
         while self._is_running:
             if self._deck:
                 yield self._deck.popleft()
             else:
                 time.sleep(0.1)
 
-    # TODO: can i re-use this?
-    def _on_frame_ready(self, img_stack: np.ndarray, event: useq.MDAEvent) -> None:
+    # TODO: can i re-use this? How to access the total frames that the user is recording
+    def _on_frame_ready(self, img: np.ndarray, event: useq.MDAEvent) -> None:
         print("FRAME READY", event.index)
         # should take the entire recording after one position is done
         t_index = event.index.get("t")
-        if t_index is not None and t_index == 100:
-            print("                 its the 100th frame, add")
-            self._deck.append(img_stack)
+        if t_index is not None:
+            self._deck.append(img)
 
     def _receive_roi_dict(self, roi_dict: dict, labels: np.ndarray, area_dict: dict):
         """Receive ROI info from Segmented Neurons."""
@@ -77,6 +75,6 @@ class AnalyzeNeurons:
         print("Analysis Done")
 
     def _on_sequence_finished(self, sequence: useq.MDASequence) -> None:
-        print("\nSEQUENCE FINISHED")
+        print("\nSEQUENCE FINISHED IN ANALYSIS")
         self._is_running = False
 

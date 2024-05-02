@@ -9,8 +9,6 @@ from cellpose import io, models, plot
 from pymmcore_plus import CMMCorePlus
 from superqt.utils import create_worker
 
-from ._analyze_neurons import AnalyzeNeurons
-
 
 class SegmentNeurons:
     """Segment neurons."""
@@ -26,8 +24,9 @@ class SegmentNeurons:
         self._mmc.mda.events.sequenceFinished.connect(self._on_sequence_finished)
 
         self._cp_model: models.CellposeModel = None
-        self._path: str = ""
+        self._path: Path = None
         self._exp_name: str = ""
+        self._pos: int = 0
         self._binning: int = None
         self._objective: int = None
         self._magnification: float = None
@@ -43,8 +42,10 @@ class SegmentNeurons:
         self._is_running = True
         self._load_model() ### <<< load CP model
         meta = sequence.metadata.get("pymmcore_widgets") # TODO: find a better way to get metadata
-        self._path = meta.get("save_dir", "")
-        self._exp_name = meta.get("save_name", "")
+        self._path = Path(meta.get("save_dir", ""))
+        self._exp_name = (meta.get("save_name", "")).split('.')[0]
+        nap_mm = sequence.metadata.get("napari_micromanager")
+        self._pixel_size = nap_mm.get("PixelSizeUm")
 
         create_worker(
             self._watch_sequence,
@@ -64,7 +65,7 @@ class SegmentNeurons:
                                                 pretrained_model=model_path)
 
     def _watch_sequence(self) -> Generator[np.ndarray, None, None]:
-        print("WATCHING SEQUENCE")
+        print("WATCHING SEQUENCE IN SEGMENTATION")
         while self._is_running:
             if self._deck:
                 yield self._deck.popleft()
@@ -72,20 +73,19 @@ class SegmentNeurons:
                 time.sleep(0.1)
 
     def _on_frame_ready(self, image: np.ndarray, event: useq.MDAEvent) -> None:
-        print("FRAME READY", event.index)
-        # if t=0, append to the deck
         t_index = event.index.get("t")
+        p_index = event.index.get("p")
         if t_index is not None and t_index == 0:
             self._deck.append(image)
+            self._pos = p_index
 
     def _on_sequence_finished(self, sequence: useq.MDASequence) -> None:
         print("\nSEQUENCE FINISHED")
-        self._is_running = False
+        # self._is_running = False
 
-    def _segment_image(self, image: np.ndarray, channels: list| None) -> None:
+    def _segment_image(self, image: np.ndarray) -> None:
         """Segment the image."""
-        if channels is None:
-            channels = [0, 0]
+        channels = [0, 0]
         print("     SEGMENTING IMAGE", image.shape)
         masks, flows, _ = self._cp_model.eval(image,
                                     diameter=None,
@@ -94,18 +94,17 @@ class SegmentNeurons:
                                     channels=channels)
 
         path = Path(self._path)
+        save_path = path.joinpath(f"{self._exp_name}_p{self._pos}")
 
-        if not path.is_dir():
-            path.mkdir()
+        if not save_path.is_dir():
+            save_path.mkdir()
 
-        self._save_overlay(image, channels, masks, path)
+        mask_path = save_path.joinpath(f"{self._exp_name}_p{self._pos}")
+        self._save_overlay(image, channels, masks, mask_path)
         rgb_mask = plot.mask_rgb(masks)
-        save_path = path / "masks.tif"
-        io.save_masks(image, rgb_mask, flows, save_path, tif=True)
-        print("                   Cellpose finished")
+        io.save_masks(image, rgb_mask, flows, mask_path, tif=True)
         bg_label = 0
         self.roi_dict, self.labels, self.area_dict = self._getROIpos(masks, bg_label)
-        print("              READY TO SEND ROI INFO TO ANALYZE NEURONS")
 
     def _save_overlay(self, img: np.ndarray, channels: list,
                       masks: np.ndarray, save_path: Path) -> None:
@@ -122,7 +121,8 @@ class SegmentNeurons:
 
         # generate mask over original image
         overlay = plot.mask_overlay(img0, masks)
-        io.imsave((save_path / "overlay.jpg"), overlay)
+        file_save_path = str(save_path) + "_overlay.jpg"
+        io.imsave(file_save_path, overlay)
 
     def _getROIpos(self, labels: np.ndarray, background_label: int
               ) -> tuple[dict, np.ndarray, dict]:
@@ -206,4 +206,3 @@ class SegmentNeurons:
         self.roi_dict: dict = {}
         self.labels: np.ndarray = None
         self.area_dict: dict = {}
-        print(f"            {len(self.roi_dict)}")
