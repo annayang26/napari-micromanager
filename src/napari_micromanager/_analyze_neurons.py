@@ -72,6 +72,18 @@ class AnalyzeNeurons:
         if t_index is not None and roi_dict is not None:
             self._deck.append([img, roi_dict, labels, area_dict])
 
+        layer = None
+        for lay in self._viewer.layers:
+            uid = lay.metadata["napari_micromanager"].get('uid')
+            if uid == event.sequence.uid:
+                layer = lay
+                break
+
+        if layer is None:
+            return
+
+        print(layer.data.shape)
+
     def _analyze_roi(self, package: list):
         """Analyze ROIs."""
         img_stack, roi_dict, labels, area_dict = package

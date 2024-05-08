@@ -82,6 +82,17 @@ class SegmentNeurons:
     def _on_sequence_finished(self, sequence: useq.MDASequence) -> None:
         print("\nSEQUENCE FINISHED")
         # self._is_running = False
+        layer = None
+        for lay in self._viewer.layers:
+            uid = lay.metadata["napari_micromanager"].get('uid')
+            if uid == sequence.uid:
+                layer = lay
+                break
+
+        if layer is None:
+            return
+
+        print(layer.data.shape)
 
     def _segment_image(self, image: np.ndarray) -> None:
         """Segment the image."""
