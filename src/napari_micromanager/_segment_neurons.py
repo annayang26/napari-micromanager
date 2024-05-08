@@ -197,7 +197,7 @@ class SegmentNeurons:
 
         return cellsize, cs_arr
 
-    def _send_roi_info(self, mask: np.ndarray):
+    def _send_roi_info(self):
         """Send the info for further analysis."""
         return self.roi_dict, self.labels, self.area_dict
 
