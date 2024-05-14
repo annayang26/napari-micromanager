@@ -421,7 +421,7 @@ class AnalyzeNeurons:
             roi_data = {}
             for r in roi_analysis:
                 roi_data[r]["cell size (um)"] = cell_size[r]
-                roi_data[r][""] = 
+                # roi_data[r][""]
 
 
 

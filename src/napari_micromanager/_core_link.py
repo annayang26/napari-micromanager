@@ -11,7 +11,7 @@ from superqt.utils import ensure_main_thread
 
 # from ._analyze_neurons import AnalyzeNeurons
 from ._mda_handler import _NapariMDAHandler
-from ._segment_neurons import SegmentNeurons
+# from ._segment_neurons import SegmentNeurons
 
 if TYPE_CHECKING:
     import napari.viewer

@@ -38,15 +38,15 @@ class SegmentNeurons:
         self._magnification: float = None
         self._pixel_size: float = None
 
-        self.roi_dict: dict = {}
-        self.labels: np.ndarray = None
-        self.area_dict: dict = {}
+        # self.roi_dict: dict = {}
+        # self.labels: np.ndarray = None
+        # self.area_dict: dict = {}
 
     def _on_sequence_started(self, sequence: useq.MDASequence) -> None:
         print("\nSEQUENCE STARTED")
         self._is_running = True
         self._load_model() ### <<< load CP model
-        meta = sequence.metadata.get("pymmcore_widgets") 
+        meta = sequence.metadata.get("pymmcore_widgets")
         # TODO: find a better way to get metadata
         self._path = Path(meta.get("save_dir", ""))
         self._exp_name = (meta.get("save_name", "")).split('.')[0]
@@ -55,8 +55,16 @@ class SegmentNeurons:
 
         # create a separate process for segmentation
         self._segmentation_process = Process(
-            target=_segmentation_worker, args=(self._queue,)
+            target=_segmentation_worker,
+            args=(self._queue,
+                  self._cp_model,
+                  self._path,
+                  self._exp_name,
+                  self._pos,
+                  )
         )
+        self._segmentation_process.start()
+        print("SEGMENTATION WORKER STARTED", self._segmentation_process)
 
     def _load_model(self):
         """Load CP model once the sequence started."""
@@ -66,18 +74,9 @@ class SegmentNeurons:
         self._cp_model = models.CellposeModel(gpu=False,
                                                 pretrained_model=model_path)
 
-    def _watch_sequence(self) -> Generator[np.ndarray, None, None]:
-        print("WATCHING SEQUENCE IN SEGMENTATION")
-        while self._is_running:
-            if self._deck:
-                yield self._deck.popleft()
-            else:
-                time.sleep(0.1)
-
     def _on_frame_ready(self, image: np.ndarray, event: useq.MDAEvent) -> None:
         # start the segmentation process
-        self._segmentation_process.start()
-        print("SEGMENTATION WORKER STARTED", self._segmentation_process)
+        print("FRAME READY", event.index)
         t_index = event.index.get("t")
         p_index = event.index.get("p")
         if t_index is not None and t_index == 0:
@@ -231,17 +230,53 @@ class SegmentNeurons:
 
         print("SEGMENTATION WORKER STOPPED", self._segmentation_process)
 
-
 # this must not be part of the SegmentNeurons class
-def _segmentation_worker(queue: mp.Queue) -> None:
+def _segmentation_worker(queue: mp.Queue, cp_model: models.CellposeModel,
+                         folder_path: Path, exp_name: str, pos: int) -> None:
     """Segmentation worker running in a separate process."""
     while True:
         image = queue.get()
         if image is None:
             break
-        _segment_image(image)
+        _segment_image(image, cp_model, folder_path, exp_name, pos)
 
+def _segment_image(image: np.ndarray, cp_model: models.CellposeModel,
+                   folder_path: Path, exp_name: str, pos: int) -> None:
+        """Segment the image."""
+        channels = [0, 0]
+        print("     SEGMENTING IMAGE", image.shape)
+        masks, flows, _ = cp_model.eval(image,
+                                    diameter=None,
+                                    flow_threshold=0.1,
+                                    cellprob_threshold=0,
+                                    channels=channels)
 
-def _segment_image(image: np.ndarray) -> None:
-    """Segment the image."""
-    print("     SEGMENTING IMAGE", image.shape)
+        save_path = folder_path.joinpath(f"{exp_name}_p{pos}")
+
+        if not save_path.is_dir():
+            save_path.mkdir()
+
+        mask_path = save_path.joinpath(f"{exp_name}_p{pos}")
+        _save_overlay(image, channels, masks, mask_path)
+        rgb_mask = plot.mask_rgb(masks)
+        io.save_masks(image, rgb_mask, flows, mask_path, tif=True)
+        # bg_label = 0
+        # self.roi_dict, self.labels, self.area_dict = self._getROIpos(masks, bg_label)
+
+def _save_overlay(self, img: np.ndarray, channels: list,
+                    masks: np.ndarray, save_path: Path) -> None:
+    """Save the overlay image of masks over original image."""
+    img0 = img.copy()
+
+    if img0.shape[0] < 4:
+        img0 = np.transpose(img0, (1, 2, 0))
+    if img0.shape[-1] < 3 or img0.ndim < 3:
+        img0 = plot.image_to_rgb(img0, channels=channels)
+    else:
+        if img0.max() <= 50.0:
+            img0 = np.uint8(np.clip(img0, 0, 1) * 255)
+
+    # generate mask over original image
+    overlay = plot.mask_overlay(img0, masks)
+    file_save_path = str(save_path) + "_overlay.jpg"
+    io.imsave(file_save_path, overlay)
