@@ -158,10 +158,7 @@ class _NapariMDAHandler:
         # update the zarr array backing the layer
         self._tmp_arrays[_id][0][im_idx] = image
 
-        # move the viewer step to the most recently added image
-        if im_idx > self._largest_idx:
-            self._largest_idx = im_idx
-            return layer_name, im_idx
+        return layer_name, im_idx
 
         return layer_name, None
 

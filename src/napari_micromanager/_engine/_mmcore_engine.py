@@ -83,7 +83,7 @@ class ArduinoEngine(MDAEngine):
             # skip if no autofocus device is found
             if not self._mmc.getAutoFocusDevice():
                 logger.warning("No autofocus device found. Cannot execute autofocus.")
-                return ()
+                return ()  #  type: ignore
 
             try:
                 # execute hardware autofocus
@@ -98,7 +98,7 @@ class ArduinoEngine(MDAEngine):
                 self._z_correction[p_idx] = new_correction + self._z_correction.get(
                     p_idx, 0.0
                 )
-            return ()
+            return ()  #  type: ignore
 
         # if the autofocus was engaged at the start of the sequence AND autofocus action
         # did not fail, re-engage it. NOTE: we need to do that AFTER the runner calls
@@ -106,9 +106,11 @@ class ArduinoEngine(MDAEngine):
         if self._af_was_engaged and self._af_succeeded:
             self._mmc.enableContinuousFocus(True)
 
-        # # open the shutter for x sec before starting the acquisition
-        # print(event.index.get("t", None), self._mmc.getCurrentConfig("Channels"))
-        if event.index.get("t", None) == 0 and self._mmc.getCurrentConfig("Channels") == "GCaMP6":
+        # open the shutter for x sec before starting the acquisition when using GCaMP6
+        if (
+            event.index.get("t", None) == 0
+            and self._mmc.getCurrentConfig("Channels") == "GCaMP6"
+        ):
             self._mmc.setShutterOpen(True)
             time.sleep(1)
 

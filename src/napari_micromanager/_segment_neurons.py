@@ -1,5 +1,8 @@
+import multiprocessing as mp
 import time
-from collections import deque
+
+# from collections import deque
+from multiprocessing import Process
 from pathlib import Path
 from typing import Generator
 
@@ -7,7 +10,6 @@ import numpy as np
 import useq
 from cellpose import io, models, plot
 from pymmcore_plus import CMMCorePlus
-from superqt.utils import create_worker
 
 
 class SegmentNeurons:
@@ -17,7 +19,11 @@ class SegmentNeurons:
         self._mmc = mmcore
 
         self._is_running: bool = False
-        self._deck: deque[np.ndarray] = deque()
+
+        self._segmentation_process: Process | None = None
+
+        # Create a multiprocessing Queue
+        self._queue: mp.Queue[np.ndarray | None] = mp.Queue()
 
         self._mmc.mda.events.sequenceStarted.connect(self._on_sequence_started)
         self._mmc.mda.events.frameReady.connect(self._on_frame_ready)
@@ -38,22 +44,18 @@ class SegmentNeurons:
 
     def _on_sequence_started(self, sequence: useq.MDASequence) -> None:
         print("\nSEQUENCE STARTED")
-        self._deck.clear()
         self._is_running = True
         self._load_model() ### <<< load CP model
-        meta = sequence.metadata.get("pymmcore_widgets") # TODO: find a better way to get metadata
+        meta = sequence.metadata.get("pymmcore_widgets") 
+        # TODO: find a better way to get metadata
         self._path = Path(meta.get("save_dir", ""))
         self._exp_name = (meta.get("save_name", "")).split('.')[0]
         nap_mm = sequence.metadata.get("napari_micromanager")
         self._pixel_size = nap_mm.get("PixelSizeUm")
 
-        create_worker(
-            self._watch_sequence,
-            _start_thread=True,
-            _connect={
-                "yielded": self._segment_image,
-                "finished": self._segmentation_finished,
-            },
+        # create a separate process for segmentation
+        self._segmentation_process = Process(
+            target=_segmentation_worker, args=(self._queue,)
         )
 
     def _load_model(self):
@@ -73,11 +75,15 @@ class SegmentNeurons:
                 time.sleep(0.1)
 
     def _on_frame_ready(self, image: np.ndarray, event: useq.MDAEvent) -> None:
+        # start the segmentation process
+        self._segmentation_process.start()
+        print("SEGMENTATION WORKER STARTED", self._segmentation_process)
         t_index = event.index.get("t")
         p_index = event.index.get("p")
         if t_index is not None and t_index == 0:
-            self._deck.append(image)
             self._pos = p_index
+            # send the image to the segmentation process
+            self._queue.put(image)
 
     def _on_sequence_finished(self, sequence: useq.MDASequence) -> None:
         print("\nSEQUENCE FINISHED")
@@ -217,3 +223,25 @@ class SegmentNeurons:
         self.roi_dict: dict = {}
         self.labels: np.ndarray = None
         self.area_dict: dict = {}
+        # stop the segmentation process
+        self._queue.put(None)
+        if self._segmentation_process is not None:
+            self._segmentation_process.join()
+        self._segmentation_process = None
+
+        print("SEGMENTATION WORKER STOPPED", self._segmentation_process)
+
+
+# this must not be part of the SegmentNeurons class
+def _segmentation_worker(queue: mp.Queue) -> None:
+    """Segmentation worker running in a separate process."""
+    while True:
+        image = queue.get()
+        if image is None:
+            break
+        _segment_image(image)
+
+
+def _segment_image(image: np.ndarray) -> None:
+    """Segment the image."""
+    print("     SEGMENTING IMAGE", image.shape)

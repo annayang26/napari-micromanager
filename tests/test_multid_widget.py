@@ -73,8 +73,16 @@ def test_saving_mda(
     splitC = mda.metadata[NMM_METADATA_KEY].get("split_channels")
     if multiC and splitC:
         expected_shape.pop(mda.used_axes.find("c"))
+<<<<<<< HEAD
+        nfiles = len(list((tmp_path / f"{meta.file_name}_000").iterdir()))
+        assert nfiles == 2 if multiC else 1
+    # splitC with a single channel is the same as not splitting
+    else:
+        assert [p.name for p in tmp_path.iterdir()] == [f"{meta.file_name}_000.tif"]
+=======
 
     assert dest.exists()
+>>>>>>> FG/calcium
     assert data_shape == expected_shape
 
 
