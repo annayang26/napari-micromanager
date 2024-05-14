@@ -67,7 +67,7 @@ USER_LAYOUT_PATH = USER_DATA_DIR / "napari_micromanager_layout.json"
 class GroupsAndPresets(GroupPresetTableWidget):
     """Subclass of GroupPresetTableWidget.
 
-    Overwrite the save and load methods to store the saced or loaded configuration in
+    Overwrite the save and load methods to store the saved or loaded configuration in
     the USER_CONFIGS_PATHS json config file.
     """
 
@@ -262,9 +262,6 @@ class MicroManagerToolbar(QMainWindow):
         dock_wdg.visibilityChanged.connect(self._save_layout)
         dock_wdg.topLevelChanged.connect(self._save_layout)
         dock_wdg.dockLocationChanged.connect(self._save_layout)
-
-    def _on_dock_widget_changed(self) -> None:
-        """Start a saving threrad to save the layout if the thread is not running."""
 
     def _save_layout(self) -> None:
         """Save the napa-micromanager layout to a json file.

@@ -12,6 +12,7 @@ from pymmcore_plus import CMMCorePlus
 from pymmcore_widgets.hcwizard.intro_page import SRC_CONFIG
 from qtpy.QtWidgets import QAction, QMenuBar
 
+from napari_micromanager._engine._mmcore_engine import ArduinoEngine
 from napari_micromanager._util import (
     load_sys_config,
     load_sys_config_dialog,
@@ -48,6 +49,8 @@ class MainWindow(MicroManagerToolbar):
 
         # get global CMMCorePlus instance
         self._mmc = CMMCorePlus.instance()
+        # set the engine
+        self._mmc.mda.set_engine(ArduinoEngine(self._mmc))
         # this object mediates the connection between the viewer and core events
         self._core_link = CoreViewerLink(viewer, self._mmc, self)
 

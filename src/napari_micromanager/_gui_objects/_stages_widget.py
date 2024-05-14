@@ -4,7 +4,7 @@ from pymmcore_plus import CMMCorePlus, DeviceType
 from pymmcore_widgets import StageWidget
 from qtpy.QtCore import QMimeData, Qt
 from qtpy.QtGui import QDrag, QDragEnterEvent, QDropEvent, QMouseEvent
-from qtpy.QtWidgets import QGroupBox, QHBoxLayout, QSizePolicy, QWidget
+from qtpy.QtWidgets import QGroupBox, QHBoxLayout, QMenu, QSizePolicy, QWidget
 
 STAGE_DEVICES = {DeviceType.Stage, DeviceType.XYStage}
 
@@ -17,6 +17,10 @@ class MMStagesWidget(QWidget):
     ) -> None:
         super().__init__(parent=parent)
 
+        self._stage_wdgs: list[_DragGroupBox] = []
+
+        self._context_menu = QMenu(self)
+
         self.setAcceptDrops(True)
         self.setLayout(QHBoxLayout())
         self.layout().setContentsMargins(5, 5, 5, 5)
@@ -27,6 +31,27 @@ class MMStagesWidget(QWidget):
         self._mmc = CMMCorePlus.instance()
         self._on_cfg_loaded()
         self._mmc.events.systemConfigurationLoaded.connect(self._on_cfg_loaded)
+
+    def _update_context_menu(self) -> None:
+        self._context_menu.clear()
+        for stg in self._stage_wdgs:
+            self._context_menu.addAction(stg._name)
+
+    def contextMenuEvent(self, event: QMouseEvent) -> None:
+        action = self._context_menu.exec_(self.mapToGlobal(event.pos()))
+        if action is None:
+            return
+        for stg in self._stage_wdgs:
+            if action.text() == stg._name:
+                if stg.isVisible():
+                    # Count the number of visible widgets
+                    visible_count = sum(wdg.isVisible() for wdg in self._stage_wdgs)
+                    # If this is the only visible widget, don't hide it
+                    if visible_count <= 1:
+                        return
+                    stg.hide()
+                else:
+                    stg.show()
 
     def _on_cfg_loaded(self) -> None:
         self._clear()
@@ -42,11 +67,14 @@ class MMStagesWidget(QWidget):
                 bx = _DragGroupBox("Z Control")
             else:
                 continue
+            self._stage_wdgs.append(bx)
             bx.setLayout(QHBoxLayout())
             bx.setSizePolicy(sizepolicy)
             bx.layout().addWidget(StageWidget(device=stage_dev))
             self.layout().addWidget(bx)
         self.resize(self.sizeHint())
+
+        self._update_context_menu()
 
     def _clear(self) -> None:
         for i in reversed(range(self.layout().count())):

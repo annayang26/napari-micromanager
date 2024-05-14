@@ -25,7 +25,6 @@ from superqt.fonticon import icon
 
 
 class StimulationValues(TypedDict):
-    arduino_board: str
     arduino_port: str
     arduino_led_pin: str
     initial_delay: int
@@ -34,7 +33,7 @@ class StimulationValues(TypedDict):
     led_start_power: int
     led_power_increment: int
     led_pulse_duration: float
-    pulse_on_frame: dict[int, int]
+    pulse_on_frame: dict[int | str, int | str]
 
 
 FIXED = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
@@ -42,6 +41,7 @@ PIN = "d:3:p"
 TIMEPOINTS_TXT = "(set in the MDA Time Tab)"
 GREEN = "#00FF00"
 RED = "#C33"
+MAX_LBL_WIDTH = 200
 
 
 class ArduinoLedControl(QDialog):
@@ -57,35 +57,31 @@ class ArduinoLedControl(QDialog):
 
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(10, 10, 10, 10)
-        main_layout.setSpacing(25)
+        main_layout.setSpacing(5)
 
         # GROUP - to detect the arduino board
         detect_board = QGroupBox("Arduino")
         port_lbl = QLabel("Arduino Port:")
         port_lbl.setSizePolicy(FIXED)
         self._board_port = QLineEdit()
-        self._board_port.setPlaceholderText("Autodetect")
-        self._detect_btn = QPushButton("Detect")
-        self._detect_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self._detect_btn.setToolTip("Click to detect the board. If no ")
-        self._detect_btn.clicked.connect(self._detect_arduino_board)
-        board_label = QLabel("Arduino Board:")
-        self._board_name = QLineEdit()
-        self._board_name.setReadOnly(True)
+        self._board_port.setPlaceholderText("e.g COM3")
+        self._connect_btn = QPushButton("Connect")
+        self._connect_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._connect_btn.setToolTip("Click to detect the board. If no ")
+        self._connect_btn.clicked.connect(self._detect_arduino_board)
         pin_lbl = QLabel("Arduino LED Pin:")
         pin_lbl.setSizePolicy(FIXED)
-        self._led_pin_info = QLineEdit(PIN)  # default to 'd:3:p'
+        self._led_pin_info = QLineEdit()
+        self._led_pin_info.setText(PIN)  # default to 'd:3:p'
         # layout
         detect_gp_layout = QGridLayout(detect_board)
-        detect_gp_layout.setContentsMargins(10, 10, 10, 10)
+        detect_gp_layout.setContentsMargins(10, 15, 10, 10)
         detect_gp_layout.setSpacing(5)
         detect_gp_layout.addWidget(port_lbl, 0, 0)
         detect_gp_layout.addWidget(self._board_port, 0, 1)
-        detect_gp_layout.addWidget(self._detect_btn, 0, 2)
-        detect_gp_layout.addWidget(board_label, 1, 0)
-        detect_gp_layout.addWidget(self._board_name, 1, 1, 1, 2)
-        detect_gp_layout.addWidget(pin_lbl, 2, 0)
-        detect_gp_layout.addWidget(self._led_pin_info, 2, 1, 1, 2)
+        detect_gp_layout.addWidget(self._connect_btn, 0, 2)
+        detect_gp_layout.addWidget(pin_lbl, 1, 0)
+        detect_gp_layout.addWidget(self._led_pin_info, 1, 1, 1, 2)
 
         # GROUP - to set on which frames to turn on the LED
         frame_group = QGroupBox("Stimulation Frames")
@@ -116,9 +112,10 @@ class ArduinoLedControl(QDialog):
         time_points_lbl = QLabel("TimePoints:")
         self._timepoints = QLineEdit()
         self._timepoints.setReadOnly(True)
+        self._timepoints.setStyleSheet("border: 0")
         # layout
         frame_gp_layout = QGridLayout(frame_group)
-        frame_gp_layout.setContentsMargins(10, 10, 10, 10)
+        frame_gp_layout.setContentsMargins(10, 15, 10, 10)
         frame_gp_layout.setSpacing(5)
         frame_gp_layout.addWidget(initial_delay_lbl, 0, 0)
         frame_gp_layout.addWidget(self._initial_delay_spin, 0, 1)
@@ -159,19 +156,32 @@ class ArduinoLedControl(QDialog):
         self._led_pwrs = QLineEdit()
         self._led_pwrs.setReadOnly(True)
         self._led_pwrs.setStyleSheet("border: 0")
+        self._led_pwrs_icon_lbl = QLabel()
+        self._led_pwrs_icon_lbl.setSizePolicy(FIXED)
+        self._led_pwrs_icon_lbl.setPixmap(
+            icon(MDI6.alert_outline, color=RED).pixmap(QSize(25, 25))
+        )
+        self._led_pwrs_icon_lbl.hide()
+
+        # set linedit height to the same as the icon label
+        fixed_height = self._led_pwrs_icon_lbl.minimumSizeHint().height()
+        self._led_pwrs.setFixedHeight(fixed_height)
+        self._timepoints.setFixedHeight(fixed_height)
+
         # layout
         led_gp_layout = QGridLayout(led_group)
-        led_gp_layout.setContentsMargins(10, 10, 10, 10)
+        led_gp_layout.setContentsMargins(10, 15, 10, 10)
         led_gp_layout.setSpacing(5)
         led_gp_layout.addWidget(led_start_pwr_lbl, 0, 0)
-        led_gp_layout.addWidget(self._led_start_power, 0, 1)
+        led_gp_layout.addWidget(self._led_start_power, 0, 1, 1, 2)
         led_gp_layout.addWidget(led_power_increment_lbl, 1, 0)
-        led_gp_layout.addWidget(self._led_power_increment, 1, 1)
+        led_gp_layout.addWidget(self._led_power_increment, 1, 1, 1, 2)
         led_gp_layout.addWidget(pulse_duration_lbl, 2, 0)
-        led_gp_layout.addWidget(self._pulse_duration_spin, 2, 1)
-        led_gp_layout.addWidget(separator, 3, 0, 1, 2)
+        led_gp_layout.addWidget(self._pulse_duration_spin, 2, 1, 1, 2)
+        led_gp_layout.addWidget(separator, 3, 0, 1, 3)
         led_gp_layout.addWidget(_led_powers_lbl, 4, 0)
         led_gp_layout.addWidget(self._led_pwrs, 4, 1)
+        led_gp_layout.addWidget(self._led_pwrs_icon_lbl, 4, 2)
 
         # connection indicator labels
         connection_info = QWidget()
@@ -185,23 +195,11 @@ class ArduinoLedControl(QDialog):
         connection_info_layout.addWidget(self._arduino_connected_icon)
         connection_info_layout.addWidget(self._arduino_connected_text)
 
-        # button box (using QPushButton instead of QDialogButtonBox to avoid the focus)
-        ok_btn = QPushButton("OK")
-        ok_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        ok_btn.clicked.connect(self.accept)
-        cancel_btn = QPushButton("Cancel")
-        cancel_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        cancel_btn.clicked.connect(self.reject)
-        ok_btn.setFixedWidth(cancel_btn.minimumSizeHint().width())
-        cancel_btn.setFixedWidth(cancel_btn.minimumSizeHint().width())
-
         # layout
         btns_layout = QHBoxLayout()
         btns_layout.setSpacing(10)
         btns_layout.addWidget(connection_info)
         btns_layout.addStretch()
-        btns_layout.addWidget(cancel_btn)
-        btns_layout.addWidget(ok_btn)
 
         # add all the widgets to the main layout
         main_layout.addWidget(detect_board)
@@ -221,17 +219,25 @@ class ArduinoLedControl(QDialog):
         ]:
             lbl.setFixedSize(num_pulses_lbl.minimumSizeHint())
 
-        # set the fixed height for the dialog
-        self.setFixedHeight(self.minimumSizeHint().height())
-
         self._enable(False)
 
     # ________________________Public Methods________________________
 
+    def board(self) -> Arduino | None:
+        """Return the connected Arduino board object."""
+        return self._arduino_board
+
+    def ledPin(self) -> Pin | None:
+        """Return the connected LED Pin object."""
+        return self._led_pin
+
+    def is_max_power_exceeded(self) -> bool:
+        """Check whether the max power is exceeded."""
+        return not self._led_power_used
+
     def value(self) -> StimulationValues:
         """Return the values set in the dialog."""
         return {
-            "arduino_board": self._arduino_board.name if self._arduino_board else "",
             "arduino_port": self._board_port.text(),
             "arduino_led_pin": self._led_pin_info.text(),
             "initial_delay": self._initial_delay_spin.value(),
@@ -249,9 +255,8 @@ class ArduinoLedControl(QDialog):
         Note that "pulse_on_frame" is not necessary to be set in the values dictionary
         as it is calculated from the other values. If provided, it will be ignored.
         """
-        self._board_name.setText(values.get("arduino_board", ""))
         self._board_port.setText(values.get("arduino_port", ""))
-        self._led_pin_info = values.get("arduino_led_pin", "")
+        self._led_pin_info.setText(values.get("arduino_led_pin", ""))
         self._initial_delay_spin.setValue(values.get("initial_delay", 0))
         self._interval_spin.setValue(values.get("interval", 0))
         self._num_pulses_spin.setValue(values.get("num_pulses", 0))
@@ -272,15 +277,15 @@ class ArduinoLedControl(QDialog):
         self._arduino_connected_icon.setPixmap(pixmap)
         self._arduino_connected_text.setText(text)
 
-    def _get_pulse_on_frame(self) -> dict[int, int]:
+    def _get_pulse_on_frame(self) -> dict[int | str, int | str]:
         """Return the pulse_on_frame dictionary.
 
         The dictionary contains the frame number as key and the respective led power to
         be used.
         """
-        if len(self._led_on_frames) != len(self._led_power_used):
-            raise ValueError("The number of frames and powers do not match.")
-
+        # make sure that the led is not exceeding the max 100% power
+        if not self._led_power_used:
+            return {"error": "Max power exceeded!!!"}
         return dict(zip(self._led_on_frames, self._led_power_used))
 
     def _detect_arduino_board(self) -> None:
@@ -322,23 +327,20 @@ class ArduinoLedControl(QDialog):
             )
 
         self._led_pin.write(0.0)
-        self._board_name.setText(self._arduino_board.name)
-        # str(self._arduino_board) -> "Board{0.name} on {0.sp.port}".format(self)
-        port = str(self._arduino_board).split("on")[-1].replace(" ", "")
-        self._board_port.setText(port)
+        self._board_port.setText(self._arduino_board.sp.port or "")
         self._enable(True)
 
     def _reset(self) -> None:
         """Reset to the initial state."""
         self._arduino_board = None
         self._led_pin = None
-        self._board_name.setText("")
         self._board_port.clear()
         self._enable(False)
 
     def _show_critical_messagebox(self, message: str) -> None:
         """Show a critical message box with the given message."""
         self._reset()
+        self._enable(False)
         QMessageBox.critical(
             self, "Arduino Board Error", message, buttons=QMessageBox.Ok
         )
@@ -356,7 +358,6 @@ class ArduinoLedControl(QDialog):
             self._initial_delay_spin.value()
             + ((self._interval_spin.value() or 1) * self._num_pulses_spin.value())
             + self._interval_spin.value()
-            - 1
         )
         self._timepoints.setText(f"{timepoints} {TIMEPOINTS_TXT}")
 
@@ -370,15 +371,6 @@ class ArduinoLedControl(QDialog):
         pulse_on_timepoint = [str(f) for f in self._led_on_frames]
         self._timepoints.setToolTip(f"Pulse On Timepoint: {pulse_on_timepoint}")
 
-        # # update the tooltip of the timepoints field with the list of frames before
-        # # which the led will be turned on
-        # stim_after_frame = (
-        #     [str(f - 1) for f in self._led_on_frames]
-        #     if self._interval_spin.value() > 0
-        #     else "N/A"
-        # )
-        # self._timepoints.setToolTip(f"Pulse After Frame: {stim_after_frame}")
-
     def _on_led_values_changed(self) -> None:
         """Update the led power info."""
         self._led_power_used.clear()
@@ -390,6 +382,7 @@ class ArduinoLedControl(QDialog):
             pwr = pwr + self._led_power_increment.value()
 
         self._led_pwrs.setText(str(self._led_power_used))
+        self._led_pwrs_icon_lbl.hide()
         self._led_pwrs.setToolTip(str(self._led_power_used))
 
         # check if the max power is not exceeded
@@ -399,7 +392,8 @@ class ArduinoLedControl(QDialog):
 
         if power_max > 100:
             self._led_power_used.clear()
-            self._led_pwrs.setText("LED max power exceeded!!!")
+            self._led_pwrs_icon_lbl.show()
+            self._led_pwrs.setText("Max power exceeded!!!")
 
 
 class _SeparatorWidget(QWidget):

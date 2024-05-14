@@ -4,11 +4,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 from warnings import warn
 
+import tifffile as tf
 from platformdirs import user_config_dir
 from pymmcore_plus import CMMCorePlus
 from qtpy.QtWidgets import QFileDialog, QWidget
 
 if TYPE_CHECKING:
+    import numpy as np
     import useq
 
 USER_DIR = Path(user_config_dir("napari_micromanager"))
@@ -96,8 +98,9 @@ def add_path_to_config_json(path: Path | str) -> None:
 
     # Append the new path. using insert so we leave the empty string at the end
     paths = cast(list, data.get("paths", []))
-    if path not in paths:
-        paths.insert(0, path)
+    if path in paths:
+        paths.remove(path)
+    paths.insert(0, path)
 
     # Write the data back to the file
     with open(USER_CONFIGS_PATHS, "w") as f:
@@ -147,3 +150,16 @@ def load_sys_config(config: Path | str, mmcore: CMMCorePlus | None = None) -> No
     except FileNotFoundError:
         # don't crash if the user passed an invalid config
         warn(f"Config file {config} not found. Nothing loaded.", stacklevel=2)
+
+
+def images_to_stack(folder_path: Path | str) -> np.ndarray:
+    """Read all .tif files in a folder into a single stack.
+
+    Returns a numpy array with shape (n_images, height, width).
+    """
+    if isinstance(folder_path, str):
+        folder_path = Path(folder_path)
+    # Get a list of all .tif files in the folder
+    file_list = sorted(folder_path.glob("*.tif"))
+    # Read all images into a stack
+    return tf.imread([str(file) for file in file_list])  # type: ignore
