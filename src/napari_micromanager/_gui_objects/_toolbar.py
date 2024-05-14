@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import base64
 import contextlib
+import json
+from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Tuple, cast
 
 from fonticon_mdi6 import MDI6
@@ -9,7 +12,6 @@ from pymmcore_widgets import (
     CameraRoiWidget,
     ChannelGroupWidget,
     ChannelWidget,
-    ConfigurationWidget,
     DefaultCameraExposureWidget,
     GroupPresetTableWidget,
     LiveButton,
@@ -18,13 +20,19 @@ from pymmcore_widgets import (
     SnapButton,
 )
 
+from napari_micromanager._util import (
+    load_sys_config_dialog,
+    save_sys_config_dialog,
+)
+
 try:
     # this was renamed
     from pymmcore_widgets import ObjectivesPixelConfigurationWidget
 except ImportError:
     from pymmcore_widgets import PixelSizeWidget as ObjectivesPixelConfigurationWidget
 
-from qtpy.QtCore import QEvent, QObject, QSize, Qt
+from platformdirs import user_data_dir
+from qtpy.QtCore import QByteArray, QEvent, QObject, QSize, Qt
 from qtpy.QtWidgets import (
     QDockWidget,
     QFrame,
@@ -32,6 +40,7 @@ from qtpy.QtWidgets import (
     QLabel,
     QMainWindow,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QTabWidget,
     QToolBar,
@@ -50,11 +59,36 @@ if TYPE_CHECKING:
 
 TOOL_SIZE = 35
 
+# Path to the user data directory to store the layout
+USER_DATA_DIR = Path(user_data_dir(appname="napari_micromanager"))
+USER_LAYOUT_PATH = USER_DATA_DIR / "napari_micromanager_layout.json"
+
+
+class GroupsAndPresets(GroupPresetTableWidget):
+    """Subclass of GroupPresetTableWidget.
+
+    Overwrite the save and load methods to store the saved or loaded configuration in
+    the USER_CONFIGS_PATHS json config file.
+    """
+
+    def __init__(
+        self, *, parent: QWidget | None = None, mmcore: CMMCorePlus | None = None
+    ) -> None:
+        super().__init__(parent=parent, mmcore=mmcore)
+
+    def _save_cfg(self) -> None:
+        """Open file dialog to save the current configuration."""
+        save_sys_config_dialog(parent=self, mmcore=self._mmc)
+
+    def _load_cfg(self) -> None:
+        """Open file dialog to select a config file."""
+        load_sys_config_dialog(parent=self, mmcore=self._mmc)
+
 
 # Dict for QObject and its QPushButton icon
 DOCK_WIDGETS: Dict[str, Tuple[type[QWidget], str | None]] = {  # noqa: U006
     "Device Property Browser": (PropertyBrowser, MDI6.table_large),
-    "Groups and Presets Table": (GroupPresetTableWidget, MDI6.table_large_plus),
+    "Groups and Presets Table": (GroupsAndPresets, MDI6.table_large_plus),
     "Illumination Control": (IlluminationWidget, MDI6.lightbulb_on),
     "Stages Control": (MMStagesWidget, MDI6.arrow_all),
     "Camera ROI": (CameraRoiWidget, MDI6.crop),
@@ -103,14 +137,13 @@ class MicroManagerToolbar(QMainWindow):
         self._dock_widgets: dict[str, QDockWidget] = {}
         # add toolbar items
         toolbar_items = [
-            ConfigToolBar(self),
-            ChannelsToolBar(self),
             ObjectivesToolBar(self),
+            ChannelsToolBar(self),
+            ExposureToolBar(self),
+            SnapLiveToolBar(self),
+            ToolsToolBar(self),
             None,
             ShuttersToolBar(self),
-            SnapLiveToolBar(self),
-            ExposureToolBar(self),
-            ToolsToolBar(self),
         ]
         for item in toolbar_items:
             if item:
@@ -198,7 +231,10 @@ class MicroManagerToolbar(QMainWindow):
                 )
                 floating = True
                 tabify = False
+
+            wdg = ScrollableWidget(self, title=key, widget=wdg)
             dock_wdg = self._add_dock_widget(wdg, key, floating=floating, tabify=tabify)
+            self._connect_dock_widget(dock_wdg)
             self._dock_widgets[key] = dock_wdg
 
     def _add_dock_widget(
@@ -221,6 +257,106 @@ class MicroManagerToolbar(QMainWindow):
         dock_wdg.setFloating(floating)
         return dock_wdg
 
+    def _connect_dock_widget(self, dock_wdg: QDockWidget) -> None:
+        """Connect the dock widget to the main window."""
+        dock_wdg.visibilityChanged.connect(self._save_layout)
+        dock_wdg.topLevelChanged.connect(self._save_layout)
+        dock_wdg.dockLocationChanged.connect(self._save_layout)
+
+    def _save_layout(self) -> None:
+        """Save the napa-micromanager layout to a json file.
+
+        The json file has two keys:
+        - "layout_state" where the state of napari main window is stored using the
+          saveState() method. The state is base64 encoded to be able to save it to the
+          json file.
+        - "pymmcore_widgets" where the names of the docked pymmcore_widgets are stored.
+
+        IMPORTANT: The "pymmcore_widgets" key is crucial in our layout saving process.
+        It stores the names of all active pymmcore_widgets at the time of saving. Before
+        restoring the layout, we must recreate these widgets. If not, they won't be
+        included in the restored layout.
+        """
+        if getattr(self.viewer.window, "_qt_window", None) is None:
+            return
+        # get the names of the pymmcore_widgets that are part of the layout
+        pymmcore_wdgs: list[str] = []
+        main_win = self.viewer.window._qt_window
+        for dock_wdg in main_win.findChildren(QDockWidget):
+            wdg_name = dock_wdg.objectName()
+            if wdg_name in DOCK_WIDGETS:
+                pymmcore_wdgs.append(wdg_name)
+
+        # get the state of the napari main window as bytes
+        state_bytes = main_win.saveState().data()
+
+        # Create dictionary with widget names and layout state. The layout state is
+        # base64 encoded to be able to save it to a json file.
+        data = {
+            "pymmcore_widgets": pymmcore_wdgs,
+            "layout_state": base64.b64encode(state_bytes).decode(),
+        }
+
+        # if the user layout path does not exist, create it
+        if not USER_LAYOUT_PATH.exists():
+            USER_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+        try:
+            with open(USER_LAYOUT_PATH, "w") as json_file:
+                json.dump(data, json_file)
+        except Exception as e:
+            print(f"Was not able to save layout to file. Error: {e}")
+
+    def _load_layout(self) -> None:
+        """Load the napari-micromanager layout from a json file."""
+        if not USER_LAYOUT_PATH.exists():
+            return
+
+        try:
+            with open(USER_LAYOUT_PATH) as f:
+                data = json.load(f)
+
+                # get the layout state bytes
+                state_bytes = data.get("layout_state")
+
+                if state_bytes is None:
+                    return
+
+                # add pymmcore_widgets to the main window
+                pymmcore_wdgs = data.get("pymmcore_widgets", [])
+                for wdg_name in pymmcore_wdgs:
+                    if wdg_name in DOCK_WIDGETS:
+                        self._show_dock_widget(wdg_name)
+
+                # Convert base64 encoded string back to bytes
+                state_bytes = base64.b64decode(state_bytes)
+
+                # restore the layout state
+                self.viewer.window._qt_window.restoreState(QByteArray(state_bytes))
+
+        except Exception as e:
+            print(f"Was not able to load layout from file. Error: {e}")
+
+
+class ScrollableWidget(QWidget):
+    """A QWidget with a QScrollArea.
+
+    We use it to add a croll alre to the pymmcore_widgets.
+    """
+
+    def __init__(self, parent: QWidget | None = None, *, title: str, widget: QWidget):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        # create the scroll area and add the widget to it
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        layout = QHBoxLayout(self)
+        layout.addWidget(self.scroll_area)
+        # set the widget to the scroll area
+        self.scroll_area.setWidget(widget)
+        # resize the dock widget to the size hint of the widget
+        self.resize(widget.minimumSizeHint())
+
 
 # -------------- Toolbars --------------------
 
@@ -239,13 +375,6 @@ class MMToolBar(QToolBar):
 
     def addSubWidget(self, wdg: QWidget) -> None:
         cast("QHBoxLayout", self.frame.layout()).addWidget(wdg)
-
-
-class ConfigToolBar(MMToolBar):
-    def __init__(self, parent: QWidget) -> None:
-        super().__init__("Configuration", parent)
-        self.addSubWidget(ConfigurationWidget())
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
 
 class ObjectivesToolBar(MMToolBar):
