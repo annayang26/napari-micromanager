@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+from pathlib import Path
 import tempfile
 import time
 from collections import deque
@@ -31,7 +32,7 @@ if TYPE_CHECKING:
         uid: UUID
         ch_id: str
 
-
+TEMP = Path(r"D:\TEMP_DO_NOT_DELETE")
 DEFAULT_NAME = "Exp"
 
 
@@ -97,7 +98,7 @@ class _NapariMDAHandler:
 
         # now create a zarr array in a temporary directory for each layer
         for id_, shape, kwargs in layers_to_create:
-            tmp = tempfile.TemporaryDirectory()
+            tmp = tempfile.TemporaryDirectory(prefix="napari-micromanager", dir=TEMP)
             dtype = f"u{self._mmc.getBytesPerPixel()}"
             # create the zarr array and add it to the viewer
             z = zarr.open(
