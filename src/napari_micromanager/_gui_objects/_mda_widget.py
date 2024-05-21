@@ -122,7 +122,7 @@ class MultiDWidget(MDAWidget):
                         save_path = save_path.with_suffix(".ome.tif")
                     save_path = OMETifWriter(save_path)
                 # use internal tif sequence writer if selected
-                elif "ome" not in save_format:
+                elif "ome" not in save_format and "zarr-tensorstore" not in save_format:
                     save_path = TifSequenceWriter(save_path)
 
         # run the MDA experiment asynchronously

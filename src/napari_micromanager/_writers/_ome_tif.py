@@ -54,12 +54,12 @@ class OMETifWriter(OMETiffWriter):
         # add the position key to the filename if there are multiple positions
         if (seq := self.current_sequence) and seq.sizes.get("p", 1) > 1:
             folder_name = self._folder.name.replace(EXT, "")
-            pos_name = f"_{self._get_current_pos_name(position_key)}"
+            pos_name = f"_{self._get_current_pos_name(position_key)}{EXT}"
         else:
             folder_name = self._folder.name
             pos_name = ""
 
-        fname = self._folder / f"{folder_name}{pos_name}{EXT}"
+        fname = self._folder / f"{folder_name}{pos_name}"
 
         # write empty file to disk
         imwrite(
