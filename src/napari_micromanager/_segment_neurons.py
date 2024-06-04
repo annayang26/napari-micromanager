@@ -40,8 +40,8 @@ class SegmentNeurons:
         print("\nSEQUENCE STARTED")
         self._deck.clear()
         self._is_running = True
-        self._load_model() ### <<< load CP model
-        meta = sequence.metadata.get("pymmcore_widgets") # TODO: find a better way to get metadata
+        self._load_model()
+        meta = sequence.metadata.get("pymmcore_widgets")
         self._path = Path(meta.get("save_dir", ""))
         self._exp_name = (meta.get("save_name", "")).split('.')[0]
         nap_mm = sequence.metadata.get("napari_micromanager")
@@ -113,7 +113,7 @@ class SegmentNeurons:
         mask_path = save_path.joinpath(f"{self._exp_name}_p{self._pos}")
         self._save_overlay(image, channels, masks, mask_path)
         rgb_mask = plot.mask_rgb(masks)
-        io.save_masks(image, rgb_mask, flows, mask_path, tif=True)
+        io.save_masks(image, rgb_mask, flows, mask_path, png=True)
         bg_label = 0
         self.roi_dict, self.labels, self.area_dict = self._getROIpos(masks, bg_label)
 

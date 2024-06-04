@@ -1,9 +1,11 @@
 import csv
-import os
 import pickle
 import time
 from collections import deque
 from typing import Generator
+import napari.viewer
+from PIL import Image
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -18,35 +20,27 @@ from ._segment_neurons import SegmentNeurons
 class AnalyzeNeurons:
     """Analyze calcium recording with masks."""
 
-    def __init__(self, mmcore: CMMCorePlus, seg: SegmentNeurons):
+    def __init__(self, mmcore: CMMCorePlus, viewer: napari.viewer.Viewer,
+                 seg: SegmentNeurons):
         self._mmc = mmcore
-        self.seg = seg
+        self._seg = seg
+        self._viewer = viewer
 
         self._is_running: bool = False
         self._deck: deque[np.ndarray] = deque()
 
-        self._mmc.mda.events.sequenceStarted.connect(self._on_sequence_started)
-        self._mmc.mda.events.frameReady.connect(self._on_frame_ready)
+        # self._mmc.mda.events.sequenceStarted.connect(self._on_sequence_started)
+        # self._mmc.mda.events.frameReady.connect(self._on_frame_ready)
         self._mmc.mda.events.sequenceFinished.connect(self._on_sequence_finished)
 
-        # self._roi_dict: dict = None
-        # self._roi_signal: dict = None
-        # self._dff: dict = None
-        # self.spike_times: dict = None
-        # self.roi_analysis: dict = None
         self._framerate: float = None
 
-    def _on_sequence_started(self, sequence: useq.MDASequence) -> None:
+    def _on_sequence_finished(self, sequence: useq.MDASequence) -> None:
         print("\nANALYSIS STARTED")
-        self._deck.clear()
         self._is_running = True
-        meta = sequence.metadata.get("pymmcore_widgets")
-        self._path = meta.get("save_dir", "")
-        self._exp_name = meta.get("save_name", "")
-        # TODO: get framerate
 
         create_worker(
-            self._watch_sequence,
+            self._retrieve_layer,
             _start_thread=True,
             _connect={
                 "yielded": self._analyze_roi,
@@ -54,45 +48,151 @@ class AnalyzeNeurons:
             },
         )
 
-    def _watch_sequence(self) -> Generator[np.ndarray, None, None]:
-        print("WATCHING SEQUENCE IN ANALYZE NEURONS")
-        while self._is_running:
-            if self._deck:
-                yield self._deck.popleft()
-            else:
-                time.sleep(0.1)
+    # def _watch_sequence(self) -> Generator[np.ndarray, None, None]:
+    #     print("WATCHING SEQUENCE IN ANALYZE NEURONS")
+    #     while self._is_running:
+    #         if self._deck:
+    #             yield self._deck.popleft()
+    #         else:
+    #             time.sleep(0.1)
 
     # TODO: check with Federico
-    def _on_frame_ready(self, img: np.ndarray, event: useq.MDAEvent) -> None:
+    def _retrieve_layer(self, img: np.ndarray, event: useq.MDAEvent) -> None:
         print("FRAME READY", event.index)
-        t_index = event.index.get("t")
-        roi_dict, labels, area_dict = self.seg._send_roi_info()
+        # t_index = event.index.get("t")
+        # roi_dict, labels, area_dict = self._seg._send_roi_info()
 
         # NOTE: should wait for the recording of one FOV to finish
-        if t_index is not None and roi_dict is not None:
-            self._deck.append([img, roi_dict, labels, area_dict])
+        # if t_index is not None and roi_dict is not None:
+        #     self._deck.append([img, roi_dict, labels, area_dict])
 
+        # when the acquisition of all positions is done
         layer = None
         for lay in self._viewer.layers:
             uid = lay.metadata["napari_micromanager"].get('uid')
             if uid == event.sequence.uid:
                 layer = lay
+                self._get_metadata(layer)
                 break
 
         if layer is None:
             return
 
         print(layer.data.shape)
+        yield layer
 
-    def _analyze_roi(self, package: list):
+    def _get_metadata(self, layer: napari.viewer.layers):
+        """Get the metadata needed."""
+        mda = layer.metadata["napari_micromanager"]['useq_sequence']
+        meta = mda.metadata
+        self._dir_name = Path(meta.get('save_dir'))
+        self._prefix = meta.get('save_name').split('.')[0]
+        self._pixel_size = float(meta.get('napari_micromanager').get('PixelSizeUm'))
+        self._exposure = float(mda.channels[0].exposure)
+        obj_label = self._mmc.getProperty('nosepiece', 'label').split(" ")
+        self._obj = int(next(word for word in obj_label if word.endswith("x"))[:-1])
+        self._binning = float(self._mmc.bin)
+
+        print(f"dirname: {self._dir_name}\n prefix: {self._prefix}")
+        print(f"pixel size: {self._pixel_size}\n exposure: {self._exposure}")
+        print(f"objective: {self._obj}")
+
+    def _analyze_roi(self, layer: napari.viewer.layers):
         """Analyze ROIs."""
-        img_stack, roi_dict, labels, area_dict = package
+        for pos in layer.shape[0]: # iterate through the position
+            # get the recording at each pos for all time frames
+            img_stack = layer[pos]
 
-        raw_signal = self._calculate_ROI_intensity(roi_dict, img_stack)
-        roi_dff, _, _ = self._calculateDFF(raw_signal)
-        spk_times = self._find_peaks(roi_dff)
-        roi_analysis = self._analyze_roi(roi_dff, spk_times, self._framerate)
-        mean_connect = self._get_mean_connect(roi_dff, spk_times)
+            # read the mask of the recording
+            mask_name = f"{self._dir_name}_p{pos}_mask.png" # TODO: CHECK!
+            mask_dir = Path(f"{self._dir_name}_p{pos}")
+            mask_path = self._dir_name / mask_dir / mask_name
+            mask = np.array(Image.open(mask_path))
+
+            # generate roi_dict
+            bg_label = 0
+            roi_dict, labels, area_dict = self._getROIpos(mask, bg_label)
+
+            # calculate
+            raw_signal = self._calculate_ROI_intensity(roi_dict, img_stack)
+            roi_dff, _, _ = self._calculateDFF(raw_signal)
+            spk_times = self._find_peaks(roi_dff)
+            roi_analysis = self._analyze_roi(roi_dff, spk_times, self._framerate)
+            mean_connect = self._get_mean_connect(roi_dff, spk_times)
+
+    def _getROIpos(self, labels: np.ndarray, background_label: int
+              ) -> tuple[dict, np.ndarray, dict]:
+        """Get ROI positions."""
+        # sort the labels and filter the unique ones
+        u_labels = np.unique(labels)
+
+        # create a dict for the labels
+        roi_dict = {}
+        for u in u_labels:
+            roi_dict[u.item()] = []
+
+        # record the coordinates for each label
+        for x in range(labels.shape[0]):
+            for y in range(labels.shape[1]):
+                roi_dict[labels[x, y]].append([x, y])
+
+        # delete any background labels
+        del roi_dict[background_label]
+
+        area_dict, roi_to_delete = self._get_ROI_area(roi_dict, 100)
+
+        # delete roi in label layer and dict
+        for r in roi_to_delete:
+            coords_to_delete = np.array(roi_dict[r]).T.tolist()
+            labels[tuple(coords_to_delete)] = 0
+            roi_dict[r] = []
+
+        # move roi in roi_dict after removing some labels
+        for r in range(1, (len(roi_dict) - len(roi_to_delete) + 1)):
+            i = 1
+            while not roi_dict[r]:
+                roi_dict[r] = roi_dict[r + i]
+                roi_dict[r + i] = []
+                i += 1
+
+        # delete extra roi keys
+        for r in range((len(roi_dict) - len(roi_to_delete) + 1), (len(roi_dict) + 1)):
+            del roi_dict[r]
+
+        # update label layer with new roi
+        for r in roi_dict:
+            roi_coords = np.array(roi_dict[r]).T.tolist()
+            labels[tuple(roi_coords)] = r
+
+        return roi_dict, labels, area_dict
+
+    def _get_ROI_area(self, roi_dict: dict, threshold: float) -> tuple[dict, list]:
+        """Calculate the areas of each ROI in the ROI_dict."""
+        area = {}
+        small_roi = []
+        for r in roi_dict:
+            if len(roi_dict[r]) < threshold:
+                small_roi.append(r)
+                continue
+            area[r] = len(roi_dict[r])
+
+            # when including in the system
+            area, _ = self._calculate_cellsize(area, self._binning, self._pixel_size,
+                                               self._obj, self._magnification)
+        return area, small_roi
+
+    def _calculate_cellsize(self, roi_dict: dict, binning: int,
+                        pixel_size: int, objective: int,
+                        magnification: float) -> (dict):
+        """Calculate the cell size in um."""
+        cellsize = {}
+        for r in roi_dict:
+            cellsize[r]=(len(roi_dict[r])*binning*pixel_size)/(objective*magnification)
+
+        cs_arr = np.array(list(cellsize.items()))
+
+        return cellsize, cs_arr
+
 
     def _calculate_ROI_intensity(self, roi_dict: dict, img_stack: np.ndarray) -> dict:
         """Calculate the raw signal of each ROI."""
@@ -389,24 +489,24 @@ class AnalyzeNeurons:
 
         return phase_diff
 
-    def _save_results(self, save_path: str, spk: dict, cell_size: dict,
+    def _save_results(self, save_path: Path, spk: dict, cell_size: dict,
                       roi_analysis: dict, framerate: float, total_frames: int,
                       dff: dict) -> None:
         """Save the analysis results."""
         # save spike times
-        if not os.path.isdir(save_path):
-            os.mkdir(save_path)
+        if not save_path.is_dir():
+            save_path.mkdir()
 
-        with open(save_path + '/spike_times.pkl', 'wb') as spike_file:
+        with open(save_path / 'spike_times.pkl', 'wb') as spike_file:
             pickle.dump(spk, spike_file)
 
         dff_df = pd.DataFrame.from_dict(dff)
-        path = save_path + '/del_frames_dff.csv'
+        path = save_path / 'del_frames_dff.csv'
         dff_df.to_csv(path, index=False)
 
         # save
         roi_data = self._all_roi_data(roi_analysis, cell_size, spk, framerate, total_frames)
-        with open(save_path + '/roi_data.csv', 'w', newline='') as roi_data_file:
+        with open(save_path / 'roi_data.csv', 'w', newline='') as roi_data_file:
             writer = csv.DictWriter(roi_data_file, dialect='excel')
             fields = ['ROI', 'cell_size (um)', '# of events', 'frequency (num of events/s)',
                     'average amplitude', 'amplitude SEM', 'average time to rise', 'time to rise SEM',
@@ -421,7 +521,7 @@ class AnalyzeNeurons:
             roi_data = {}
             for r in roi_analysis:
                 roi_data[r]["cell size (um)"] = cell_size[r]
-                roi_data[r][""] = 
+                # roi_data[r][""] = 
 
 
 
